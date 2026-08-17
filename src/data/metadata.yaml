@@ -1,0 +1,45 @@
+fields:
+  - key: title
+    value: "DrDebits"
+  - key: guide_version
+    value: "0.2.0-draft"
+  - key: status
+    value: "draft"
+  - key: jurisdiction
+    value: "AU"
+  - key: owner
+    value: "Ryan Duguid"
+  - key: canonical_repository
+    value: "https://github.com/ryanduguid/DrDebits"
+  - key: release_tag
+    value: "v0.2.0-draft"
+  - key: sources_checked_at
+    value: "2026-08-16T00:00:00+10:00"
+  - key: review_due
+    value: "2026-11-16"
+  - key: tasa_compilation
+    value: "C2025C00107"
+  - key: tasr_compilation
+    value: "F2024C00896"
+  - key: code_determination_compilation
+    value: "F2025C00168"
+  - key: apes_110_compilation
+    value: "July 2025"
+  - key: apes_110_pdf_filename
+    value: "Compiled_APES_110_July_25.pdf"
+  - key: apes_110_compilation_details_filename
+    value: "Compilation_Details_APES_110_July_25.pdf"
+  - key: apes_110_pdf_sha256
+    value: "B6937B93B0A6F7F3F32667CFE8880F8F60CBD7777BCE0C2D57F2DD6F13D3A300"
+  - key: apes_220_issued
+    value: "January 2025"
+  - key: apes_220_effective
+    value: "2025-07-01"
+  - key: tpb_guidance_statement_count
+    value: "55"
+  - key: tpb_library_index_count
+    value: "55"
+  - key: guide_end_marker
+    value: "DRDEBITS-END-v0.2.0-draft"
+  - key: checksum_files
+    value: "LICENSE|README.md|drdebits.md|MAINTENANCE.md|reference/tpb-catalogue.md|reference/apes-110-map.md|tests/behaviour-tests.md"

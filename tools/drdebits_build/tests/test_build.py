@@ -3,7 +3,8 @@ import textwrap
 from pathlib import Path
 import pytest
 from drdebits_build.build import (
-    BuildError, find_root, load_sources, build_guide, build_sha256sums,
+    BuildError, find_root, load_sources, build_guide, build_catalogue_md,
+    build_behaviour_md, build_apes_md, build_sha256sums,
     write_outputs, stamp_version,
 )
 
@@ -78,6 +79,36 @@ def test_guide_shape_and_determinism(tmp_path):
     assert g1.startswith("---\nguide_version: 0.9.9-test\n")
     assert g1.rstrip("\n").endswith("END-v0.9.9-test")
     assert "## Rules" in g1 and "| 0.9.9-test | 2026-01-01 | Draft | init |" in g1
+
+
+def test_catalogue_md_header_version_and_table(tmp_path):
+    s = load_sources(make_repo(tmp_path))
+    out = build_catalogue_md(s)
+    assert out.count("0.9.9-test") == 1
+    assert out.startswith("# Complete TPB Guidance Statement catalogue\n")
+    assert "| Statement (concise title and official link) | LLM trigger |" in out
+    assert "| [T](https://x.invalid/a) | g |" in out
+
+
+def test_behaviour_md_header_version_and_table(tmp_path):
+    s = load_sources(make_repo(tmp_path))
+    out = build_behaviour_md(s)
+    assert out.count("0.9.9-test") == 1
+    assert out.startswith("# DrDebits behaviour tests\n")
+    assert "| ID | Scenario | Expected status | Required behaviour and human step | Side-effect check |" in out
+    assert "| A-001 | s | HARD_STOP | r | c |" in out
+
+
+def test_apes_md_header_version_and_both_tables(tmp_path):
+    s = load_sources(make_repo(tmp_path))
+    out = build_apes_md(s)
+    assert out.count("0.9.9-test") == 1
+    assert out.startswith("# Primary APES 110 reference map\n")
+    assert "| Context | APES 110 starting points |" in out
+    assert "| All | Part 1 |" in out
+    assert "Key paragraph-level retrieval points are:" in out
+    assert "| Control | APES 110 retrieval points |" in out
+    assert "| Scope | R1.2 |" in out
 
 
 def test_sha256sums_covers_generated_and_static(tmp_path):
