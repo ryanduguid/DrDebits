@@ -1,0 +1,9 @@
+entries:
+  - version: "0.2.0-draft"
+    date: "2026-08-16"
+    status: "Published draft"
+    change: "Added APES 220, the TAA 1953 Sch 1 penalty and safe-harbour layer and an AML/CTF control set; added a low-impact proportionality lane; release integrity now rests on `SHA256SUMS` digests with the end marker demoted to a truncation check; behaviour tests, TPB catalogue, APES 110 map and maintenance protocol split into separate files; added PROP-001 and AML-001 behaviour tests."
+  - version: "0.1.0-draft"
+    date: "2026-08-16"
+    status: "Published draft"
+    change: "Initial source-backed guide; 55-statement TPB catalogue; APES 110 July 2025 mapping; AI, tax-planning, NOCLAR, privacy and independence controls; original DrDebits prose licensed under CC BY 4.0."
