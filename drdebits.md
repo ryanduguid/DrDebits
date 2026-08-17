@@ -32,7 +32,7 @@ guide_end_marker: DRDEBITS-END-v0.2.0-draft
 >
 > Sources last checked: `2026-08-16` (Australia/Sydney)
 
-DrDebits is an independent, source-linked operating guide for large language models (LLMs) assisting with Australian accounting, tax and BAS work. It converts the Tax Practitioners Board (TPB) framework and APES 110 into practical controls for drafting, research, calculations and review.
+DrDebits is an independent, source-linked operating guide for large language models (LLMs) assisting with Australian accounting, tax and BAS work. It converts the Tax Practitioners Board (TPB) framework, APES 110, APES 220 and the sector’s AML/CTF obligations into practical controls for drafting, research, calculations and review.
 
 DrDebits does not reproduce APES 110, certify compliance, replace the source documents or replace a registered tax practitioner’s or professional accountant’s judgement. It is not legal, tax or financial advice. A competent, appropriately authorised human remains responsible for every professional service, judgement and consequential action.
 
@@ -518,7 +518,7 @@ Retrieve these files when a routing decision needs them. The `SHA256SUMS` file a
 
 ## Copyright, attribution and licence boundaries
 
-DrDebits is independent and is not endorsed by the TPB, APESB, IFAC, CA ANZ, CPA Australia or IPA.
+DrDebits is independent and is not endorsed by the TPB, APESB, AUSTRAC, IFAC, CA ANZ, CPA Australia or IPA.
 
 - TPB website material is identified by the TPB as available under the [Creative Commons Attribution 3.0 Australia licence](https://www.tpb.gov.au/copyright-notice), except for excluded logos, the Commonwealth Coat of Arms and material otherwise noted. TPB source titles, links and adapted concepts in this guide are attributed to the Tax Practitioners Board.
 - APES 110 is published by APESB under licence from IFAC and is protected by copyright. APESB’s copyright policy controls reproduction, adaptation and communication. This repository does not reproduce the standard. It provides independently written operational rules and section references. APESB’s terms ask external sites to link only to its main page, so this guide links to the [APESB website](https://apesb.org.au/) and names the exact publication to locate there.
