@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import re
+import socket
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -10,6 +12,12 @@ from .build import GENERATED, find_root, load_sources
 
 URL_RE = re.compile(r"https://[^\s)\"<>]+")
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) drdebits-linkcheck"
+
+# HTTP statuses that indicate definitive link rot rather than a network/CDN
+# hiccup. Everything else (403/429/5xx, timeouts, TLS errors, connection
+# resets, DNS hiccups that aren't outright NXDOMAIN, ...) is merely
+# unreachable *from this network* and must not be reported as dead.
+DEAD_HTTP_STATUSES = {404, 410}
 
 
 def collect_urls(root):
@@ -30,13 +38,58 @@ def collect_urls(root):
     return out
 
 
-def check(url, timeout):
+def _classify_exception(exc):
+    """Map an exception to (kind, detail).
+
+    detail is always an HTTP status code or an exception class name - never
+    a server-supplied reason phrase (HTTPError.msg, URLError.reason strings,
+    etc. can echo attacker- or server-controlled text and must not flow into
+    issue bodies).
+    """
+    if isinstance(exc, urllib.error.HTTPError):
+        detail = str(exc.code)
+        if exc.code in DEAD_HTTP_STATUSES:
+            return "dead", detail
+        return "unreachable", detail
+    if isinstance(exc, urllib.error.URLError):
+        reason = exc.reason
+        if isinstance(reason, socket.gaierror):
+            return "dead", "gaierror"
+        if isinstance(reason, TimeoutError):
+            return "unreachable", "timeout"
+        if isinstance(reason, BaseException):
+            return "unreachable", type(reason).__name__
+        return "unreachable", type(exc).__name__
+    if isinstance(exc, TimeoutError):
+        return "unreachable", "timeout"
+    return "unreachable", type(exc).__name__
+
+
+def _attempt(url, timeout):
     req = urllib.request.Request(url, headers={"User-Agent": UA}, method="GET")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status
+            status = resp.status
     except Exception as exc:  # any failure is a finding, described not raised
-        return exc
+        return _classify_exception(exc)
+    if 200 <= status < 400:
+        return "ok", str(status)
+    return "unreachable", str(status)
+
+
+def check(url, timeout):
+    """Classify a URL as ("ok" | "dead" | "unreachable", detail).
+
+    Unreachable results (timeouts, connection refused/reset, HTTP
+    403/429/5xx, TLS errors, and anything else that isn't a definitive
+    404/410 or DNS NXDOMAIN) get one retry with the same timeout before the
+    classification sticks, since a single blocked probe from this network
+    must not be reported as link rot.
+    """
+    kind, detail = _attempt(url, timeout)
+    if kind == "unreachable":
+        kind, detail = _attempt(url, timeout)
+    return kind, detail
 
 
 def main(argv=None):
@@ -45,12 +98,18 @@ def main(argv=None):
     parser.add_argument("--timeout", type=int, default=20)
     args = parser.parse_args(argv)
     root = Path(args.root) if args.root else find_root(Path.cwd())
-    dead = 0
+    ok = dead = unreachable = 0
     for url in collect_urls(root):
-        result = check(url, args.timeout)
-        if not (isinstance(result, int) and 200 <= result < 400):
-            print(f"DEAD {result} {url}")
+        kind, detail = check(url, args.timeout)
+        if kind == "ok":
+            ok += 1
+        elif kind == "dead":
             dead += 1
+            print(f"DEAD {detail} {url}")
+        else:
+            unreachable += 1
+            print(f"UNREACHABLE {detail} {url}")
+    print(f"checked {ok + dead + unreachable}: ok {ok}, dead {dead}, unreachable {unreachable}")
     return 1 if dead else 0
 
 
