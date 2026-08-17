@@ -78,6 +78,11 @@ def _classify_exception(exc):
 
 
 def _attempt(url, timeout):
+    # collect_urls only yields https:// URLs, but keep urlopen pinned to that
+    # scheme here too so a future collector change cannot make this fetch
+    # file:// or other local schemes.
+    if not url.startswith("https://"):
+        return "unreachable", "non-https"
     req = urllib.request.Request(url, headers={"User-Agent": UA}, method="GET")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:

@@ -21,6 +21,8 @@ def _read(path):
             data = yaml.safe_load(fh)
     except yaml.YAMLError as e:
         raise ModelError(f"{path}: {e}") from e
+    except OSError as e:
+        raise ModelError(f"{path}: cannot read source file ({e})") from e
     if not isinstance(data, dict):
         raise ModelError(f"{path}: top level must be a mapping")
     return data
@@ -32,7 +34,7 @@ def _require_str(path, where, value):
     return value
 
 
-def _rows(path, data, key, fields):
+def _rows(path, data, key, fields, table_safe=False):
     entries = data.get(key)
     if not isinstance(entries, list) or not entries:
         raise ModelError(f"{path}: '{key}' must be a non-empty list")
@@ -40,7 +42,24 @@ def _rows(path, data, key, fields):
     for i, row in enumerate(entries):
         if not isinstance(row, dict) or set(row) != set(fields):
             raise ModelError(f"{path}: entry {i} must have exactly fields {fields}")
-        out.append({f: _require_str(path, f"entry {i} field '{f}'", row[f]) for f in fields})
+        clean = {}
+        for f in fields:
+            value = _require_str(path, f"entry {i} field '{f}'", row[f])
+            # No source value may contain a newline (either kind): a table row
+            # would split across lines and a metadata value would inject extra
+            # frontmatter lines into the guide - and verify would bless both,
+            # since the rebuild breaks identically. Pipes are additionally
+            # rejected in table-bound values only, because metadata's
+            # checksum_files legitimately uses '|' as its separator.
+            if "\n" in value or "\r" in value:
+                raise ModelError(
+                    f"{path}: entry {i} field '{f}' contains a newline")
+            if table_safe and "|" in value:
+                raise ModelError(
+                    f"{path}: entry {i} field '{f}' contains '|', "
+                    "which would break the rendered Markdown table")
+            clean[f] = value
+        out.append(clean)
     return out
 
 
@@ -71,7 +90,8 @@ def load_metadata(path):
 
 
 def load_catalogue(path):
-    rows = _rows(path, _read(path), "entries", ("id", "title", "url", "trigger"))
+    rows = _rows(path, _read(path), "entries", ("id", "title", "url", "trigger"),
+                 table_safe=True)
     _unique_ids(path, rows)
     for r in rows:
         if not r["url"].startswith("https://"):
@@ -81,7 +101,8 @@ def load_catalogue(path):
 
 def load_behaviour_tests(path):
     rows = _rows(path, _read(path), "entries",
-                 ("id", "scenario", "expected_status", "required_behaviour", "side_effect_check"))
+                 ("id", "scenario", "expected_status", "required_behaviour", "side_effect_check"),
+                 table_safe=True)
     _unique_ids(path, rows)
     for r in rows:
         if r["expected_status"] not in ALLOWED_STATUSES:
@@ -90,15 +111,32 @@ def load_behaviour_tests(path):
 
 
 def load_changelog(path):
-    return _rows(path, _read(path), "entries", ("version", "date", "status", "change"))
+    return _rows(path, _read(path), "entries", ("version", "date", "status", "change"),
+                 table_safe=True)
 
 
 def load_apes_map(path):
     data = _read(path)
     out = {}
     for key in ("contexts", "retrieval_points"):
-        out[key] = _rows(path, {"entries": data.get(key)}, "entries", ("label", "value"))
+        out[key] = _rows(path, {key: data.get(key)}, key, ("label", "value"),
+                         table_safe=True)
     return out
+
+
+# Every key the builders and verifier dereference unconditionally. A missing
+# key must surface as a ModelError finding at load, not a KeyError escaping
+# run_verify's returns-messages contract.
+REQUIRED_METADATA_KEYS = (
+    "guide_version", "release_tag", "guide_end_marker", "sources_checked_at",
+    "tpb_guidance_statement_count", "tpb_library_index_count", "checksum_files",
+)
+
+
+def validate_required_metadata(metadata):
+    missing = [k for k in REQUIRED_METADATA_KEYS if k not in metadata]
+    if missing:
+        raise ModelError(f"metadata: missing required keys {missing}")
 
 
 def validate_counts(metadata, catalogue):

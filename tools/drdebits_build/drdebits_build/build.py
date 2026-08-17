@@ -54,10 +54,14 @@ def load_sources(root):
     root = Path(root)
     data = root / "src" / "data"
     meta = model.load_metadata(data / "metadata.yaml")
+    model.validate_required_metadata(meta)
     catalogue = model.load_catalogue(data / "tpb-catalogue.yaml")
     model.validate_counts(meta, catalogue)
     fragments = []
-    for f in sorted((root / "src" / "guide").glob("*.md")):
+    # Sort by name string, not Path: Path ordering casefolds on Windows but
+    # not on POSIX, so a mixed-case fragment name would order differently on
+    # the dev box and the CI rebuild.
+    for f in sorted((root / "src" / "guide").glob("*.md"), key=lambda p: p.name):
         fragments.append((f.name, f.read_text(encoding="utf-8")))
     if not fragments:
         raise BuildError("src/guide/ has no fragments")
