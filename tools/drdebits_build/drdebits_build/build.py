@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 from . import model, render
@@ -13,12 +14,19 @@ class BuildError(Exception):
     pass
 
 
-# Matches only a version-like token delimited by backticks (an inline code span),
-# e.g. `0.2.0-draft`. The backticks themselves are zero-width lookaround, not
-# consumed, so a replacement leaves them in place and touches only the inner
-# token. This deliberately excludes bare version-like strings in prose (e.g.
-# "uv 0.12.0"), which stamping and verification must both leave alone.
-STAMP_RE = re.compile(r"(?<=`)[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.]+)?(?=`)")
+# Matches only the guide-version token in its two sanctioned stamp contexts:
+# the "Version: `X`" header line and the "Part of [DrDebits](./drdebits.md)
+# `X`" satellite reference. The context and backticks are zero-width
+# lookaround, not consumed, so a replacement touches only the inner token.
+# Anchoring to context keeps stamping and verification away from every other
+# version-like token - bare prose ("uv 0.12.0") and unrelated backticked
+# versions (a documented tool pin such as `0.12.0`) alike - which both must
+# leave alone.
+_VERSION_TOKEN = r"[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.]+)?"
+STAMP_RE = re.compile(
+    rf"(?<=Version: `){_VERSION_TOKEN}(?=`)"
+    rf"|(?<=\[DrDebits\]\(\./drdebits\.md\) `){_VERSION_TOKEN}(?=`)"
+)
 
 CHANGELOG_HEADERS = ["Version", "Date", "Status", "Change"]
 CHANGELOG_ALIGNS = ["---", "---", "---", "---"]
@@ -76,12 +84,31 @@ def build_guide(s):
     return "".join(parts)
 
 
-CATALOGUE_HEADER_TEMPLATE = '# Complete TPB Guidance Statement catalogue\n\nPart of [DrDebits](../drdebits.md) `{version}`. Retrieve this file when routing a task against TPB guidance; verify it against `SHA256SUMS` in the release.\n\n\nThis catalogue covers all final, live TPB Guidance Statements discoverable on 16 August 2026: 55 statements, GS01–GS55, all exposed by the filtered TPB library index. It excludes withdrawn or superseded products, historical versions, exposure drafts, consultation material, factsheets, FAQs and other non-Guidance-Statement webpages. Those sources may still matter to a particular task and must be retrieved separately with their authority and status labelled.\n\nThe “LLM trigger” is an independent DrDebits routing note, not a substitute for reading the linked statement. Statements about education, registration or professional associations might not affect the wording of an ordinary client deliverable, but they remain relevant to capability, authority and service-scope checks. “Complete” here means the checked live Guidance Statement category, not every policy or guidance product ever published by the TPB.\n\n'
+CATALOGUE_HEADER_TEMPLATE = '# Complete TPB Guidance Statement catalogue\n\nPart of [DrDebits](../drdebits.md) `{version}`. Retrieve this file when routing a task against TPB guidance; verify it against `SHA256SUMS` in the release.\n\n\nThis catalogue covers all final, live TPB Guidance Statements discoverable on {checked}: {count} statements, {first}–{last}, all exposed by the filtered TPB library index. It excludes withdrawn or superseded products, historical versions, exposure drafts, consultation material, factsheets, FAQs and other non-Guidance-Statement webpages. Those sources may still matter to a particular task and must be retrieved separately with their authority and status labelled.\n\nThe “LLM trigger” is an independent DrDebits routing note, not a substitute for reading the linked statement. Statements about education, registration or professional associations might not affect the wording of an ordinary client deliverable, but they remain relevant to capability, authority and service-scope checks. “Complete” here means the checked live Guidance Statement category, not every policy or guidance product ever published by the TPB.\n\n'
+
+_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
+           "August", "September", "October", "November", "December")
+
+
+def _render_checked_date(sources_checked_at):
+    """Render metadata's ISO sources_checked_at as prose, e.g. "16 August 2026".
+
+    Month names are a fixed English tuple, not strftime, so the output cannot
+    vary with the build machine's locale.
+    """
+    d = date.fromisoformat(sources_checked_at[:10])
+    return f"{d.day} {_MONTHS[d.month - 1]} {d.year}"
 
 
 def build_catalogue_md(s):
     rows = [[render.render_link(r["title"], r["url"]), r["trigger"]] for r in s.catalogue]
-    header = CATALOGUE_HEADER_TEMPLATE.format(version=s.meta["guide_version"])
+    header = CATALOGUE_HEADER_TEMPLATE.format(
+        version=s.meta["guide_version"],
+        checked=_render_checked_date(s.meta["sources_checked_at"]),
+        count=s.meta["tpb_guidance_statement_count"],
+        first=s.catalogue[0]["id"],
+        last=s.catalogue[-1]["id"],
+    )
     return header + render.render_table(
         ["Statement (concise title and official link)", "LLM trigger"], ["---", "---"], rows)
 

@@ -26,7 +26,7 @@ def test_tampered_output_names_file_and_src(tmp_path):
 def test_stamped_version_mismatch_detected(tmp_path):
     root = make_repo(tmp_path)
     sync(root)
-    (root / "README.md").write_text("DrDebits `0.0.1` stub\n", encoding="utf-8", newline="\n")
+    (root / "README.md").write_text("> Version: `0.0.1`\n", encoding="utf-8", newline="\n")
     failures = run_verify(root)
     assert any("README.md" in f and "0.0.1" in f for f in failures)
 
@@ -123,6 +123,35 @@ def test_guide_end_marker_metadata_mismatch_detected(tmp_path):
     assert any(
         "metadata: guide_end_marker DRDEBITS-END-BOGUS != DRDEBITS-END-v0.9.9-test" in f
         for f in failures)
+
+
+def test_malformed_sources_checked_at_becomes_message_not_traceback(tmp_path):
+    """A bad date value must surface as a loader finding, not a ValueError
+    escaping the catalogue-header builder."""
+    root = make_repo(tmp_path)
+    sync(root)
+    meta = root / "src" / "data" / "metadata.yaml"
+    meta.write_text(
+        meta.read_text(encoding="utf-8").replace(
+            'value: "2026-01-01T00:00:00+10:00"', 'value: "checked mid August"'),
+        encoding="utf-8", newline="\n")
+    failures = run_verify(root)
+    assert any("sources_checked_at" in f for f in failures)
+
+
+def test_source_check_date_drift_detected(tmp_path):
+    """Check (e): a metadata date bump that misses the guide header line and
+    README must fail verify instead of shipping two different check dates."""
+    root = make_repo(tmp_path)
+    meta = root / "src" / "data" / "metadata.yaml"
+    meta.write_text(
+        meta.read_text(encoding="utf-8").replace(
+            'value: "2026-01-01T00:00:00+10:00"', 'value: "2026-02-02T00:00:00+10:00"'),
+        encoding="utf-8", newline="\n")
+    sync(root)  # rebuild so byte-compare passes; only the hand-written copies are stale
+    failures = run_verify(root)
+    assert any("drdebits.md: header source-check date" in f for f in failures)
+    assert any("README.md: source-check date" in f for f in failures)
 
 
 def test_changelog_newest_entry_mismatch_detected(tmp_path):
