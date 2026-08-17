@@ -3,3 +3,4 @@ LICENSE text eol=lf
 SHA256SUMS text eol=lf
 *.py text eol=lf
 *.yaml text eol=lf
+*.cff text eol=lf
