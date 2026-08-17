@@ -4,6 +4,7 @@ import pytest
 from drdebits_build.model import (
     ModelError, ALLOWED_STATUSES, load_metadata, load_catalogue,
     load_behaviour_tests, load_changelog, load_apes_map, validate_counts,
+    validate_required_metadata,
 )
 
 
@@ -73,6 +74,62 @@ def test_counts_must_match(tmp_path):
     with pytest.raises(ModelError):
         validate_counts(meta, cat)
     validate_counts(meta, cat + [{"id": "b", "title": "t", "url": "https://y.invalid", "trigger": "g"}])
+
+
+def test_missing_source_file_becomes_model_error(tmp_path):
+    with pytest.raises(ModelError, match="cannot read source file"):
+        load_metadata(tmp_path / "does-not-exist.yaml")
+
+
+def test_apes_map_missing_key_names_the_key(tmp_path):
+    p = write(tmp_path, "am.yaml", """\
+        retrieval_points:
+          - label: "Scope"
+            value: "R1.2"
+    """)
+    with pytest.raises(ModelError, match="'contexts'"):
+        load_apes_map(p)
+
+
+def test_table_bound_values_reject_pipes_and_newlines(tmp_path):
+    tmpl = """\
+        entries:
+          - id: "GS01"
+            title: "T"
+            url: "https://x.invalid/a"
+            trigger: {trigger}
+    """
+    with pytest.raises(ModelError, match="break the rendered Markdown table"):
+        load_catalogue(write(tmp_path, "p.yaml", tmpl.format(trigger='"either A | B"')))
+    with pytest.raises(ModelError, match="contains a newline"):
+        load_catalogue(write(tmp_path, "n.yaml", tmpl.format(trigger='"a\\nb"')))
+    with pytest.raises(ModelError, match="contains a newline"):
+        load_catalogue(write(tmp_path, "r.yaml", tmpl.format(trigger='"a\\rb"')))
+    # Metadata keeps the '|' exemption (checksum_files uses it as a separator)
+    # but newlines stay banned everywhere - one would inject an extra
+    # frontmatter line into the guide.
+    m = write(tmp_path, "m.yaml", """\
+        fields:
+          - key: checksum_files
+            value: "LICENSE|README.md"
+    """)
+    assert load_metadata(m)["checksum_files"] == "LICENSE|README.md"
+    with pytest.raises(ModelError, match="contains a newline"):
+        load_metadata(write(tmp_path, "mi.yaml", """\
+            fields:
+              - key: jurisdiction
+                value: "AU\\nstatus: injected"
+        """))
+
+
+def test_required_metadata_keys_enforced():
+    meta = {k: "x" for k in (
+        "guide_version", "release_tag", "guide_end_marker", "sources_checked_at",
+        "tpb_guidance_statement_count", "tpb_library_index_count", "checksum_files")}
+    validate_required_metadata(meta)
+    del meta["guide_version"]
+    with pytest.raises(ModelError, match="guide_version"):
+        validate_required_metadata(meta)
 
 
 def test_changelog_and_apes_map_shapes(tmp_path):

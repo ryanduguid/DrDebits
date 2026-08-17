@@ -40,9 +40,9 @@ def test_bad_yaml_becomes_message_not_traceback(tmp_path):
     assert any("NOT_A_STATUS" in f for f in failures)
 
 
-# Regression tests for fix 1: stamped-file presence and version coverage
+# Stamped-file presence and version coverage
 def test_missing_stamped_file_detected(tmp_path):
-    """Fix 1 (CRITICAL): missing stamped file should be detected."""
+    """Regression: a missing stamped file must be detected."""
     root = make_repo(tmp_path)
     sync(root)
     (root / "MAINTENANCE.md").unlink()
@@ -51,7 +51,7 @@ def test_missing_stamped_file_detected(tmp_path):
 
 
 def test_stripped_version_stamp_detected(tmp_path):
-    """Fix 1 (CRITICAL): stripped version stamp (zero matches) should be detected."""
+    """Regression: a stripped version stamp (zero matches) must be detected."""
     root = make_repo(tmp_path)
     sync(root)
     (root / "MAINTENANCE.md").write_text("Protocol for maintenance.\n", encoding="utf-8", newline="\n")
@@ -59,9 +59,9 @@ def test_stripped_version_stamp_detected(tmp_path):
     assert any("MAINTENANCE.md: no version stamp found" in f for f in failures)
 
 
-# Regression test for fix 2: end-marker check on committed file
+# End-marker check on the committed file
 def test_committed_end_marker_drift_detected(tmp_path):
-    """Fix 2 (IMPORTANT): appended line to committed drdebits.md should be detected as end-marker drift."""
+    """Regression: an appended line on the committed drdebits.md is end-marker drift."""
     root = make_repo(tmp_path)
     sync(root)
     guide = root / "drdebits.md"
@@ -70,9 +70,9 @@ def test_committed_end_marker_drift_detected(tmp_path):
     assert any("end marker:" in f for f in failures)
 
 
-# Regression test for fix 3: checksum rebuild crash
+# Checksum rebuild must not crash
 def test_missing_checksum_file_becomes_message_not_crash(tmp_path):
-    """Fix 3 (IMPORTANT): missing checksum_files member should produce message, not crash."""
+    """Regression: a missing checksum_files member produces a message, not a crash."""
     root = make_repo(tmp_path)
     sync(root)
     (root / "README.md").unlink()  # README is in checksum_files
@@ -82,12 +82,11 @@ def test_missing_checksum_file_becomes_message_not_crash(tmp_path):
     assert any("README.md: missing" in f for f in failures)
 
 
-# Regression tests for the final-review fix: the guide version lives in four
-# more places than the stamped files, and a version bump that misses one of
-# them produced a build that verified clean but disagreed with itself.
+# The guide version lives in more places than the stamped files; a version
+# bump that misses one must not verify clean while disagreeing with itself.
 
 def test_header_version_line_mismatch_detected(tmp_path):
-    """Final-review fix (a): drdebits.md's own header version line must match guide_version."""
+    """Check (a): drdebits.md's own header version line must match guide_version."""
     root = make_repo(tmp_path)
     header = root / "src" / "guide" / "000-header.md"
     header.write_text(
@@ -99,7 +98,7 @@ def test_header_version_line_mismatch_detected(tmp_path):
 
 
 def test_release_tag_mismatch_detected(tmp_path):
-    """Final-review fix (b): metadata release_tag must equal 'v' + guide_version."""
+    """Check (b): metadata release_tag must equal 'v' + guide_version."""
     root = make_repo(tmp_path)
     meta = root / "src" / "data" / "metadata.yaml"
     meta.write_text(
@@ -111,7 +110,7 @@ def test_release_tag_mismatch_detected(tmp_path):
 
 
 def test_guide_end_marker_metadata_mismatch_detected(tmp_path):
-    """Final-review fix (c): metadata guide_end_marker must equal 'DRDEBITS-END-' + release_tag."""
+    """Check (c): metadata guide_end_marker must equal 'DRDEBITS-END-' + release_tag."""
     root = make_repo(tmp_path)
     meta = root / "src" / "data" / "metadata.yaml"
     meta.write_text(
@@ -123,6 +122,44 @@ def test_guide_end_marker_metadata_mismatch_detected(tmp_path):
     assert any(
         "metadata: guide_end_marker DRDEBITS-END-BOGUS != DRDEBITS-END-v0.9.9-test" in f
         for f in failures)
+
+
+def test_missing_required_metadata_key_becomes_message_not_keyerror(tmp_path):
+    """Deleting a load-bearing metadata row must surface as a sources finding,
+    not a KeyError escaping run_verify."""
+    root = make_repo(tmp_path)
+    sync(root)
+    meta = root / "src" / "data" / "metadata.yaml"
+    text = meta.read_text(encoding="utf-8")
+    start = text.index("  - key: guide_version")
+    end = text.index("  - key: release_tag")
+    meta.write_text(text[:start] + text[end:], encoding="utf-8", newline="\n")
+    failures = run_verify(root)
+    assert any("sources:" in f and "guide_version" in f for f in failures)
+
+
+def test_citation_version_and_date_drift_detected(tmp_path):
+    """Check (f): CITATION.cff's version must match guide_version and its
+    date-released the newest changelog row; quoted YAML scalars are accepted."""
+    root = make_repo(tmp_path)
+    sync(root)
+    citation = root / "CITATION.cff"
+    citation.write_text(
+        'cff-version: 1.2.0\nversion: 0.9.9-test\ndate-released: "2026-01-01"\n',
+        encoding="utf-8", newline="\n")
+    assert run_verify(root) == []
+    citation.write_text(
+        'cff-version: 1.2.0\nversion: "0.9.9-test"\ndate-released: 2026-01-01\n',
+        encoding="utf-8", newline="\n")
+    assert run_verify(root) == []  # quoting style is not load-bearing
+    citation.write_text(
+        'cff-version: 1.2.0\nversion: 0.1.0-stale\ndate-released: "2026-01-01"\n',
+        encoding="utf-8", newline="\n")
+    assert any("CITATION.cff: version" in f for f in run_verify(root))
+    citation.write_text(
+        'cff-version: 1.2.0\nversion: 0.9.9-test\ndate-released: "1999-01-01"\n',
+        encoding="utf-8", newline="\n")
+    assert any("CITATION.cff: date-released" in f for f in run_verify(root))
 
 
 def test_malformed_sources_checked_at_becomes_message_not_traceback(tmp_path):
@@ -155,7 +192,7 @@ def test_source_check_date_drift_detected(tmp_path):
 
 
 def test_changelog_newest_entry_mismatch_detected(tmp_path):
-    """Final-review fix (d): the newest (first) changelog entry must match guide_version."""
+    """Check (d): the newest (first) changelog entry must match guide_version."""
     root = make_repo(tmp_path)
     changelog = root / "src" / "data" / "changelog.yaml"
     changelog.write_text(
