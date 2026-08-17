@@ -11,9 +11,9 @@ For each DrDebits release:
 3. Check the APESB APES 110 landing page, compiled standard, compilation details, technical alerts and effective/transitional dates, and the current APES 220 issue and effective dates.
 4. Check the operative AML/CTF Act text and the current AUSTRAC accountant guidance, transitional rules and compliance-officer requirements.
 5. Reassess each DrDebits rule against the changed source. Do not update a date without reviewing the substantive effect.
-6. Test every direct link and all behaviour tests in `tests/behaviour-tests.md`.
+6. Run `uv run --project tools/drdebits_build python -m drdebits_build verify` and review the latest weekly link-check workflow run; investigate any links it reported.
 7. Confirm that no client data, credentials, proprietary prompt content or unauthorised APESB text entered the repository.
-8. Update the version string everywhere it appears (frontmatter `guide_version` and `release_tag`, the header block, the change log, the end marker and the satellite-file headers), regenerate `SHA256SUMS` over every DrDebits file, and confirm the declared end marker.
+8. Edit the sources under `src/` (never the generated files), update `guide_version`, `release_tag` and the end marker in `src/data/metadata.yaml`, run `uv run --project tools/drdebits_build python -m drdebits_build build`, then re-run `verify`.
 9. Tag the release, sign the tag and the release commit, and record the source check, material changes, reviewer, approved tag and release date in the change log.
 
 If freshness cannot be confirmed, the LLM must label the affected material `SOURCE CURRENCY NOT CONFIRMED`, avoid calling it “latest” or “current”, and restrict the output to a draft requiring primary-source verification.
