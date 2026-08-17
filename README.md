@@ -16,7 +16,7 @@ DrDebits does not reproduce APES 110, certify compliance, replace the source doc
 |---|---|
 | [drdebits.md](./drdebits.md) | The guide: core operating controls. Load this as persistent context. |
 | [tests/behaviour-tests.md](./tests/behaviour-tests.md) | Adverse-case tests an implementation must pass |
-| [reference/tpb-catalogue.md](./reference/tpb-catalogue.md) | Complete live TPB Guidance Statement catalogue, GS01–GS55 |
+| [reference/tpb-catalogue.md](./reference/tpb-catalogue.md) | Complete live TPB Guidance Statement catalogue, GS01 to GS55 |
 | [reference/apes-110-map.md](./reference/apes-110-map.md) | Primary APES 110 reference map |
 | [MAINTENANCE.md](./MAINTENANCE.md) | Release and source-check protocol |
 | [SHA256SUMS](./SHA256SUMS) | Digests of every DrDebits file in this release |
