@@ -1,12 +1,13 @@
 """Acceptance: the real repo verifies clean; hand edits fail; version bump propagates."""
 import shutil
 from pathlib import Path
+from drdebits_build import model
 from drdebits_build.__main__ import main
 from drdebits_build.build import find_root
 
 REAL = find_root(Path(__file__).resolve())
 COPY_ITEMS = ["src", "drdebits.md", "reference", "tests", "SHA256SUMS",
-              "README.md", "MAINTENANCE.md", "LICENSE"]
+              "README.md", "MAINTENANCE.md", "LICENSE", "CITATION.cff"]
 
 
 def clone_repo(tmp_path):
@@ -33,13 +34,21 @@ def test_hand_edit_fails(tmp_path):
 
 def test_version_bump_propagates(tmp_path):
     """The true bump procedure (MAINTENANCE.md step 8): metadata.yaml, the guide's
-    own header version line, and the changelog's newest entry all move together."""
+    own header version line, the changelog's newest entry and CITATION.cff all
+    move together - whatever the current version is."""
     root = clone_repo(tmp_path)
-    for rel in ("src/data/metadata.yaml", "src/guide/000-header.md", "src/data/changelog.yaml"):
+    current = model.load_metadata(root / "src" / "data" / "metadata.yaml")["guide_version"]
+    # Bump the patch digit so the result matches the stamp token pattern for
+    # suffixed and bare versions alike (an appended ".bump" would not).
+    import re
+    m = re.match(r"(\d+)\.(\d+)\.(\d+)(.*)", current)
+    bumped = f"{m.group(1)}.{m.group(2)}.{int(m.group(3)) + 1}{m.group(4)}"
+    for rel in ("src/data/metadata.yaml", "src/guide/000-header.md",
+                "src/data/changelog.yaml", "CITATION.cff"):
         p = root / rel
-        text = p.read_text(encoding="utf-8").replace("0.2.0-draft", "0.2.1-draft")
+        text = p.read_text(encoding="utf-8").replace(current, bumped)
         p.write_text(text, encoding="utf-8", newline="\n")
     assert main(["build", "--root", str(root)]) == 0
     assert main(["verify", "--root", str(root)]) == 0
-    assert "0.2.1-draft" in (root / "README.md").read_text(encoding="utf-8")
-    assert (root / "drdebits.md").read_text(encoding="utf-8").rstrip("\n").endswith("0.2.1-draft")
+    assert bumped in (root / "README.md").read_text(encoding="utf-8")
+    assert (root / "drdebits.md").read_text(encoding="utf-8").rstrip("\n").endswith(bumped)

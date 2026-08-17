@@ -1,4 +1,8 @@
 entries:
+  - version: "0.3.0-draft"
+    date: "2026-08-18"
+    status: "Published draft"
+    change: "Scoped the output contract’s tool-action field to state-changing actions; wired the low-impact lane into the mandatory workflow and defined its outcome label; drew the boundary between human-performed consequential actions and the state-change gate and reworked AUTH-002 to match; added AML/CTF and APES 220 classification to the intake gate and workflow; added PROP-002, SAFE-001, CERT-001, BRE-001 and CONF-001 behaviour tests; brought `CITATION.cff` under the digest set; licensed the build tooling under MIT."
   - version: "0.2.0-draft"
     date: "2026-08-16"
     status: "Published draft"
