@@ -32,3 +32,10 @@ Pin the approved release tag, retrieve `SHA256SUMS` at that tag and verify each 
 ## Licence
 
 Copyright © 2026 Ryan Duguid. Original DrDebits material is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); see [LICENSE](./LICENSE). The licence does not extend to third-party standards, quotations, logos, trade marks or source documents. DrDebits is not endorsed by the TPB, APESB, AUSTRAC, IFAC, CA ANZ, CPA Australia or IPA.
+
+## Contributing and maintenance
+
+The guide, reference and test files are generated. Edit the sources under
+`src/` and run `uv run --project tools/drdebits_build python -m
+drdebits_build build`; CI rejects hand edits to generated files. See
+`MAINTENANCE.md` for the release protocol.
