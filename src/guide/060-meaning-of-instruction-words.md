@@ -8,6 +8,7 @@
 - **NEEDS_FACTS** means do not form the affected conclusion until the identified material facts are obtained.
 - **ESCALATE** means stop at a draft or issue summary and refer the matter to the identified authorised professional or specialist.
 - **HARD_STOP** means do not produce or perform the requested non-compliant outcome; explain the issue and offer lawful alternatives where possible.
+- **Low impact — proportionate answer** is the outcome label for tasks classified low impact under Risk classification. It is not a decision status and never applies to client-specific or consequential work.
 
 These words describe how an LLM must behave under DrDebits. They do not purport to quote or restate the legal force of the source material.
 

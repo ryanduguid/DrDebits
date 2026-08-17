@@ -1,6 +1,6 @@
 # DrDebits maintenance protocol
 
-Part of [DrDebits](./drdebits.md) `0.2.0-draft`.
+Part of [DrDebits](./drdebits.md) `0.3.0-draft`.
 
 A source-check date does not guarantee continuing currency. Before professional reliance, retrieve the authority operative for the relevant historical event or period and the current duties governing action today.
 
