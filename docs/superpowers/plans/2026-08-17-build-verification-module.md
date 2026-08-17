@@ -18,7 +18,7 @@
 - YAML sources quote every scalar that YAML would otherwise coerce (timestamps like `2026-08-16T00:00:00+10:00`, digests, version strings); loaders use `yaml.safe_load` and treat all leaf values as strings.
 - Render frontmatter and tables by explicit line construction; `yaml.dump` loses round-trip fidelity.
 - Git identity: `Ryan Duguid <ryan@duguid.com.au>` (already configured repo-locally). - No em dashes in newly written prose (docs, comments, commit messages). Frozen content and its YAML copies are exempt.
-- Work happens in `C:/Users/-/AppData/Local/Temp/claude/C--/d73ac32a-b268-474f-a1ba-c058181baa3f/scratchpad/DrDebits` on `main`. Nothing is pushed until Task 14's confirm gate.
+- Work happens in the repo root on `main`. Nothing is pushed until Task 14's confirm gate.
 - Windows note: run tests via `uv run --project tools/drdebits_build --locked --extra dev pytest tools/drdebits_build/tests`; `python` not `python3`.
 
 ---
@@ -64,7 +64,7 @@ testpaths = ["tests"]
 - [ ] **Step 3: Lock and smoke-run**
 
 ```bash
-cd "C:/Users/-/AppData/Local/Temp/claude/C--/d73ac32a-b268-474f-a1ba-c058181baa3f/scratchpad/DrDebits" && uv lock --project tools/drdebits_build && uv run --project tools/drdebits_build --locked --extra dev pytest tools/drdebits_build/tests
+uv lock --project tools/drdebits_build && uv run --project tools/drdebits_build --locked --extra dev pytest tools/drdebits_build/tests
 ```
 
 Expected: lockfile written; pytest reports "no tests ran" and exits 5, which is fine at this step.
@@ -972,7 +972,7 @@ Then `main()` in the same script, in order (each block asserts before writing):
 - [ ] **Step 2: Run the extractor**
 
 ```bash
-cd "C:/Users/-/AppData/Local/Temp/claude/C--/d73ac32a-b268-474f-a1ba-c058181baa3f/scratchpad/DrDebits" && uv run --project tools/drdebits_build python tools/drdebits_build/scripts/extract_v020.py
+uv run --project tools/drdebits_build python tools/drdebits_build/scripts/extract_v020.py
 ```
 
 Expected: `EXTRACTION OK`. On any assertion failure, fix the extractor or extend `render.py` (unit test per extension). NEVER edit the frozen files.
@@ -1064,7 +1064,7 @@ Caveat: `REAL / "tests"` is the repo's `tests/behaviour-tests.md` directory, dis
 - [ ] **Step 1: Confirm the gate**
 
 ```bash
-cd "C:/Users/-/AppData/Local/Temp/claude/C--/d73ac32a-b268-474f-a1ba-c058181baa3f/scratchpad/DrDebits" && git diff 4c14621 --stat -- drdebits.md reference tests/behaviour-tests.md LICENSE SHA256SUMS README.md MAINTENANCE.md && uv run --project tools/drdebits_build python -m drdebits_build verify --root .
+git diff 4c14621 --stat -- drdebits.md reference tests/behaviour-tests.md LICENSE SHA256SUMS README.md MAINTENANCE.md && uv run --project tools/drdebits_build python -m drdebits_build verify --root .
 ```
 
 Expected: EMPTY diff stat (every frozen file identical to the pre-project commit `4c14621`) and `verify: OK`. Record both outputs in the task report. If anything shows, STOP; nothing later lands until the gate holds.
@@ -1160,7 +1160,7 @@ jobs:
 - [ ] **Step 2: Validate with the local actionlint**
 
 ```bash
-cd "C:/Users/-/AppData/Local/Temp/claude/C--/d73ac32a-b268-474f-a1ba-c058181baa3f/scratchpad/DrDebits" && "C:/Users/-/AppData/Local/Temp/claude/C--/d73ac32a-b268-474f-a1ba-c058181baa3f/scratchpad/actionlint.exe" .github/workflows/verify.yml
+"a locally downloaded actionlint binary" .github/workflows/verify.yml
 ```
 
 Expected: no findings.
