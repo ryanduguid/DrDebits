@@ -2,7 +2,7 @@
 
 ### Scope
 
-Parts 1–4B apply as a Professional Standard to members of Chartered Accountants Australia and New Zealand, CPA Australia and the Institute of Public Accountants within their scope. APES 110 may also be incorporated into legally enforceable auditing requirements, law, regulation or engagement terms; paragraph 1.5 notes the legal effect of ASA 102 for relevant Corporations Act audits and reviews. Part 5 applies to Sustainability Assurance Practitioners for the services described in paragraph 5100.2, whether or not the practitioner is a member.
+Parts 1 to 4B apply as a Professional Standard to members of Chartered Accountants Australia and New Zealand, CPA Australia and the Institute of Public Accountants within their scope. APES 110 may also be incorporated into legally enforceable auditing requirements, law, regulation or engagement terms; paragraph 1.5 notes the legal effect of ASA 102 for relevant Corporations Act audits and reviews. Part 5 applies to Sustainability Assurance Practitioners for the services described in paragraph 5100.2, whether or not the practitioner is a member.
 
 A non-member providing only tax or BAS services must not be described as bound by APES 110 unless another applicable requirement incorporates it. That person remains bound by the TASA framework where applicable, and DrDebits may adopt APES-aligned project controls without misrepresenting their source or legal force.
 
@@ -51,12 +51,12 @@ Apply the technology revisions with their engagement-specific effective dates an
 - APESB’s Technical Alert says members should disclose when AI tools are used and should supervise and review that use. Mandatory disclosure also applies where required by law, engagement terms or a service-specific APES standard. Make any disclosure accurate and protect confidential information; do not expose prompts or data unnecessarily.
 - Protect confidential information across the complete data lifecycle and obtain proper authority for uses such as training, product development, research or benchmarking.
 
-### Tax planning — sections 280, 380 and 5380
+### Tax planning: sections 280, 380 and 5380
 
 For tax-planning activities in business, tax-planning services in public practice and relevant Part 5 work:
 
 - Establish the client or employing organisation, purpose, relevant people, facts, economic substance, assumptions and current law.
-- Do not recommend or advise on an arrangement unless the responsible Member, Member in Public Practice or Sustainability Assurance Practitioner, as applicable, has determined—after considering any necessary specialist advice—that the arrangement has a credible basis in laws and regulations. For a tax-planning arrangement requiring advice or recommendations about Australian tax laws and regulations, the Australian application material links this to a reasonably arguable position under s 284-15 of Schedule 1 to the Taxation Administration Act 1953.
+- Do not recommend or advise on an arrangement unless the responsible Member, Member in Public Practice or Sustainability Assurance Practitioner, as applicable, has determined (after considering any necessary specialist advice) that the arrangement has a credible basis in laws and regulations. For a tax-planning arrangement requiring advice or recommendations about Australian tax laws and regulations, the Australian application material links this to a reasonably arguable position under s 284-15 of Schedule 1 to the Taxation Administration Act 1953.
 - Reassess the basis when facts, law, rulings or other circumstances change.
 - Consider anti-avoidance rules, legislative intent, economic purpose, ultimate beneficiaries, transparency, and reputational, commercial and wider economic consequences.
 - Explain uncertainty, the basis of advice, realistic alternatives and material consequences. Do not convert uncertainty into false precision.
@@ -64,7 +64,7 @@ For tax-planning activities in business, tax-planning services in public practic
 - If the arrangement lacks a credible basis, advise against it and explain why. If the client still intends to proceed, escalate the disagreement, consider required disclosures and whether withdrawal is necessary; do not help implement or conceal it.
 - Document the purpose, substance, beneficiaries, uncertainty, research, analysis, options, judgements, discussions, client response and disagreements on a timely basis.
 
-### Non-compliance with laws and regulations — sections 260, 360 and 5360
+### Non-compliance with laws and regulations: sections 260, 360 and 5360
 
 When actual or suspected non-compliance arises, the LLM MUST NOT make the legal or disclosure decision. It must:
 
@@ -81,7 +81,7 @@ Confidentiality continues to apply. Do not assume that confidentiality always pr
 
 ### Independence and assurance
 
-Apply each independence part only within its stated engagement scope. Part 5 ethics sections 5100–5390 use the broader scope in paragraph 5100.2. Apply Part 5 independence sections 5400–5600 according to paragraphs 5400.3a–5400.3d, including any extension required by law or regulation under paragraph 5400.3c and the attestation-engagement limitation in paragraph 5400.3d. Paragraph 5400.3e routes other sustainability assurance engagements described there to Part 4B for independence. An LLM MUST NOT conclude that a firm, network, team or person is independent.
+Apply each independence part only within its stated engagement scope. Part 5 ethics sections 5100 to 5390 use the broader scope in paragraph 5100.2. Apply Part 5 independence sections 5400 to 5600 according to paragraphs 5400.3a to 5400.3d, including any extension required by law or regulation under paragraph 5400.3c and the attestation-engagement limitation in paragraph 5400.3d. Paragraph 5400.3e routes other sustainability assurance engagements described there to Part 4B for independence. An LLM MUST NOT conclude that a firm, network, team or person is independent.
 
 For audit, review, other assurance or sustainability-assurance work, the LLM must instead collect and flag facts concerning:
 
@@ -99,9 +99,9 @@ Refer every identified trigger to the engagement partner or independence/ethics 
 
 Determine which parts apply before giving advice:
 
-- **Part 2 — members in business:** conflicts, preparation and presentation of information, sufficient expertise, incentives, inducements, pressure, NOCLAR, tax planning and relevant external-expert provisions.
-- **Part 3 — members in public practice:** conflicts, professional appointments, second opinions, fees, inducements, custody of client assets, NOCLAR, tax planning and relevant external-expert provisions.
-- **Part 5 — Sustainability Assurance Practitioners:** apply the ethics scope in paragraph 5100.2 and sections 5100–5390, including Part 5 fundamental principles, conceptual framework, NOCLAR, tax planning and external experts. Apply sections 5400–5600 or Part 4B for independence according to paragraphs 5400.3a–5400.3e.
+- **Part 2 (members in business):** conflicts, preparation and presentation of information, sufficient expertise, incentives, inducements, pressure, NOCLAR, tax planning and relevant external-expert provisions.
+- **Part 3 (members in public practice):** conflicts, professional appointments, second opinions, fees, inducements, custody of client assets, NOCLAR, tax planning and relevant external-expert provisions.
+- **Part 5 (Sustainability Assurance Practitioners):** apply the ethics scope in paragraph 5100.2 and sections 5100 to 5390, including Part 5 fundamental principles, conceptual framework, NOCLAR, tax planning and external experts. Apply sections 5400 to 5600 or Part 4B for independence according to paragraphs 5400.3a to 5400.3e.
 
 For information prepared or presented by an LLM, do not obscure the true nature of transactions, omit material context, bias a selection of data, or imply a level of precision or verification that does not exist.
 

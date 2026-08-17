@@ -1,6 +1,6 @@
 ## TPB control set
 
-### TASA Code items 1–17
+### TASA Code items 1 to 17
 
 Use the [current TASA text](https://www.legislation.gov.au/C2009A00013/latest) for the exact obligations. The following table is an operational index, not a quotation.
 
@@ -24,7 +24,7 @@ Use the [current TASA text](https://www.legislation.gov.au/C2009A00013/latest) f
 | 16 | Arrangements with disqualified entities | Do not facilitate a tax agent service connected with a prohibited disqualified-entity arrangement. |
 | 17 | Determined obligations | Apply every relevant obligation in the current Code Determination, summarised below. |
 
-### Code Determination sections 10–45
+### Code Determination sections 10 to 45
 
 The staged commencement dates in s 100(1) had passed by the source-check date, but the application and transitional rules remain relevant to historical facts. Section 100(4) confines s 15 to statements made, and s 30 to services provided, on or after the applicable start date. Section 151(1) confines the events captured by s 45(1)(d) to those arising on or after 1 July 2022 despite its five-year wording. Use the [latest compilation](https://www.legislation.gov.au/F2024L00849/latest), identify the practitioner’s applicable start date and apply the provisions to the relevant event date.
 
