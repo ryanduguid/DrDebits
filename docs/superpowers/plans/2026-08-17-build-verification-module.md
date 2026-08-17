@@ -16,7 +16,7 @@
 - Repo root discovery: walk up from cwd until a directory containing both `drdebits.md` and `src/` is found; `--root PATH` overrides.
 - Behaviour-test `expected_status` allowed set, exactly: `HARD_STOP`, `ESCALATE`, `NEEDS_FACTS`, `PROCEED_DRAFT_ONLY`, and the literal string `Low impact — proportionate answer` (frozen content keeps its em dash; the no-em-dash rule binds new prose only).
 - YAML sources quote every scalar that YAML would otherwise coerce (timestamps like `2026-08-16T00:00:00+10:00`, digests, version strings); loaders use `yaml.safe_load` and treat all leaf values as strings.
-- Frontmatter and tables are rendered by explicit line construction, never `yaml.dump`.
+- Render frontmatter and tables by explicit line construction; `yaml.dump` loses round-trip fidelity.
 - Git identity: `Ryan Duguid <ryan@duguid.com.au>` (already configured repo-locally). - No em dashes in newly written prose (docs, comments, commit messages). Frozen content and its YAML copies are exempt.
 - Work happens in `C:/Users/-/AppData/Local/Temp/claude/C--/d73ac32a-b268-474f-a1ba-c058181baa3f/scratchpad/DrDebits` on `main`. Nothing is pushed until Task 14's confirm gate.
 - Windows note: run tests via `uv run --project tools/drdebits_build --locked --extra dev pytest tools/drdebits_build/tests`; `python` not `python3`.
