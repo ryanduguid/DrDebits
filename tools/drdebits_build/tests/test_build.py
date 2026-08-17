@@ -147,6 +147,18 @@ def test_write_outputs_lf_only(tmp_path):
     assert b"\r" not in raw
 
 
+def test_fragment_order_is_case_sensitive_string_sort(tmp_path):
+    """Fragments sort by name string on every platform. Path-object sorting
+    casefolds on Windows but not POSIX, which would let a mixed-case fragment
+    name order differently on the dev box and the CI rebuild."""
+    root = make_repo(tmp_path)
+    (root / "src" / "guide" / "500-B.md").write_text("## B section\n", encoding="utf-8", newline="\n")
+    (root / "src" / "guide" / "500-a.md").write_text("## a section\n", encoding="utf-8", newline="\n")
+    s = load_sources(root)
+    guide = build_guide(s)
+    assert guide.index("## B section") < guide.index("## a section")
+
+
 def test_stamp_version():
     assert stamp_version("> Version: `0.2.0-draft`", "0.3.0-draft") == "> Version: `0.3.0-draft`"
     assert stamp_version(

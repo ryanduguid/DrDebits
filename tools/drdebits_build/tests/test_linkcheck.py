@@ -102,6 +102,17 @@ def test_check_transient_dns_failure_is_unreachable_and_retried(monkeypatch):
     assert len(calls) == 2  # one retry attempted before classification stuck
 
 
+def test_non_https_url_is_never_fetched(monkeypatch):
+    """Scheme guard: anything but https:// must classify without touching
+    urlopen, so a collector change can never make this fetch local schemes."""
+    def fake_urlopen(req, timeout):
+        raise AssertionError("urlopen must not be called for non-https URLs")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    kind, detail = linkcheck.check("file:///C:/Windows/win.ini", 5)
+    assert (kind, detail) == ("unreachable", "non-https")
+
+
 def test_check_url_error_timeout_reason_is_unreachable(monkeypatch):
     def fake_urlopen(req, timeout):
         raise urllib.error.URLError(TimeoutError("timed out"))
