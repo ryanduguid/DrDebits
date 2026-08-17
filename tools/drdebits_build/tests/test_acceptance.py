@@ -32,10 +32,13 @@ def test_hand_edit_fails(tmp_path):
 
 
 def test_version_bump_propagates(tmp_path):
+    """The true bump procedure (MAINTENANCE.md step 8): metadata.yaml, the guide's
+    own header version line, and the changelog's newest entry all move together."""
     root = clone_repo(tmp_path)
-    meta = root / "src" / "data" / "metadata.yaml"
-    text = meta.read_text(encoding="utf-8").replace("0.2.0-draft", "0.2.1-draft")
-    meta.write_text(text, encoding="utf-8", newline="\n")
+    for rel in ("src/data/metadata.yaml", "src/guide/000-header.md", "src/data/changelog.yaml"):
+        p = root / rel
+        text = p.read_text(encoding="utf-8").replace("0.2.0-draft", "0.2.1-draft")
+        p.write_text(text, encoding="utf-8", newline="\n")
     assert main(["build", "--root", str(root)]) == 0
     assert main(["verify", "--root", str(root)]) == 0
     assert "0.2.1-draft" in (root / "README.md").read_text(encoding="utf-8")
