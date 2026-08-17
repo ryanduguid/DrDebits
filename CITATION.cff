@@ -5,7 +5,7 @@ type: dataset
 authors:
   - family-names: "Duguid"
     given-names: "Ryan"
-version: 0.3.0-draft
+version: 0.3.1-draft
 date-released: "2026-08-18"
 repository-code: "https://github.com/ryanduguid/DrDebits"
 license: CC-BY-4.0

@@ -105,7 +105,7 @@ def test_catalogue_md_header_derived_from_metadata_and_rows(tmp_path):
     "1 statements" is synthetic; the real catalogue is always plural."""
     s = load_sources(make_repo(tmp_path))
     out = build_catalogue_md(s)
-    assert "discoverable on 1 January 2026: 1 statements, GS01–GS01," in out
+    assert "discoverable on 1 January 2026: 1 statements, GS01 to GS01," in out
 
 
 def test_behaviour_md_header_version_and_table(tmp_path):
