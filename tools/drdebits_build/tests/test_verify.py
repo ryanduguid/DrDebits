@@ -80,3 +80,58 @@ def test_missing_checksum_file_becomes_message_not_crash(tmp_path):
     # Should have messages, not raise; check that we got failures without exception
     assert isinstance(failures, list)
     assert any("README.md: missing" in f for f in failures)
+
+
+# Regression tests for the final-review fix: the guide version lives in four
+# more places than the stamped files, and a version bump that misses one of
+# them produced a build that verified clean but disagreed with itself.
+
+def test_header_version_line_mismatch_detected(tmp_path):
+    """Final-review fix (a): drdebits.md's own header version line must match guide_version."""
+    root = make_repo(tmp_path)
+    header = root / "src" / "guide" / "000-header.md"
+    header.write_text(
+        header.read_text(encoding="utf-8").replace("0.9.9-test", "0.9.8-test"),
+        encoding="utf-8", newline="\n")
+    sync(root)  # rebuild so the committed guide matches the (stale) src output
+    failures = run_verify(root)
+    assert any("drdebits.md: header version line does not match guide_version" in f for f in failures)
+
+
+def test_release_tag_mismatch_detected(tmp_path):
+    """Final-review fix (b): metadata release_tag must equal 'v' + guide_version."""
+    root = make_repo(tmp_path)
+    meta = root / "src" / "data" / "metadata.yaml"
+    meta.write_text(
+        meta.read_text(encoding="utf-8").replace('value: "v0.9.9-test"', 'value: "v9.9.9-test"'),
+        encoding="utf-8", newline="\n")
+    sync(root)
+    failures = run_verify(root)
+    assert any("metadata: release_tag v9.9.9-test != v0.9.9-test" in f for f in failures)
+
+
+def test_guide_end_marker_metadata_mismatch_detected(tmp_path):
+    """Final-review fix (c): metadata guide_end_marker must equal 'DRDEBITS-END-' + release_tag."""
+    root = make_repo(tmp_path)
+    meta = root / "src" / "data" / "metadata.yaml"
+    meta.write_text(
+        meta.read_text(encoding="utf-8").replace(
+            'value: "DRDEBITS-END-v0.9.9-test"', 'value: "DRDEBITS-END-BOGUS"'),
+        encoding="utf-8", newline="\n")
+    sync(root)
+    failures = run_verify(root)
+    assert any(
+        "metadata: guide_end_marker DRDEBITS-END-BOGUS != DRDEBITS-END-v0.9.9-test" in f
+        for f in failures)
+
+
+def test_changelog_newest_entry_mismatch_detected(tmp_path):
+    """Final-review fix (d): the newest (first) changelog entry must match guide_version."""
+    root = make_repo(tmp_path)
+    changelog = root / "src" / "data" / "changelog.yaml"
+    changelog.write_text(
+        changelog.read_text(encoding="utf-8").replace('version: "0.9.9-test"', 'version: "0.9.8-test"'),
+        encoding="utf-8", newline="\n")
+    sync(root)
+    failures = run_verify(root)
+    assert any("changelog: newest entry 0.9.8-test != 0.9.9-test" in f for f in failures)

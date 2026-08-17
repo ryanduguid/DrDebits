@@ -16,14 +16,17 @@ def make_repo(tmp_path: Path) -> Path:
     (tmp_path / "LICENSE").write_text("MIT-ish\n", encoding="utf-8", newline="\n")
     (tmp_path / "README.md").write_text("DrDebits `0.9.9-test` stub\n", encoding="utf-8", newline="\n")
     (tmp_path / "MAINTENANCE.md").write_text("Protocol for `0.9.9-test`.\n", encoding="utf-8", newline="\n")
-    (tmp_path / "src" / "guide" / "000-header.md").write_text("# G\n\nIntro.\n", encoding="utf-8", newline="\n")
+    (tmp_path / "src" / "guide" / "000-header.md").write_text(
+        "# G\n\n> Version: `0.9.9-test`\n\nIntro.\n", encoding="utf-8", newline="\n")
     (tmp_path / "src" / "guide" / "010-rules.md").write_text("## Rules\n\nBe good.\n", encoding="utf-8", newline="\n")
     (tmp_path / "src" / "data" / "metadata.yaml").write_text(textwrap.dedent("""\
         fields:
           - key: guide_version
             value: "0.9.9-test"
+          - key: release_tag
+            value: "v0.9.9-test"
           - key: guide_end_marker
-            value: "END-v0.9.9-test"
+            value: "DRDEBITS-END-v0.9.9-test"
           - key: tpb_guidance_statement_count
             value: "1"
           - key: tpb_library_index_count
@@ -77,7 +80,7 @@ def test_guide_shape_and_determinism(tmp_path):
     g1, g2 = build_guide(s), build_guide(s)
     assert g1 == g2
     assert g1.startswith("---\nguide_version: 0.9.9-test\n")
-    assert g1.rstrip("\n").endswith("END-v0.9.9-test")
+    assert g1.rstrip("\n").endswith("DRDEBITS-END-v0.9.9-test")
     assert "## Rules" in g1 and "| 0.9.9-test | 2026-01-01 | Draft | init |" in g1
 
 
@@ -131,4 +134,5 @@ def test_write_outputs_lf_only(tmp_path):
 
 def test_stamp_version():
     assert stamp_version("DrDebits `0.2.0-draft` here", "0.3.0-draft") == "DrDebits `0.3.0-draft` here"
-    assert stamp_version("v1.2.3 and 9.9.9-x.1", "2.0.0") == "v2.0.0 and 2.0.0"
+    # Bare, non-backticked version-like tokens are prose, not a stamp: left alone.
+    assert stamp_version("v1.2.3 and 9.9.9-x.1", "2.0.0") == "v1.2.3 and 9.9.9-x.1"

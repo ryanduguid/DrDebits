@@ -13,7 +13,7 @@ For each DrDebits release:
 5. Reassess each DrDebits rule against the changed source. Do not update a date without reviewing the substantive effect.
 6. Run `uv run --project tools/drdebits_build python -m drdebits_build verify` and review the latest weekly link-check workflow run; investigate any links it reported.
 7. Confirm that no client data, credentials, proprietary prompt content or unauthorised APESB text entered the repository.
-8. Edit the sources under `src/` (never the generated files), update `guide_version`, `release_tag` and the end marker in `src/data/metadata.yaml`, run `uv run --project tools/drdebits_build python -m drdebits_build build`, then re-run `verify`.
+8. Edit the sources under `src/` (never the generated files), update `guide_version`, `release_tag` and the end marker in `src/data/metadata.yaml`, update the header version line in `src/guide/000-header.md` and add the release row in `src/data/changelog.yaml`, run `uv run --project tools/drdebits_build python -m drdebits_build build`, then re-run `verify`.
 9. Tag the release, sign the tag and the release commit, and record the source check, material changes, reviewer, approved tag and release date in the change log.
 
 If freshness cannot be confirmed, the LLM must label the affected material `SOURCE CURRENCY NOT CONFIRMED`, avoid calling it “latest” or “current”, and restrict the output to a draft requiring primary-source verification.

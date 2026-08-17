@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .build import GENERATED, VERSION_RE, build_sha256sums, load_sources
+from .build import GENERATED, STAMP_RE, build_sha256sums, load_sources
 
 
 def run_verify(root):
@@ -46,12 +46,43 @@ def run_verify(root):
             failures.append(f"{rel}: missing")
         else:
             text = p.read_text(encoding="utf-8")
-            matches = list(VERSION_RE.finditer(text))
+            matches = list(STAMP_RE.finditer(text))
             if not matches:
                 failures.append(f"{rel}: no version stamp found")
             else:
                 for m in matches:
                     if m.group(0) != s.meta["guide_version"]:
                         failures.append(f"{rel}: version {m.group(0)} != {s.meta['guide_version']}")
+
+    # Final-review fix: the guide version lives in four places beyond the
+    # stamped files above. Each must agree with meta["guide_version"] (the
+    # single source of truth) or with each other, so a bump that misses one
+    # spot is caught here instead of shipping a self-contradictory release.
+
+    # (a) the committed drdebits.md header must carry the exact version line
+    if not any("drdebits.md: missing committed file" in f for f in failures):
+        committed_guide = root / "drdebits.md"
+        if committed_guide.is_file():
+            committed_text = committed_guide.read_text(encoding="utf-8")
+            version_line = "> Version: `" + s.meta["guide_version"] + "`"
+            if version_line not in committed_text.splitlines():
+                failures.append("drdebits.md: header version line does not match guide_version")
+
+    # (b) release_tag must be "v" + guide_version
+    if s.meta["release_tag"] != "v" + s.meta["guide_version"]:
+        failures.append(
+            f"metadata: release_tag {s.meta['release_tag']} != v{s.meta['guide_version']}")
+
+    # (c) guide_end_marker must be "DRDEBITS-END-" + release_tag
+    if s.meta["guide_end_marker"] != "DRDEBITS-END-" + s.meta["release_tag"]:
+        failures.append(
+            f"metadata: guide_end_marker {s.meta['guide_end_marker']} != "
+            f"DRDEBITS-END-{s.meta['release_tag']}")
+
+    # (d) the newest (first) changelog entry must match guide_version
+    newest_changelog_version = s.changelog[0]["version"]
+    if newest_changelog_version != s.meta["guide_version"]:
+        failures.append(
+            f"changelog: newest entry {newest_changelog_version} != {s.meta['guide_version']}")
 
     return failures

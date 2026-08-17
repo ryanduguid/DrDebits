@@ -13,7 +13,12 @@ class BuildError(Exception):
     pass
 
 
-VERSION_RE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.]+)?")
+# Matches only a version-like token delimited by backticks (an inline code span),
+# e.g. `0.2.0-draft`. The backticks themselves are zero-width lookaround, not
+# consumed, so a replacement leaves them in place and touches only the inner
+# token. This deliberately excludes bare version-like strings in prose (e.g.
+# "uv 0.12.0"), which stamping and verification must both leave alone.
+STAMP_RE = re.compile(r"(?<=`)[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.]+)?(?=`)")
 
 CHANGELOG_HEADERS = ["Version", "Date", "Status", "Change"]
 CHANGELOG_ALIGNS = ["---", "---", "---", "---"]
@@ -127,7 +132,7 @@ def build_sha256sums(root, s):
 
 
 def stamp_version(text, version):
-    return VERSION_RE.sub(version, text)
+    return STAMP_RE.sub(version, text)
 
 
 def write_outputs(root, outdir):
