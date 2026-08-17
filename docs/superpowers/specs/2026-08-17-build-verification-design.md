@@ -6,7 +6,7 @@
 
 ## Problem
 
-DrDebits v0.2.0-draft is five hand-edited runtime files plus a manual maintenance protocol. MAINTENANCE.md steps 6 and 8 require testing every link and behaviour case, updating the version string in six-plus locations, regenerating SHA256SUMS over seven files and confirming the end marker, all by hand. The 20 behaviour tests are a prose table no harness can execute. The repository has no CI, so nothing catches a missed version stamp, a stale digest, a truncated guide or a count that no longer matches the frontmatter. The guide's own integrity rules are stronger than the tooling that maintains it.
+DrDebits v0.2.0-draft is five hand-edited runtime files plus a manual maintenance protocol. MAINTENANCE.md steps 6 and 8 require testing every link and behaviour case, updating the version string in six-plus locations, regenerating SHA256SUMS over seven files and confirming the end marker, all by hand. The 20 behaviour tests are a prose table no harness can execute. The repository has no CI, so nothing catches a missed version stamp, a stale digest, a truncated guide or a count that no longer matches the frontmatter.
 
 ## Decision
 
@@ -62,7 +62,7 @@ Explicitly not machine-checked, by design: source currency, legal substance and 
 
 ## Migration invariant
 
-Phase one extracts the current v0.2.0-draft content into `src/` and must reproduce every committed output byte-identically, proven by the verify pass passing against the untouched files before any other change lands. This project changes no guide content; the text is frozen. Renderer quirks follow the existing files, not the other way round.
+Phase one extracts the current v0.2.0-draft content into `src/` and must reproduce every committed output byte-identically, proven by the verify pass passing against the untouched files before any other change lands. This project changes no guide content; the text is frozen. The renderer copies the existing files' formatting quirks.
 
 ## Maintenance protocol update
 
