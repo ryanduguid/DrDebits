@@ -19,6 +19,16 @@ UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) drdebits-linkcheck"
 # unreachable *from this network* and must not be reported as dead.
 DEAD_HTTP_STATUSES = {404, 410}
 
+# getaddrinfo errnos that indicate definitive name rot (NXDOMAIN / no address
+# records). Every other gaierror - EAI_AGAIN's "temporary failure in name
+# resolution" being the common one on CI runners - is a transient resolver
+# condition, not link rot. EAI_NODATA is missing from some platforms' socket
+# modules, hence the hasattr guard.
+DEAD_GAI_ERRNOS = frozenset(
+    getattr(socket, name) for name in ("EAI_NONAME", "EAI_NODATA")
+    if hasattr(socket, name)
+)
+
 
 def collect_urls(root):
     root = Path(root)
@@ -54,7 +64,9 @@ def _classify_exception(exc):
     if isinstance(exc, urllib.error.URLError):
         reason = exc.reason
         if isinstance(reason, socket.gaierror):
-            return "dead", "gaierror"
+            if reason.errno in DEAD_GAI_ERRNOS:
+                return "dead", "gaierror"
+            return "unreachable", "gaierror"
         if isinstance(reason, TimeoutError):
             return "unreachable", "timeout"
         if isinstance(reason, BaseException):
