@@ -13,8 +13,8 @@ For each DrDebits release:
 5. Reassess each DrDebits rule against the changed source. Do not update a date without reviewing the substantive effect.
 6. Run `uv run --project tools/drdebits_build python -m drdebits_build verify` and review the latest weekly link-check workflow run; investigate any links it reported.
 7. Confirm that no client data, credentials, proprietary prompt content or unauthorised APESB text entered the repository.
-8. Edit the sources under `src/` (never the generated files), update `guide_version`, `release_tag` and the end marker in `src/data/metadata.yaml`, update the header version line in `src/guide/000-header.md` and add the release row in `src/data/changelog.yaml`, run `uv run --project tools/drdebits_build python -m drdebits_build build`, then re-run `verify`.
-9. Tag the release, sign the tag and the release commit, and record the source check, material changes, reviewer, approved tag and release date in the change log.
+8. Edit the sources under `src/` (never the generated files), update `guide_version`, `release_tag`, the end marker and `sources_checked_at` in `src/data/metadata.yaml`, update the header version and source-check date lines in `src/guide/000-header.md`, the dates in `src/guide/040-source-status.md`, the README header date, and the `version` and `date-released` lines in `CITATION.cff`, and add the release row in `src/data/changelog.yaml`. Run `uv run --project tools/drdebits_build python -m drdebits_build build`, then re-run `verify` (it cross-checks the version and date copies it knows about).
+9. Tag the release, sign the tag and the release commit, and record the material changes and release date in the change-log row. The signed tag itself records the approver and the approved revision.
 
 If freshness cannot be confirmed, the LLM must label the affected material `SOURCE CURRENCY NOT CONFIRMED`, avoid calling it “latest” or “current”, and restrict the output to a draft requiring primary-source verification.
 
