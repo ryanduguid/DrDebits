@@ -44,6 +44,8 @@ jobs:
           title="Link check: SOURCE CURRENCY NOT CONFIRMED for listed links"
           body="The weekly live link check could not confirm these links. Treat the affected material as SOURCE CURRENCY NOT CONFIRMED until a human re-verifies the sources. This workflow only reports; it changes nothing.
 
+          Links listed UNREACHABLE in the run log could not be checked from GitHub's network (AU government sites block cloud IP ranges); verify those manually from a local machine.
+
           $(cat dead-links.txt)"
           existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "$title in:title" --json number --jq '.[0].number // empty')"
           if [ -n "$existing" ]; then
