@@ -16,6 +16,12 @@ def main(argv=None):
     args = parser.parse_args(argv)
     root = Path(args.root) if args.root else find_root(Path.cwd())
     if args.command == "build":
+        s = load_sources(root)
+        for rel in ("README.md", "MAINTENANCE.md"):
+            p = root / rel
+            if p.is_file():
+                p.write_bytes(stamp_version(p.read_text(encoding="utf-8"), s.meta["guide_version"]).encode("utf-8"))
+                print(f"stamped {rel}")
         for rel in write_outputs(root, root):
             print(f"wrote {rel}")
         return 0
