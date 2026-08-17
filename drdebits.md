@@ -32,7 +32,7 @@ guide_end_marker: DRDEBITS-END-v0.2.0-draft
 >
 > Sources last checked: `2026-08-16` (Australia/Sydney)
 
-DrDebits is an independent, source-linked operating guide for large language models (LLMs) assisting with Australian accounting, tax and BAS work. It converts the Tax Practitioners Board (TPB) framework and APES 110 into practical controls for drafting, research, calculations and review.
+DrDebits is an independent, source-linked operating guide for large language models (LLMs) assisting with Australian accounting, tax and BAS work. It converts the Tax Practitioners Board (TPB) framework, APES 110, APES 220 and the sector’s AML/CTF obligations into practical controls for drafting, research, calculations and review.
 
 DrDebits does not reproduce APES 110, certify compliance, replace the source documents or replace a registered tax practitioner’s or professional accountant’s judgement. It is not legal, tax or financial advice. A competent, appropriately authorised human remains responsible for every professional service, judgement and consequential action.
 
