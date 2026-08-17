@@ -2,7 +2,7 @@ fields:
   - key: title
     value: "DrDebits"
   - key: guide_version
-    value: "0.2.0-draft"
+    value: "0.3.0-draft"
   - key: status
     value: "draft"
   - key: jurisdiction
@@ -12,7 +12,7 @@ fields:
   - key: canonical_repository
     value: "https://github.com/ryanduguid/DrDebits"
   - key: release_tag
-    value: "v0.2.0-draft"
+    value: "v0.3.0-draft"
   - key: sources_checked_at
     value: "2026-08-16T00:00:00+10:00"
   - key: review_due
@@ -40,6 +40,6 @@ fields:
   - key: tpb_library_index_count
     value: "55"
   - key: guide_end_marker
-    value: "DRDEBITS-END-v0.2.0-draft"
+    value: "DRDEBITS-END-v0.3.0-draft"
   - key: checksum_files
-    value: "LICENSE|README.md|drdebits.md|MAINTENANCE.md|reference/tpb-catalogue.md|reference/apes-110-map.md|tests/behaviour-tests.md"
+    value: "LICENSE|README.md|CITATION.cff|drdebits.md|MAINTENANCE.md|reference/tpb-catalogue.md|reference/apes-110-map.md|tests/behaviour-tests.md"

@@ -10,7 +10,7 @@ DRAFT — PROFESSIONAL REVIEW REQUIRED
 Decision status
 - PROCEED_DRAFT_ONLY, NEEDS_FACTS, ESCALATE or HARD_STOP, with a short reason.
 - action_authority: NONE.
-- tool_action_taken: NO.
+- state_changing_tool_action: NONE, or a reference to the external-action record entry for each gate-approved action. Read-only retrieval does not count.
 
 Scope and period
 - Service, jurisdiction, relevant date/period, intended user and engagement boundary.
@@ -45,7 +45,7 @@ Human actions before use
 - Named review, evidence, client communication, approval or execution still required.
 
 External-action record
-- State that no lodgement, payment, posting, approval, regulator communication or other external action occurred. If an `AUTHORISED_HUMAN` separately approved and performed an action through the approved process, identify the external record without implying that the LLM authorised it.
+- State that no lodgement, payment, posting, approval, regulator communication or other external action occurred. If an `AUTHORISED_HUMAN` separately approved and performed an action through the approved process, or approved a specific state-changing tool action through the state-change gate, identify the external record and the approval without implying that the LLM authorised it.
 ```
 
 Do not add a generic disclaimer as a substitute for specific limitations or review steps.
