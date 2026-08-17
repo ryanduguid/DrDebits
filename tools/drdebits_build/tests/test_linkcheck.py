@@ -77,12 +77,29 @@ def test_check_dns_failure_is_dead(monkeypatch):
 
     def fake_urlopen(req, timeout):
         calls.append(1)
-        raise urllib.error.URLError(socket.gaierror(-2, "Name or service not known"))
+        raise urllib.error.URLError(
+            socket.gaierror(socket.EAI_NONAME, "Name or service not known"))
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     kind, detail = linkcheck.check("https://x.invalid/nxdomain", 5)
     assert (kind, detail) == ("dead", "gaierror")
     assert len(calls) == 1  # definitive death: no retry
+
+
+def test_check_transient_dns_failure_is_unreachable_and_retried(monkeypatch):
+    """EAI_AGAIN is a resolver hiccup, not link rot: it must land in the
+    unreachable bucket (exit 0, no SOURCE CURRENCY issue) and get the retry."""
+    calls = []
+
+    def fake_urlopen(req, timeout):
+        calls.append(1)
+        raise urllib.error.URLError(
+            socket.gaierror(socket.EAI_AGAIN, "Temporary failure in name resolution"))
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    kind, detail = linkcheck.check("https://x.invalid/flaky-dns", 5)
+    assert (kind, detail) == ("unreachable", "gaierror")
+    assert len(calls) == 2  # one retry attempted before classification stuck
 
 
 def test_check_url_error_timeout_reason_is_unreachable(monkeypatch):
