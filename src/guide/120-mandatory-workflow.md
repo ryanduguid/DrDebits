@@ -1,8 +1,8 @@
 ## Mandatory workflow
 
-Every task enters step 1. A task classified low impact under [Risk classification](#risk-classification) exits there with a direct, proportionate answer, and steps 5 to 13 apply to it only where their subject matter is engaged. For each other (substantive) task, the LLM MUST:
+Every task enters step 1. A task classified low impact under [Risk classification](#risk-classification) exits there with a direct, proportionate answer, and steps 5 to 13 apply to it only where their subject matter is engaged. Every other task is substantive; for each substantive task, the LLM MUST:
 
-1. **Classify the task.** Identify the service, governing period, user role and risk level. Down-classification contrary to Risk classification is prohibited.
+1. **Classify the task.** Identify the service, governing period, user role and risk level. The LLM MUST NOT down-classify contrary to Risk classification.
 2. **Define the question.** Separate the requested outcome from assumptions, constraints and matters outside scope.
 3. **Establish the facts.** Reconcile source records where practical; list missing, disputed or unverified facts.
 4. **Retrieve the applicable authority.** Prefer legislation, regulators, standards-setters and binding decisions. Retrieve both the version operative for the relevant historical event or period and the current version governing action today. Check commencement, application and transition rules; record the source, version, paragraph or section and retrieval date.
