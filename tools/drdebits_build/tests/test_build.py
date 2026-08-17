@@ -14,10 +14,14 @@ def make_repo(tmp_path: Path) -> Path:
     (tmp_path / "src" / "data").mkdir()
     (tmp_path / "drdebits.md").write_text("placeholder", encoding="utf-8")
     (tmp_path / "LICENSE").write_text("MIT-ish\n", encoding="utf-8", newline="\n")
-    (tmp_path / "README.md").write_text("DrDebits `0.9.9-test` stub\n", encoding="utf-8", newline="\n")
-    (tmp_path / "MAINTENANCE.md").write_text("Protocol for `0.9.9-test`.\n", encoding="utf-8", newline="\n")
+    (tmp_path / "README.md").write_text(
+        "> Version: `0.9.9-test`\n\nSources last checked: 2026-01-01\n",
+        encoding="utf-8", newline="\n")
+    (tmp_path / "MAINTENANCE.md").write_text(
+        "Part of [DrDebits](./drdebits.md) `0.9.9-test`.\n", encoding="utf-8", newline="\n")
     (tmp_path / "src" / "guide" / "000-header.md").write_text(
-        "# G\n\n> Version: `0.9.9-test`\n\nIntro.\n", encoding="utf-8", newline="\n")
+        "# G\n\n> Version: `0.9.9-test`\n>\n> Sources last checked: `2026-01-01`\n\nIntro.\n",
+        encoding="utf-8", newline="\n")
     (tmp_path / "src" / "guide" / "010-rules.md").write_text("## Rules\n\nBe good.\n", encoding="utf-8", newline="\n")
     (tmp_path / "src" / "data" / "metadata.yaml").write_text(textwrap.dedent("""\
         fields:
@@ -31,6 +35,8 @@ def make_repo(tmp_path: Path) -> Path:
             value: "1"
           - key: tpb_library_index_count
             value: "1"
+          - key: sources_checked_at
+            value: "2026-01-01T00:00:00+10:00"
           - key: checksum_files
             value: "LICENSE|README.md|drdebits.md"
     """), encoding="utf-8", newline="\n")
@@ -93,6 +99,15 @@ def test_catalogue_md_header_version_and_table(tmp_path):
     assert "| [T](https://x.invalid/a) | g |" in out
 
 
+def test_catalogue_md_header_derived_from_metadata_and_rows(tmp_path):
+    """Count, GS range and check date come from the sources, not template
+    literals, so a catalogue change cannot ship a stale header. The fixture's
+    "1 statements" is synthetic; the real catalogue is always plural."""
+    s = load_sources(make_repo(tmp_path))
+    out = build_catalogue_md(s)
+    assert "discoverable on 1 January 2026: 1 statements, GS01–GS01," in out
+
+
 def test_behaviour_md_header_version_and_table(tmp_path):
     s = load_sources(make_repo(tmp_path))
     out = build_behaviour_md(s)
@@ -133,6 +148,13 @@ def test_write_outputs_lf_only(tmp_path):
 
 
 def test_stamp_version():
-    assert stamp_version("DrDebits `0.2.0-draft` here", "0.3.0-draft") == "DrDebits `0.3.0-draft` here"
+    assert stamp_version("> Version: `0.2.0-draft`", "0.3.0-draft") == "> Version: `0.3.0-draft`"
+    assert stamp_version(
+        "Part of [DrDebits](./drdebits.md) `0.2.0-draft`.", "0.3.0-draft"
+    ) == "Part of [DrDebits](./drdebits.md) `0.3.0-draft`."
+    # Backticked version-like tokens outside the two stamp contexts are prose
+    # (e.g. a documented tool pin): left alone.
+    assert stamp_version("Install uv `0.12.0` before building.", "2.0.0") == \
+        "Install uv `0.12.0` before building."
     # Bare, non-backticked version-like tokens are prose, not a stamp: left alone.
     assert stamp_version("v1.2.3 and 9.9.9-x.1", "2.0.0") == "v1.2.3 and 9.9.9-x.1"
