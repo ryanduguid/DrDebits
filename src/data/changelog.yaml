@@ -1,4 +1,8 @@
 entries:
+  - version: "0.3.1-draft"
+    date: "2026-08-18"
+    status: "Published draft"
+    change: "Wording patch: removed the duplicated action-list paraphrase from the deployment section, aligned the down-classification ban with the instruction-word vocabulary, and clarified the workflow preamble and PROP-002 phrasing. No control change."
   - version: "0.3.0-draft"
     date: "2026-08-18"
     status: "Published draft"
