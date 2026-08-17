@@ -71,29 +71,39 @@ def build_guide(s):
     return "".join(parts)
 
 
+CATALOGUE_HEADER_TEMPLATE = '# Complete TPB Guidance Statement catalogue\n\nPart of [DrDebits](../drdebits.md) `{version}`. Retrieve this file when routing a task against TPB guidance; verify it against `SHA256SUMS` in the release.\n\n\nThis catalogue covers all final, live TPB Guidance Statements discoverable on 16 August 2026: 55 statements, GS01–GS55, all exposed by the filtered TPB library index. It excludes withdrawn or superseded products, historical versions, exposure drafts, consultation material, factsheets, FAQs and other non-Guidance-Statement webpages. Those sources may still matter to a particular task and must be retrieved separately with their authority and status labelled.\n\nThe “LLM trigger” is an independent DrDebits routing note, not a substitute for reading the linked statement. Statements about education, registration or professional associations might not affect the wording of an ordinary client deliverable, but they remain relevant to capability, authority and service-scope checks. “Complete” here means the checked live Guidance Statement category, not every policy or guidance product ever published by the TPB.\n\n'
+
+
 def build_catalogue_md(s):
     rows = [[render.render_link(r["title"], r["url"]), r["trigger"]] for r in s.catalogue]
-    header = f"# DrDebits TPB Guidance Statement catalogue\n\nPart of DrDebits `{s.meta['guide_version']}`.\n\n"
+    header = CATALOGUE_HEADER_TEMPLATE.format(version=s.meta["guide_version"])
     return header + render.render_table(
         ["Statement (concise title and official link)", "LLM trigger"], ["---", "---"], rows)
+
+
+BEHAVIOUR_HEADER_TEMPLATE = '# DrDebits behaviour tests\n\nPart of [DrDebits](../drdebits.md) `{version}`. These tests travel with the guide; verify this file against `SHA256SUMS` in the release.\n\n## Behaviour tests\n\nAn implementation of DrDebits MUST pass at least these adverse cases. Evaluate observable outputs and actions, not hidden reasoning.\n\n'
 
 
 def build_behaviour_md(s):
     rows = [[r["id"], r["scenario"], r["expected_status"], r["required_behaviour"], r["side_effect_check"]]
             for r in s.behaviour]
-    header = f"# DrDebits behaviour tests\n\nPart of DrDebits `{s.meta['guide_version']}`.\n\n"
+    header = BEHAVIOUR_HEADER_TEMPLATE.format(version=s.meta["guide_version"])
     return header + render.render_table(
         ["ID", "Scenario", "Expected status", "Required behaviour and human step", "Side-effect check"],
         ["---", "---", "---", "---", "---"], rows)
 
 
+APES_HEADER_TEMPLATE = '# Primary APES 110 reference map\n\nPart of [DrDebits](../drdebits.md) `{version}`. Retrieve this file when locating APES 110 provisions; verify it against `SHA256SUMS` in the release.\n\n\nThe LLM should retrieve the operative paragraphs from the official compilation rather than rely on this short map.\n\nIn APES 110, `R` and `AUST R` identify requirement paragraphs. `A` paragraphs are application material that must be considered to understand and apply the requirements and conceptual framework, but they are not separate requirements. DrDebits controls may be deliberately more conservative than either category and must remain labelled as project controls.\n\n'
+APES_BETWEEN_TABLES = '\nKey paragraph-level retrieval points are:\n\n'
+
+
 def build_apes_md(s):
-    header = f"# DrDebits APES 110 reference map\n\nPart of DrDebits `{s.meta['guide_version']}`.\n\n"
+    header = APES_HEADER_TEMPLATE.format(version=s.meta["guide_version"])
     a = render.render_table(["Context", "APES 110 starting points"], ["---", "---"],
                             [[r["label"], r["value"]] for r in s.apes["contexts"]])
     b = render.render_table(["Control", "APES 110 retrieval points"], ["---", "---"],
                             [[r["label"], r["value"]] for r in s.apes["retrieval_points"]])
-    return header + a + "\n" + b
+    return header + a + APES_BETWEEN_TABLES + b
 
 
 GENERATED = {
