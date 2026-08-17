@@ -13,7 +13,7 @@ For each DrDebits release:
 5. Reassess each DrDebits rule against the changed source. Do not update a date without reviewing the substantive effect.
 6. Test every direct link and all behaviour tests in `tests/behaviour-tests.md`.
 7. Confirm that no client data, credentials, proprietary prompt content or unauthorised APESB text entered the repository.
-8. Update the version string everywhere it appears (frontmatter `guide_version` and `release_tag`, the header block, the change log, the end marker and the satellite-file headers), regenerate `SHA256SUMS` over every DrDebits file, and confirm the declared end marker.
+8. Update the version string everywhere it appears (frontmatter `guide_version` and `release_tag`, the header block, the `README.md` header block with its source-check date, the change log, the end marker and the satellite-file headers), regenerate `SHA256SUMS` over every DrDebits file, and confirm the declared end marker.
 9. Tag the release, sign the tag and the release commit, and record the source check, material changes, reviewer, approved tag and release date in the change log.
 
 If freshness cannot be confirmed, the LLM must label the affected material `SOURCE CURRENCY NOT CONFIRMED`, avoid calling it “latest” or “current”, and restrict the output to a draft requiring primary-source verification.
