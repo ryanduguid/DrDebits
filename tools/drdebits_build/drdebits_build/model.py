@@ -1,6 +1,8 @@
 """Load and validate the YAML sources of truth. All leaf values are strings."""
 from __future__ import annotations
 
+from datetime import date
+
 import yaml
 
 ALLOWED_STATUSES = frozenset({
@@ -53,7 +55,19 @@ def load_metadata(path):
     keys = [r["key"] for r in rows]
     if len(keys) != len(set(keys)):
         raise ModelError(f"{path}: duplicate metadata keys")
-    return {r["key"]: r["value"] for r in rows}
+    meta = {r["key"]: r["value"] for r in rows}
+    # The catalogue header derives prose from this value, so a malformed date
+    # must surface here as a ModelError (a clean verify finding), not later as
+    # a ValueError escaping the builders.
+    checked = meta.get("sources_checked_at")
+    if checked is not None:
+        try:
+            date.fromisoformat(checked[:10])
+        except ValueError as e:
+            raise ModelError(
+                f"{path}: sources_checked_at must start with an ISO date (YYYY-MM-DD), "
+                f"got {checked!r}") from e
+    return meta
 
 
 def load_catalogue(path):

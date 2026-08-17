@@ -85,4 +85,27 @@ def run_verify(root):
         failures.append(
             f"changelog: newest entry {newest_changelog_version} != {s.meta['guide_version']}")
 
+    # (e) the source-check date is derived into the catalogue header and the
+    # guide frontmatter from metadata, but the guide's header line and README
+    # carry hand-written copies. A metadata bump that misses either would ship
+    # one release carrying two different check dates, so cross-check both.
+    # (src/guide/040-source-status.md carries two further prose copies that
+    # this check does not cover; MAINTENANCE step 8 owns those.)
+    checked_date = s.meta.get("sources_checked_at", "")[:10]
+    if checked_date:
+        # Substring, not whole-line: the real header line carries a timezone
+        # suffix after the backticked date.
+        guide_line = f"> Sources last checked: `{checked_date}`"
+        committed_guide = root / "drdebits.md"
+        if committed_guide.is_file():
+            if guide_line not in committed_guide.read_text(encoding="utf-8"):
+                failures.append(
+                    "drdebits.md: header source-check date line does not match "
+                    f"sources_checked_at ({checked_date})")
+        readme = root / "README.md"
+        if readme.is_file():
+            if f"Sources last checked: {checked_date}" not in readme.read_text(encoding="utf-8"):
+                failures.append(
+                    f"README.md: source-check date does not match sources_checked_at ({checked_date})")
+
     return failures
