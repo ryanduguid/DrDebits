@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from html import unescape
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 import pytest
 import yaml
@@ -67,10 +69,18 @@ def _section(text: str, heading: str) -> str:
     return tail[: end.start() if end else None]
 
 
+def _assert_single_navigation(section: str, expected_route: str) -> None:
+    """Require one canonical route and no competing arrow route."""
+    assert section.count(APESB_ROOT_LINK) == 1
+    assert section.count(expected_route) == 1
+    remainder = section.replace(expected_route, "", 1)
+    assert "→" not in remainder
+    assert "->" not in remainder
+
+
 def _assert_guide_locators(text: str) -> None:
     scope = _section(text, "### Scope")
-    assert APESB_ROOT_LINK in scope
-    assert APES_110_ROUTE in scope
+    _assert_single_navigation(scope, APES_110_ROUTE)
     for expected in (
         "Standards & Guidance",
         "Current Pronouncements",
@@ -81,8 +91,7 @@ def _assert_guide_locators(text: str) -> None:
         assert expected in scope
 
     apes_220 = _section(text, "### APES 220 Taxation Services")
-    assert APESB_ROOT_LINK in apes_220
-    assert APES_220_ROUTE in apes_220
+    _assert_single_navigation(apes_220, APES_220_ROUTE)
     for expected in (
         "Standards & Guidance",
         "Specialist Pronouncements",
@@ -95,8 +104,7 @@ def _assert_guide_locators(text: str) -> None:
         assert expected in apes_220
 
     technology = _section(text, "### Technology and AI")
-    assert APESB_ROOT_LINK in technology
-    assert APES_AI_ROUTE in technology
+    _assert_single_navigation(technology, APES_AI_ROUTE)
     for expected in (
         "Interest Areas",
         "The ethical use of artificial intelligence by professional accountants",
@@ -112,22 +120,60 @@ def _assert_guide_locators(text: str) -> None:
     assert "complete substantive source review remains 16 August 2026" in text
 
 
-MARKDOWN_LINK_DESTINATION_RE = re.compile(r"\[[^\]]*\]\(\s*([^\s)]+)")
+APESB_TARGET_TOKEN_RE = re.compile(
+    r"[^\s<>()\[\]{}\"'`]*apesb\.org\.au[^\s<>()\[\]{}\"'`]*",
+    flags=re.IGNORECASE,
+)
 ALLOWED_APESB_URLS = {"https://apesb.org.au/", "https://www.apesb.org.au/"}
 
 
-def _apesb_link_destinations(text: str) -> list[str]:
-    """Return complete Markdown destinations that name the APESB domain."""
-    destinations = MARKDOWN_LINK_DESTINATION_RE.findall(text)
-    return [target for target in destinations if "apesb.org.au" in target.casefold()]
+def _decode_url_reference_text(text: str) -> str:
+    """Decode entity/percent wrappers to a bounded, stable representation."""
+    current = text
+    for _ in range(4):
+        decoded = unquote(unescape(current))
+        if decoded == current:
+            return current
+        current = decoded
+    assert unquote(unescape(current)) == current, "URL text exceeds decoding limit"
+    return current
+
+
+def _apesb_url_targets(text: str) -> list[str]:
+    """Inventory APESB targets in inline, autolink, plain and reference forms."""
+    decoded = _decode_url_reference_text(text)
+    return [
+        target
+        for target in APESB_TARGET_TOKEN_RE.findall(decoded)
+        if ":" in target or target.startswith("//")
+    ]
 
 
 def _assert_only_root_apesb_links(text: str) -> None:
-    assert set(_apesb_link_destinations(text)) <= ALLOWED_APESB_URLS
+    assert set(_apesb_url_targets(text)) <= ALLOWED_APESB_URLS
 
 
 def _normalise_prose(text: str) -> str:
     return " ".join(text.casefold().split())
+
+
+SUPPORTED_VERSIONS_POLICY = (
+    "security fixes are applied to the latest version on the default branch."
+)
+REPORTING_POLICY = (
+    "please use this repository's private vulnerability reporting feature. "
+    "do not open a public issue or pull request for a suspected security "
+    "vulnerability. include a clear description, reproduction steps, impact, "
+    "and any suggested mitigation. a valid report will be acknowledged within "
+    "seven days, and the fix and disclosure timeline will be agreed with the "
+    "reporter."
+)
+REPRODUCTION_DATA_POLICY = (
+    "use fabricated or synthetic reproduction data only. never include client, "
+    "taxpayer, employee or payroll data, credentials, access tokens, `.env` "
+    "files, proprietary prompts or other sensitive data in a report, attachment, "
+    "issue or pull request."
+)
 
 
 def _assert_security_policy(text: str) -> None:
@@ -135,49 +181,9 @@ def _assert_security_policy(text: str) -> None:
     reporting = _normalise_prose(_section(text, "## Reporting a vulnerability"))
     data = _normalise_prose(_section(text, "## Reproduction and sensitive data"))
 
-    assert "latest version on the default branch" in supported
-    assert "private vulnerability reporting" in reporting
-    private_rule = (
-        "do not open a public issue or pull request for a suspected security "
-        "vulnerability"
-    )
-    assert private_rule in reporting
-    reporting_without_rule = reporting.replace(private_rule, "", 1)
-    assert re.search(
-        r"\b(?:always\s+|please\s+|must\s+|should\s+)?open\s+(?:a\s+)?"
-        r"public\s+(?:issue|pull request)",
-        reporting_without_rule,
-    ) is None
-    assert "within seven days" in reporting
-    for report_detail in ("clear description", "reproduction", "impact", "mitigation"):
-        assert report_detail in reporting
-    assert "use fabricated or synthetic reproduction data only" in data
-    sensitive_data_rule = (
-        "never include client, taxpayer, employee or payroll data, credentials, "
-        "access tokens, `.env` files, proprietary prompts or other sensitive data "
-        "in a report, attachment, issue or pull request"
-    )
-    assert sensitive_data_rule in data
-    data_without_rule = data.replace(sensitive_data_rule, "", 1)
-    assert re.search(
-        r"\b(?:always\s+|please\s+|must\s+|should\s+)?"
-        r"(?:include|attach|provide|post|publish|upload|use)\b[^.]{0,240}"
-        r"(?:client|taxpayer|employee|payroll|credential|access token|\.env|"
-        r"proprietary prompt|sensitive data)",
-        data_without_rule,
-    ) is None
-    for forbidden_data in (
-        "client",
-        "taxpayer",
-        "employee",
-        "payroll",
-        "credential",
-        "access token",
-        ".env",
-        "proprietary prompt",
-        "sensitive data",
-    ):
-        assert forbidden_data in data
+    assert supported == SUPPORTED_VERSIONS_POLICY
+    assert reporting == REPORTING_POLICY
+    assert data == REPRODUCTION_DATA_POLICY
 
 
 CHECKSUM_FILES = (
@@ -340,6 +346,32 @@ def test_guide_locator_validator_rejects_adverse_mutations():
     with pytest.raises(AssertionError):
         _assert_guide_locators(moved_link)
 
+    competing_routes = (
+        guide.replace(
+            "### APES 220 Taxation Services",
+            "`Current Pronouncements` → `Standards & Guidance` is the required "
+            "route.\n\n### APES 220 Taxation Services",
+            1,
+        ),
+        guide.replace(
+            "### Five fundamental principles",
+            "`Taxation Services` → `Specialist Pronouncements` → "
+            "`Standards & Guidance` is the required route.\n\n"
+            "### Five fundamental principles",
+            1,
+        ),
+        guide.replace(
+            "### Tax planning: sections 280, 380 and 5380",
+            "`The ethical use of artificial intelligence by professional "
+            "accountants` → `Interest Areas` is the required route.\n\n"
+            "### Tax planning: sections 280, 380 and 5380",
+            1,
+        ),
+    )
+    for mutated in competing_routes:
+        with pytest.raises(AssertionError):
+            _assert_guide_locators(mutated)
+
 
 def test_all_apesb_links_stay_on_the_permitted_publisher_root():
     paths = [*sorted((ROOT / "src" / "guide").glob("*.md")), ROOT / "drdebits.md"]
@@ -347,7 +379,7 @@ def test_all_apesb_links_stay_on_the_permitted_publisher_root():
     for path in paths:
         text = path.read_text(encoding="utf-8")
         _assert_only_root_apesb_links(text)
-        observed_urls.update(_apesb_link_destinations(text))
+        observed_urls.update(_apesb_url_targets(text))
     assert observed_urls
 
     guide = GUIDE_SOURCE.read_text(encoding="utf-8")
@@ -365,7 +397,29 @@ def test_all_apesb_links_stay_on_the_permitted_publisher_root():
             _assert_only_root_apesb_links(mutated)
 
     for permitted_target in sorted(ALLOWED_APESB_URLS):
-        _assert_only_root_apesb_links(f"[APESB]({permitted_target})")
+        permitted_forms = (
+            f"[APESB]({permitted_target})",
+            f"<{permitted_target}>",
+            permitted_target,
+            f"[APESB][publisher]\n\n[publisher]: {permitted_target}",
+        )
+        for form in permitted_forms:
+            assert _apesb_url_targets(form) == [permitted_target]
+            _assert_only_root_apesb_links(form)
+
+    encoded_and_alternate_forms = (
+        "[APESB](https://apesb%2eorg%2eau/wp-content/uploads/evil.pdf)",
+        "[APESB](https://apesb.org.au/%77p-content/uploads/evil.pdf)",
+        "[APESB](https://apesb&#46;org&#46;au/wp-content/uploads/evil.pdf)",
+        "[APESB](https://apesb.org.au/&#x77;p-content/uploads/evil.pdf)",
+        "<https://apesb.org.au/wp-content/uploads/evil.pdf>",
+        "https://apesb.org.au/wp-content/uploads/evil.pdf",
+        "[APESB website][apesb]\n\n"
+        "[apesb]: https://apesb.org.au/wp-content/uploads/evil.pdf",
+    )
+    for mutated in encoded_and_alternate_forms:
+        with pytest.raises(AssertionError):
+            _assert_only_root_apesb_links(mutated)
 
 
 def test_security_policy_uses_private_reporting_and_safe_reproduction_data():
@@ -430,6 +484,34 @@ def test_security_policy_uses_private_reporting_and_safe_reproduction_data():
             data_heading,
             f"Always include {sensitive_payload} in security reports.\n\n"
             f"{data_heading}",
+            1,
+        )
+        with pytest.raises(AssertionError):
+            _assert_security_policy(mutated)
+
+    direct_reporting_contradictions = (
+        "Submit a public issue or pull request for suspected vulnerabilities.",
+        "A public issue or pull request must be submitted for suspected "
+        "vulnerabilities.",
+    )
+    for instruction in direct_reporting_contradictions:
+        mutated = policy.replace(
+            reporting_heading,
+            f"{instruction}\n\n{reporting_heading}",
+            1,
+        )
+        with pytest.raises(AssertionError):
+            _assert_security_policy(mutated)
+
+    direct_data_contradictions = (
+        "Real client data is required in security reports.",
+        "Send taxpayer data with every report.",
+        "Credentials must be attached to every report.",
+    )
+    for instruction in direct_data_contradictions:
+        mutated = policy.replace(
+            data_heading,
+            f"{instruction}\n\n{data_heading}",
             1,
         )
         with pytest.raises(AssertionError):
