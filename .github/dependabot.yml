@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      # init and analyze are separate dependencies to Dependabot but must
+      # move together: a job running one release against the other's config
+      # fails outright. Grouped so the pair can never arrive split.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
+
+  - package-ecosystem: uv
+    directory: /tools/drdebits_build
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
