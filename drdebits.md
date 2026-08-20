@@ -15,8 +15,19 @@ apes_110_compilation: July 2025
 apes_110_pdf_filename: Compiled_APES_110_July_25.pdf
 apes_110_compilation_details_filename: Compilation_Details_APES_110_July_25.pdf
 apes_110_pdf_sha256: B6937B93B0A6F7F3F32667CFE8880F8F60CBD7777BCE0C2D57F2DD6F13D3A300
+apesb_root_url: https://apesb.org.au/
+apesb_locator_rechecked_at: 2026-08-20
+apes_110_navigation: Standards & Guidance > Current Pronouncements > Compilation of APES 110 Standard (Jul 2025)
 apes_220_issued: January 2025
 apes_220_effective: 2025-07-01
+apes_220_navigation: Standards & Guidance > Specialist Pronouncements > Taxation Services > APES 220 Taxation Services (2025) - effective from 1 July 2025
+apes_220_pdf_filename: APES_220_Jan_2025.pdf
+apes_220_technical_update: 2025/5 - APESB issues revised APES 220 Taxation Services
+apes_220_technical_update_date: 2025-01-31
+apes_ai_alert_navigation: Home > Interest Areas > The ethical use of artificial intelligence by professional accountants
+apes_ai_alert_title: The ethical use of artificial intelligence by professional accountants
+apes_ai_alert_label: Technical Alert
+apes_ai_alert_date: 2025-10-31
 tpb_guidance_statement_count: 55
 tpb_library_index_count: 55
 guide_end_marker: DRDEBITS-END-v0.3.1-draft
@@ -327,11 +338,11 @@ Parts 1 to 4B apply as a Professional Standard to members of Chartered Accountan
 
 A non-member providing only tax or BAS services must not be described as bound by APES 110 unless another applicable requirement incorporates it. That person remains bound by the TASA framework where applicable, and DrDebits may adopt APES-aligned project controls without misrepresenting their source or legal force.
 
-At the [APESB website](https://apesb.org.au/), locate *APES 110 Code of Ethics for Professional Accountants (including Independence Standards)* and use the July 2025 compilation. The document is the November 2018 Code as amended through July 2025; it is not a “2026 edition”. Apply other APES standards when the service triggers them; APES 110 is not the entire professional-standards framework.
+At the [APESB website](https://apesb.org.au/), follow `Standards & Guidance` → `Current Pronouncements` → `Compilation of APES 110 Standard (Jul 2025)`. Confirm the expected files `Compiled_APES_110_July_25.pdf` and `Compilation_Details_APES_110_July_25.pdf` before relying on the compilation. The document is the November 2018 Code as amended through July 2025; it is not a “2026 edition”. Apply other APES standards when the service triggers them; APES 110 is not the entire professional-standards framework.
 
 ### APES 220 Taxation Services
 
-For a Member providing a taxation service, apply APES 220 *Taxation Services* (issued January 2025, effective 1 July 2025) alongside APES 110 and the TASA layer; locate the current standard at the [APESB website](https://apesb.org.au/). APES 220 sets service-level obligations for taxation services, including tax schemes and arrangements, use of estimates, false or misleading information, client monies, professional fees and documentation.
+For a Member providing a taxation service, apply APES 220 *Taxation Services* (issued January 2025, effective 1 July 2025) alongside APES 110 and the TASA layer. At the [APESB website](https://apesb.org.au/), follow `Standards & Guidance` → `Specialist Pronouncements` → `Taxation Services` → `APES 220 Taxation Services (2025) - effective from 1 July 2025`, and confirm the expected standard filename `APES_220_Jan_2025.pdf`. The related Technical Update `2025/5`, *APESB issues revised APES 220 Taxation Services*, is dated 31 January 2025. APES 220 sets service-level obligations for taxation services, including tax schemes and arrangements, use of estimates, false or misleading information, client monies, professional fees and documentation.
 
 The LLM MUST classify whether the task is a taxation service for a Member and, if so, check APES 220 in addition to the controls in this guide. Compliance with one layer is not compliance with another: the TASA Code, APES 110 and APES 220 each apply within their own scope, and the strictest applicable obligation governs.
 
@@ -362,7 +373,9 @@ Explicitly challenge automation, anchoring, availability, confirmation, groupthi
 
 ### Technology and AI
 
-Apply the technology revisions with their engagement-specific effective dates and APESB’s *The ethical use of artificial intelligence by professional accountants* Technical Alert dated 31 October 2025, available through the [APESB website](https://apesb.org.au/).
+Apply the technology revisions with their engagement-specific effective dates. At the [APESB website](https://apesb.org.au/), follow `Interest Areas` → `The ethical use of artificial intelligence by professional accountants`; confirm that it is labelled `Technical Alert` and dated 31 October 2025.
+
+Publisher navigation and document identifiers were rechecked on 20 August 2026; the complete substantive source review remains 16 August 2026.
 
 - The responsible member or Sustainability Assurance Practitioner remains responsible for analysis, professional judgement and outcomes within the applicable scope.
 - Verify AI-generated information with suitable primary evidence and independent calculation or review where material.
