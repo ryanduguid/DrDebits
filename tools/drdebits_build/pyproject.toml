@@ -4,10 +4,10 @@ version = "0.1.0"
 description = "Deterministic build and verification tooling for the DrDebits guide"
 license = "MIT"
 requires-python = ">=3.12"
-dependencies = ["pyyaml==6.0.2"]
+dependencies = ["pyyaml==6.0.3"]
 
 [project.optional-dependencies]
-dev = ["pytest==9.0.3"]
+dev = ["pytest==9.1.1"]
 
 [build-system]
 requires = ["setuptools==84.0.0"]
