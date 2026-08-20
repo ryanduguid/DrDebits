@@ -18,6 +18,21 @@ For each DrDebits release:
 
 If freshness cannot be confirmed, the LLM must label the affected material `SOURCE CURRENCY NOT CONFIRMED`, avoid calling it “latest” or “current”, and restrict the output to a draft requiring primary-source verification.
 
+## GitHub release checklist
+
+For each future GitHub release:
+
+1. Start from a clean worktree. Run the complete pytest suite, builder `verify`, a deterministic second build and the reviewed link-check result. Resolve every failure or classify every unreachable link before staging a release.
+2. Confirm the verified guide bundle contains `LICENSE`, `README.md`, `CITATION.cff`, `drdebits.md`, `MAINTENANCE.md`, `reference/tpb-catalogue.md`, `reference/apes-110-map.md`, `tests/behaviour-tests.md` and the generated `SHA256SUMS` manifest. The manifest covers the first eight files and travels with them; it does not hash itself.
+3. Create a signed release commit and a signed annotated tag that identify the approved revision.
+4. Confirm immutable releases are enabled for the repository before creating the release. Create a GitHub draft release, stage every asset, and include the checksum and verification instructions.
+5. Download every staged asset into a clean location while the release is still a draft. Independently verify the signed commit and tag, bundle membership, every `SHA256SUMS` entry and any available asset attestations.
+6. Publish the release only after all verification succeeds. With immutable releases enabled, publication locks the tag and assets only after that pre-publication verification.
+7. After publication, run `gh release verify TAG` and `gh release verify-asset TAG PATH` for each downloaded asset when immutable releases are enabled, and retain the verification record.
+8. Do not overwrite or delete a published immutable release, and do not reuse its tag. Correct a released defect with a new version, new tag and a new release.
+
+The existing `v0.1.0-draft`, `v0.2.0-draft`, `v0.3.0-draft` and `v0.3.1-draft` releases are historical published prereleases, not GitHub draft releases. They have no attached distribution assets. Do not silently rewrite them; any superseding distribution must use a new tag and a new release.
+
 Versioning convention:
 
 - **Major:** a change to the control model, authority handling or human-decision boundaries.
