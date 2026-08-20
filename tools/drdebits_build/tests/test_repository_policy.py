@@ -44,19 +44,81 @@ LOCATOR_METADATA = {
     "apes_ai_alert_date": "2025-10-31",
 }
 APESB_ROOT_LINK = "[APESB website](https://apesb.org.au/)"
-APES_110_ROUTE = (
-    "`Standards & Guidance` → `Current Pronouncements` → "
-    "`Compilation of APES 110 Standard (Jul 2025)`"
-)
-APES_220_ROUTE = (
-    "`Standards & Guidance` → `Specialist Pronouncements` → "
-    "`Taxation Services` → `APES 220 Taxation Services (2025) - effective "
-    "from 1 July 2025`"
-)
-APES_AI_ROUTE = (
-    "`Interest Areas` → `The ethical use of artificial intelligence by "
-    "professional accountants`"
-)
+CANONICAL_GUIDE_LOCATOR_SECTIONS = {
+    "### Scope": (
+        "\n"
+        "Parts 1 to 4B apply as a Professional Standard to members of Chartered "
+        "Accountants Australia and New Zealand, CPA Australia and the Institute "
+        "of Public Accountants within their scope. APES 110 may also be "
+        "incorporated into legally enforceable auditing requirements, law, "
+        "regulation or engagement terms; paragraph 1.5 notes the legal effect of "
+        "ASA 102 for relevant Corporations Act audits and reviews. Part 5 applies "
+        "to Sustainability Assurance Practitioners for the services described in "
+        "paragraph 5100.2, whether or not the practitioner is a member.\n\n"
+        "A non-member providing only tax or BAS services must not be described as "
+        "bound by APES 110 unless another applicable requirement incorporates it. "
+        "That person remains bound by the TASA framework where applicable, and "
+        "DrDebits may adopt APES-aligned project controls without misrepresenting "
+        "their source or legal force.\n\n"
+        "At the [APESB website](https://apesb.org.au/), follow `Standards & "
+        "Guidance` → `Current Pronouncements` → `Compilation of APES 110 Standard "
+        "(Jul 2025)`. Confirm the expected files "
+        "`Compiled_APES_110_July_25.pdf` and "
+        "`Compilation_Details_APES_110_July_25.pdf` before relying on the "
+        "compilation. The document is the November 2018 Code as amended through "
+        "July 2025; it is not a “2026 edition”. Apply other APES standards when "
+        "the service triggers them; APES 110 is not the entire "
+        "professional-standards framework.\n\n"
+    ),
+    "### APES 220 Taxation Services": (
+        "\n"
+        "For a Member providing a taxation service, apply APES 220 *Taxation "
+        "Services* (issued January 2025, effective 1 July 2025) alongside APES "
+        "110 and the TASA layer. At the [APESB website](https://apesb.org.au/), "
+        "follow `Standards & Guidance` → `Specialist Pronouncements` → `Taxation "
+        "Services` → `APES 220 Taxation Services (2025) - effective from 1 July "
+        "2025`, and confirm the expected standard filename "
+        "`APES_220_Jan_2025.pdf`. The related Technical Update `2025/5`, *APESB "
+        "issues revised APES 220 Taxation Services*, is dated 31 January 2025. "
+        "APES 220 sets service-level obligations for taxation services, including "
+        "tax schemes and arrangements, use of estimates, false or misleading "
+        "information, client monies, professional fees and documentation.\n\n"
+        "The LLM MUST classify whether the task is a taxation service for a "
+        "Member and, if so, check APES 220 in addition to the controls in this "
+        "guide. Compliance with one layer is not compliance with another: the "
+        "TASA Code, APES 110 and APES 220 each apply within their own scope, and "
+        "the strictest applicable obligation governs.\n\n"
+    ),
+    "### Technology and AI": (
+        "\n"
+        "Apply the technology revisions with their engagement-specific effective "
+        "dates. At the [APESB website](https://apesb.org.au/), follow `Interest "
+        "Areas` → `The ethical use of artificial intelligence by professional "
+        "accountants`; confirm that it is labelled `Technical Alert` and dated "
+        "31 October 2025.\n\n"
+        "Publisher navigation and document identifiers were rechecked on 20 "
+        "August 2026; the complete substantive source review remains 16 August "
+        "2026.\n\n"
+        "- The responsible member or Sustainability Assurance Practitioner "
+        "remains responsible for analysis, professional judgement and outcomes "
+        "within the applicable scope.\n"
+        "- Verify AI-generated information with suitable primary evidence and "
+        "independent calculation or review where material.\n"
+        "- Avoid undue reliance on or influence from technology.\n"
+        "- Maintain relevant technology competence and understand limitations, "
+        "bias, provenance, security and explainability that affect the activity.\n"
+        "- Supervise and review AI-assisted work. Do not describe the model as an "
+        "external expert, reviewer or approver.\n"
+        "- APESB’s Technical Alert says members should disclose when AI tools are "
+        "used and should supervise and review that use. Mandatory disclosure also "
+        "applies where required by law, engagement terms or a service-specific "
+        "APES standard. Make any disclosure accurate and protect confidential "
+        "information; do not expose prompts or data unnecessarily.\n"
+        "- Protect confidential information across the complete data lifecycle "
+        "and obtain proper authority for uses such as training, product "
+        "development, research or benchmarking.\n\n"
+    ),
+}
 
 
 def _section(text: str, heading: str) -> str:
@@ -69,55 +131,17 @@ def _section(text: str, heading: str) -> str:
     return tail[: end.start() if end else None]
 
 
-def _assert_single_navigation(section: str, expected_route: str) -> None:
-    """Require one canonical route and no competing arrow route."""
-    assert section.count(APESB_ROOT_LINK) == 1
-    assert section.count(expected_route) == 1
-    remainder = section.replace(expected_route, "", 1)
-    assert "→" not in remainder
-    assert "->" not in remainder
+def _normalise_line_endings(text: str) -> str:
+    """Treat reviewed LF and CRLF content as equivalent, but nothing else."""
+    normalised = text.replace("\r\n", "\n")
+    assert "\r" not in normalised
+    return normalised
 
 
 def _assert_guide_locators(text: str) -> None:
-    scope = _section(text, "### Scope")
-    _assert_single_navigation(scope, APES_110_ROUTE)
-    for expected in (
-        "Standards & Guidance",
-        "Current Pronouncements",
-        "Compilation of APES 110 Standard (Jul 2025)",
-        "Compiled_APES_110_July_25.pdf",
-        "Compilation_Details_APES_110_July_25.pdf",
-    ):
-        assert expected in scope
-
-    apes_220 = _section(text, "### APES 220 Taxation Services")
-    _assert_single_navigation(apes_220, APES_220_ROUTE)
-    for expected in (
-        "Standards & Guidance",
-        "Specialist Pronouncements",
-        "Taxation Services",
-        "APES 220 Taxation Services (2025) - effective from 1 July 2025",
-        "APES_220_Jan_2025.pdf",
-        "Technical Update `2025/5`",
-        "31 January 2025",
-    ):
-        assert expected in apes_220
-
-    technology = _section(text, "### Technology and AI")
-    _assert_single_navigation(technology, APES_AI_ROUTE)
-    for expected in (
-        "Interest Areas",
-        "The ethical use of artificial intelligence by professional accountants",
-        "`Technical Alert`",
-        "31 October 2025",
-    ):
-        assert expected in technology
-
-    assert (
-        "Publisher navigation and document identifiers were rechecked on "
-        "20 August 2026" in text
-    )
-    assert "complete substantive source review remains 16 August 2026" in text
+    for heading, canonical in CANONICAL_GUIDE_LOCATOR_SECTIONS.items():
+        actual = _normalise_line_endings(_section(text, heading))
+        assert actual == canonical
 
 
 APESB_TARGET_TOKEN_RE = re.compile(
@@ -142,11 +166,14 @@ def _decode_url_reference_text(text: str) -> str:
 def _apesb_url_targets(text: str) -> list[str]:
     """Inventory APESB targets in inline, autolink, plain and reference forms."""
     decoded = _decode_url_reference_text(text)
-    return [
-        target
-        for target in APESB_TARGET_TOKEN_RE.findall(decoded)
-        if ":" in target or target.startswith("//")
-    ]
+    targets = []
+    for match in APESB_TARGET_TOKEN_RE.finditer(decoded):
+        target = match.group()
+        if match.end() == len(decoded) or decoded[match.end()].isspace():
+            target = target.rstrip(".,;")
+        if ":" in target or target.startswith("//"):
+            targets.append(target)
+    return targets
 
 
 def _assert_only_root_apesb_links(text: str) -> None:
@@ -270,6 +297,7 @@ def test_guide_binds_each_locator_to_its_subject_section():
 def test_guide_locator_validator_rejects_adverse_mutations():
     guide = GUIDE_SOURCE.read_text(encoding="utf-8")
     _assert_guide_locators(guide)
+    _assert_guide_locators(guide.replace("\n", "\r\n"))
 
     mutations = (
         (
@@ -354,6 +382,12 @@ def test_guide_locator_validator_rejects_adverse_mutations():
             1,
         ),
         guide.replace(
+            "### APES 220 Taxation Services",
+            "Follow Current Pronouncements, then Standards & Guidance; this is "
+            "the required route.\n\n### APES 220 Taxation Services",
+            1,
+        ),
+        guide.replace(
             "### Five fundamental principles",
             "`Taxation Services` → `Specialist Pronouncements` → "
             "`Standards & Guidance` is the required route.\n\n"
@@ -401,6 +435,9 @@ def test_all_apesb_links_stay_on_the_permitted_publisher_root():
             f"[APESB]({permitted_target})",
             f"<{permitted_target}>",
             permitted_target,
+            f"{permitted_target}.",
+            f"{permitted_target},",
+            f"{permitted_target};",
             f"[APESB][publisher]\n\n[publisher]: {permitted_target}",
         )
         for form in permitted_forms:
