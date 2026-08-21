@@ -7,7 +7,8 @@ requires-python = ">=3.12"
 dependencies = ["pyyaml==6.0.3"]
 
 [project.optional-dependencies]
-dev = ["pytest==9.1.1"]
+dev = [
+    "ruff==0.12.8", "mypy==1.17.1","pytest==9.1.1"]
 
 [build-system]
 requires = ["setuptools==84.0.0"]
@@ -18,3 +19,20 @@ include = ["drdebits_build*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["drdebits_build", "tests"]
+
+[tool.ruff.lint]
+# First-enablement set: syntax and undefined-name errors only (E9, F82).
+# Keep Decimal("10.00") money literals and existing import layout.
+select = ["E9", "F82"]
+
+[tool.mypy]
+python_version = "3.10"
+packages = ["drdebits_build"]
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
+pretty = true
+

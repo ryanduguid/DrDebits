@@ -135,7 +135,7 @@ def test_sha256sums_covers_generated_and_static(tmp_path):
     out = build_sha256sums(root, s)
     lines = out.rstrip("\n").split("\n")
     assert lines[0].endswith(" *LICENSE") and lines[2].endswith(" *drdebits.md")
-    assert all(len(l.split(" *")[0]) == 64 for l in lines)
+    assert all(len(line.split(" *")[0]) == 64 for line in lines)
 
 
 def test_write_outputs_lf_only(tmp_path):
