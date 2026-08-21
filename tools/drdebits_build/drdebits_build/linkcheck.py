@@ -87,6 +87,9 @@ def _attempt(url, timeout):
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             status = resp.status
+            final = resp.geturl() if hasattr(resp, "geturl") else url
+        if not str(final).startswith("https://"):
+            return "unreachable", "non-https-redirect"
     except Exception as exc:  # any failure is a finding, described not raised
         return _classify_exception(exc)
     if 200 <= status < 400:

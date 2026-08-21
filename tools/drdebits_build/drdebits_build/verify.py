@@ -4,14 +4,15 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .build import GENERATED, STAMP_RE, build_sha256sums, load_sources
+from .build import GENERATED, STAMP_RE, BuildError, build_sha256sums, load_sources
+from .model import ModelError
 
 
 def run_verify(root):
     root = Path(root)
     try:
         s = load_sources(root)
-    except Exception as exc:  # loader problems are findings, not crashes; catches ModelError and BuildError alike
+    except (ModelError, BuildError, OSError) as exc:
         return [f"sources: {exc}"]
 
     failures: list[str] = []
@@ -20,7 +21,7 @@ def run_verify(root):
     # A missing checksum_files member must surface as a finding, not a crash.
     try:
         built["SHA256SUMS"] = build_sha256sums(root, s)
-    except Exception as exc:
+    except (ModelError, BuildError, OSError) as exc:
         failures.append(f"SHA256SUMS: cannot rebuild ({exc})")
         # SHA256SUMS drops out of the parity check below; all other entries still checked
 
