@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   links:
+    timeout-minutes: 15
     name: live link check, report only
     runs-on: ubuntu-latest
     steps:
