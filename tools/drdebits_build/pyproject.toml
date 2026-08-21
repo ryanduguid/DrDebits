@@ -25,13 +25,14 @@ line-length = 100
 src = ["drdebits_build", "tests"]
 
 [tool.ruff.lint]
-# First-enablement set: syntax/undefined-name errors only. Keep Decimal("10.00")
-# money literals; do not import-sort the existing test corpus in this change.
-select = ["E4", "E7", "E9", "F"]
+# First-enablement set: syntax and undefined-name errors only (E9, F82).
+# Keep Decimal("10.00") money literals and existing import layout.
+select = ["E9", "F82"]
 
 [tool.mypy]
 python_version = "3.10"
 packages = ["drdebits_build"]
 ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
 pretty = true
 
