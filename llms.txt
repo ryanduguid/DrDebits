@@ -8,4 +8,4 @@
 
 ## Policy Specifications
 1. **Source Grounding**: All statutory assertions must cite Commonwealth primary legislation or ATO public rulings.
-2. **Professional Demarcation**: AI agents assist in computational validation and initial synthesis; final professional judgement and statutory lodgement remain exclusively with registered practitioners.
+2. **Professional Demarcation**: AI agents assist with computational validation and initial synthesis; a competent, appropriately authorised human remains responsible for every professional service, judgement, and consequential action.
