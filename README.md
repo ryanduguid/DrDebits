@@ -1,9 +1,9 @@
 # DrDebits
 
-[![APES 110 Compliant](https://img.shields.io/badge/APES%20110-Compliant%20Guardrails-blue.svg)](#)
-[![TPB Code of Conduct](https://img.shields.io/badge/TPB%20Code-GS01--GS55%20Mapped-green.svg)](#)
-[![Jurisdiction](https://img.shields.io/badge/Jurisdiction-Australia%20%F0%9F%87%A6%F0%9F%87%BA-FFD700.svg)](#)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill%20%26%20Rule%20Ready-D97706?logo=anthropic&logoColor=white)](#)
+[![APES 110 Compliant](https://img.shields.io/badge/APES%20110-Compliant%20Guardrails-blue.svg)](SECURITY.md)
+[![TPB Code of Conduct](https://img.shields.io/badge/TPB%20Code-GS01--GS55%20Mapped-green.svg)](SECURITY.md)
+[![Jurisdiction](https://img.shields.io/badge/Jurisdiction-Australia%20%F0%9F%87%A6%F0%9F%87%BA-FFD700.svg)](#drdebits)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill%20%26%20Rule%20Ready-D97706?logo=anthropic&logoColor=white)](#-quick-start-for-ai-agents)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
