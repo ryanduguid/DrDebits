@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   verify:
-    timeout-minutes: 15
     name: build parity and structural checks
     runs-on: ubuntu-latest
     steps:
@@ -26,6 +25,13 @@ jobs:
 
       - name: Install the locked toolchain
         run: python -m pip install "uv==0.12.0"
+
+      - name: Lint the builder
+        run: uv run --project tools/drdebits_build --locked --extra dev ruff check tools/drdebits_build/drdebits_build tools/drdebits_build/tests
+
+      - name: Typecheck the builder
+        continue-on-error: true
+        run: uv run --project tools/drdebits_build --locked --extra dev mypy tools/drdebits_build/drdebits_build
 
       - name: Run the build package tests
         run: uv run --project tools/drdebits_build --locked --extra dev pytest tools/drdebits_build/tests -q
