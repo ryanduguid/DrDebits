@@ -5,7 +5,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from .build import find_root, load_sources, stamp_version, write_outputs
+from .build import BuildError, find_root, load_sources, stamp_version, write_outputs
+from .model import ModelError
 from .verify import run_verify
 
 
@@ -16,14 +17,18 @@ def main(argv=None):
     args = parser.parse_args(argv)
     root = Path(args.root) if args.root else find_root(Path.cwd())
     if args.command == "build":
-        s = load_sources(root)
-        for rel in ("README.md", "MAINTENANCE.md"):
-            p = root / rel
-            if p.is_file():
-                p.write_bytes(stamp_version(p.read_text(encoding="utf-8"), s.meta["guide_version"]).encode("utf-8"))
-                print(f"stamped {rel}")
-        for rel in write_outputs(root, root):
-            print(f"wrote {rel}")
+        try:
+            s = load_sources(root)
+            for rel in ("README.md", "MAINTENANCE.md"):
+                p = root / rel
+                if p.is_file():
+                    p.write_bytes(stamp_version(p.read_text(encoding="utf-8"), s.meta["guide_version"]).encode("utf-8"))
+                    print(f"stamped {rel}")
+            for rel in write_outputs(root, root):
+                print(f"wrote {rel}")
+        except (ModelError, BuildError, OSError) as exc:
+            print(f"build: {exc}", file=sys.stderr)
+            return 1
         return 0
     failures = run_verify(root)
     for f in failures:

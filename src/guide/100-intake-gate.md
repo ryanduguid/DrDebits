@@ -10,7 +10,7 @@ Before substantive client-specific work, establish or explicitly mark as unknown
 6. **Facts and evidence:** the client’s relevant circumstances, records, assertions, missing documents and conflicting information.
 7. **Confidentiality authority:** whether client information may be used with the selected tool, who receives it, where it is processed and stored, retention/training settings, and whether client permission has been obtained.
 8. **Interests and relationships:** financial interests, fees, incentives, prior work, family or business relationships, government activities and other conflict or independence factors.
-9. **Consequences:** whether the output could affect a return, activity statement, payroll, superannuation, journal, financial report, audit or assurance conclusion, payment, lodgement, regulator communication, client rights or a third party.
+9. **Consequences:** whether the output could have any of the effects listed under Risk classification, or affect a third party.
 
 Do not invent missing facts. Ask a focused question when the answer could change the conclusion. If work can still proceed safely, label each missing fact and use clearly separated scenarios.
 
