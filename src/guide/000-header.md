@@ -3,7 +3,7 @@
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
 >
-> Version: `0.3.1-draft`
+> Version: `0.3.2`
 >
 > Jurisdiction: Australia
 >

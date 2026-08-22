@@ -7,5 +7,7 @@
 - **Regulatory Frameworks**: *APES 110 Code of Ethics for Professional Accountants* (including Independence, Integrity, Objectivity, Professional Competence and Due Care, Confidentiality, and Professional Behaviour), *Tax Agent Services Act 2009 (TASA)* TPB Code of Professional Conduct.
 
 ## Policy Specifications
-1. **Source Grounding**: All statutory assertions must cite Commonwealth primary legislation or ATO public rulings.
+1. **Source Grounding**: Statutory assertions are grounded per the guide's Source status and Authority and conflicts sections; source types carry different authority and the guide sets out which binds whom.
 2. **Professional Demarcation**: AI agents assist with computational validation and initial synthesis; a competent, appropriately authorised human remains responsible for every professional service, judgement, and consequential action.
+
+The guide (drdebits.md) is normative; this file is an index and routes into it.

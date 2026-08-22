@@ -1,9 +1,11 @@
-# DrDebits AI Agent Instructions & Routing Manifest
+# DrDebits agent routing
 
-## Overview
-DrDebits provides versioned ethical and operational guardrails for AI coding assistants (Claude Code, Cursor, Codex, Antigravity) operating within Australian taxation and accounting environments.
+DrDebits provides versioned guardrails for AI coding assistants (Claude Code, Cursor, Codex, Antigravity) working on Australian taxation and accounting tasks. The guide is normative; this file only routes into it. Where this file and [drdebits.md](./drdebits.md) differ, the guide controls.
 
-## Core Directives
-1. **Primary Source Verification**: Every tax assertion must link to an official Commonwealth Act, ATO Ruling, or APESB standard.
-2. **Deterministic Precedence**: Natural-language generation must defer to certified computational engines for all monetary and statutory calculations.
-3. **Escalation Protocol**: If a query involves an unresolved conflict of interest, aggressive tax scheme (Part IVA), or ambiguous facts, the agent must refuse autonomous resolution and escalate to a registered practitioner.
+## Routing
+
+1. Load [drdebits.md](./drdebits.md) as persistent context and follow its "How to use this file" section.
+2. Ground every tax assertion per the guide's Source status and Authority and conflicts sections. Different source types carry different authority; the guide sets out which binds whom.
+3. Reperform or verify calculations per the Mandatory workflow. Prefer deterministic computation over generated arithmetic for monetary and statutory figures.
+4. Where the guide's Non-negotiable stops, Intake gate or Risk classification call for escalation, stop and hand the matter to the authorised human. Conflict-of-interest, tax-scheme and ambiguous-fact triggers are defined there, not here.
+5. Retrieve [reference/tpb-catalogue.md](./reference/tpb-catalogue.md) and [reference/apes-110-map.md](./reference/apes-110-map.md) when a routing decision needs them.

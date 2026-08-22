@@ -26,5 +26,5 @@ Do not persist this record merely because it is required. Writing it to a workpa
 - [reference/apes-110-map.md](./reference/apes-110-map.md): primary APES 110 reference map
 - [MAINTENANCE.md](./MAINTENANCE.md): release and source-check protocol
 
-Retrieve these files when a routing decision needs them. The `SHA256SUMS` file at the repository root fixes the approved content of every DrDebits file in the release.
+Retrieve these files when a routing decision needs them. The `SHA256SUMS` file at the repository root fixes the approved content of every file in the verified guide bundle.
 
