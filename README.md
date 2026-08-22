@@ -1,10 +1,10 @@
 # DrDebits
 
-[![APES 110 aligned](https://img.shields.io/badge/APES%20110-Aligned%20Guardrails-blue.svg)](reference/apes-110-map.md)
-[![TPB Code of Conduct](https://img.shields.io/badge/TPB%20Code-GS01--GS55%20Mapped-green.svg)](reference/tpb-catalogue.md)
-[![Jurisdiction](https://img.shields.io/badge/Jurisdiction-Australia%20%F0%9F%87%A6%F0%9F%87%BA-FFD700.svg)](#drdebits)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill%20%26%20Rule%20Ready-D97706?logo=anthropic&logoColor=white)](#-quick-start-for-ai-agents)
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
+[![APES 110 aligned](https://img.shields.io/badge/APES%20110-Aligned%20Guardrails-5C2D91.svg?labelColor=04001F)](reference/apes-110-map.md)
+[![TPB Code of Conduct](https://img.shields.io/badge/TPB%20Code-GS01--GS55%20Mapped-5C2D91.svg?labelColor=04001F)](reference/tpb-catalogue.md)
+[![Jurisdiction](https://img.shields.io/badge/Jurisdiction-Australia%20%F0%9F%87%A6%F0%9F%87%BA-4F485E.svg?labelColor=04001F)](#drdebits)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill%20%26%20Rule%20Ready-5C2D91?logo=anthropic&logoColor=white&labelColor=04001F)](#-quick-start-for-ai-agents)
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-4F485E.svg?labelColor=04001F)](LICENSE)
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
 >
@@ -41,6 +41,7 @@ All tax positions must be cited against primary ATO/Commonwealth sources.
 ## 🧭 Ethical Routing & Boundary Architecture
 
 ```mermaid
+%%{init: {"themeVariables": {"lineColor": "#B1AFAD"}}}%%
 flowchart TD
     Prompt["Accounting or tax prompt"] --> Gate["Intake gate<br/><i>scope, facts, sources, authority, confidentiality, interests, consequences</i>"]
     Gate --> Risk{"Risk classification"}
@@ -53,10 +54,10 @@ flowchart TD
     Status -->|"NEEDS_FACTS"| Facts["Focused questions back to the human"]
     Status -->|"ESCALATE or HARD_STOP"| Stop["No autonomous resolution<br/><i>responsibility stays with the authorised human</i>"]
 
-    style Prop fill:#e8f4f8,stroke:#2b579a,stroke-width:2px
-    style Flow fill:#fcf8e3,stroke:#8a6d3b,stroke-width:2px
-    style Draft fill:#dff0d8,stroke:#3c763d,stroke-width:2px
-    style Stop fill:#f2dede,stroke:#a94442,stroke-width:2px
+    style Prop fill:#140E24,stroke:#4F485E,stroke-width:2px,color:#FFFFFF
+    style Flow fill:#1E1236,stroke:#5C2D91,stroke-width:2px,color:#FFFFFF
+    style Draft fill:#2D184E,stroke:#8A4AC7,stroke-width:2px,color:#FFFFFF
+    style Stop fill:#2A0A12,stroke:#C02B0A,stroke-width:2px,color:#FFFFFF
 ```
 
 The diagram summarises the guide's own gate, classification, workflow and decision statuses; the guide text controls.
