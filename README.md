@@ -3,7 +3,7 @@
 [![APES 110 aligned](https://img.shields.io/badge/APES%20110-Aligned%20Guardrails-5C2D91.svg?labelColor=04001F)](reference/apes-110-map.md)
 [![TPB Code of Conduct](https://img.shields.io/badge/TPB%20Code-GS01--GS55%20Mapped-5C2D91.svg?labelColor=04001F)](reference/tpb-catalogue.md)
 [![Jurisdiction](https://img.shields.io/badge/Jurisdiction-Australia%20%F0%9F%87%A6%F0%9F%87%BA-4F485E.svg?labelColor=04001F)](#drdebits)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill%20%26%20Rule%20Ready-5C2D91?logo=anthropic&logoColor=white&labelColor=04001F)](#-quick-start-for-ai-agents)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill%20%26%20Rule%20Ready-5C2D91?logo=anthropic&logoColor=white&labelColor=04001F)](#quick-start-for-ai-agents)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-4F485E.svg?labelColor=04001F)](LICENSE)
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
@@ -18,7 +18,7 @@ DrDebits does not reproduce APES 110, certify compliance, replace the source doc
 
 ---
 
-## ⚡ Quick start for AI Agents
+## Quick start for AI Agents
 
 Supply `drdebits.md` as persistent project context at the highest configurable instruction tier beneath immutable platform controls, then instruct the model per the "How to use this file" section of the guide. Retrieve the reference files when a routing decision needs them.
 
@@ -38,7 +38,7 @@ All tax positions must be cited against primary ATO/Commonwealth sources.
 
 ---
 
-## 🧭 Ethical Routing & Boundary Architecture
+## Ethical Routing & Boundary Architecture
 
 ```mermaid
 %%{init: {"themeVariables": {"lineColor": "#B1AFAD"}}}%%
@@ -64,7 +64,7 @@ The diagram summarises the guide's own gate, classification, workflow and decisi
 
 ---
 
-## 📂 Files & Governance
+## Files & Governance
 
 | File | Purpose |
 |---|---|
@@ -79,14 +79,14 @@ The diagram summarises the guide's own gate, classification, workflow and decisi
 
 ---
 
-## 🔒 Integrity
+## Integrity
 
 Pin the approved release tag, retrieve `SHA256SUMS` at that tag and verify each file's digest before use. The `DRDEBITS-END-…` marker on the guide's final line is a truncation check only, not tamper evidence.
 
-## 📄 Licence
+## Licence
 
 Copyright © 2026 Ryan Duguid. Original DrDebits material is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); see [LICENSE](./LICENSE). The build tooling under `tools/` is separately licensed under the [MIT License](./tools/drdebits_build/LICENSE). The licences do not extend to third-party standards, quotations, logos, trade marks or source documents. DrDebits is not endorsed by the TPB, APESB, AUSTRAC, IFAC, CA ANZ, CPA Australia or IPA.
 
-## 🛠️ Contributing and maintenance
+## Contributing and maintenance
 
 The guide, reference and test files are generated. Edit the sources under `src/` and run `uv run --project tools/drdebits_build python -m drdebits_build build`; CI rejects hand edits to generated files. See `MAINTENANCE.md` for the release protocol.
