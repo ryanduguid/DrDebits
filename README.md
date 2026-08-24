@@ -1,5 +1,19 @@
 # DrDebits
 
+```
++----------------------------------------------------------------------+
+|                               DrDebits                               |
++----------------------------------------------------------------------+
+|          APES 110 and TPB Code guardrails for LLM tax work           |
++----------------------------------+-----------------------------------+
+| DR  what it gives you            | CR  what it needs                 |
++----------------------------------+-----------------------------------+
+| APES 110 mapped guardrails       | drdebits.md as project context    |
+| TPB Code GS01 to GS55 map        | Claude Code, Antigravity, Cursor  |
+| risk classified draft or stop    | -                                 |
++----------------------------------+-----------------------------------+
+```
+
 [![APES 110 aligned](https://img.shields.io/badge/APES%20110-Aligned%20Guardrails-5C2D91.svg?labelColor=04001F)](reference/apes-110-map.md)
 [![TPB Code of Conduct](https://img.shields.io/badge/TPB%20Code-GS01--GS55%20Mapped-5C2D91.svg?labelColor=04001F)](reference/tpb-catalogue.md)
 [![Jurisdiction](https://img.shields.io/badge/Jurisdiction-Australia%20%F0%9F%87%A6%F0%9F%87%BA-4F485E.svg?labelColor=04001F)](#drdebits)
