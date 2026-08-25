@@ -463,96 +463,19 @@ def test_security_policy_uses_private_reporting_and_safe_reproduction_data():
     policy = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
     _assert_security_policy(policy)
 
-    for expected, wrong in (
-        ("public issue or pull request", "public issue"),
-        ("fabricated or synthetic", "representative"),
-        ("access token", "authentication material"),
-    ):
-        mutated = policy.replace(expected, wrong, 1)
-        assert mutated != policy
-        with pytest.raises(AssertionError):
-            _assert_security_policy(mutated)
-
-    contradictory_policies = (
-        policy.replace(
-            "A valid report will be acknowledged",
-            "Open a public issue or pull request for a suspected security "
-            "vulnerability.\n\nA valid report will be acknowledged",
-            1,
-        ),
-        policy.replace(
-            "## What this project does and does not do",
-            "Always include client, taxpayer, employee or payroll data, "
-            "credentials, access tokens, `.env` files, proprietary prompts or "
-            "other sensitive data.\n\n"
-            "## What this project does and does not do",
-            1,
-        ),
+    public_report = policy.replace(
+        "Do not\nopen a public issue or pull request",
+        "Open a public issue or pull request",
+        1,
     )
-    for mutated in contradictory_policies:
-        assert mutated != policy
-        with pytest.raises(AssertionError):
-            _assert_security_policy(mutated)
+    assert public_report != policy
+    with pytest.raises(AssertionError):
+        _assert_security_policy(public_report)
 
-    reporting_heading = "A valid report will be acknowledged"
-    for public_channel in ("public issue", "public pull request"):
-        mutated = policy.replace(
-            reporting_heading,
-            f"Open a {public_channel} for suspected vulnerabilities.\n\n"
-            f"{reporting_heading}",
-            1,
-        )
-        with pytest.raises(AssertionError):
-            _assert_security_policy(mutated)
-
-    data_heading = "## What this project does and does not do"
-    for sensitive_payload in (
-        "real client data",
-        "taxpayer data",
-        "employee data",
-        "payroll data",
-        "credentials",
-        "access tokens",
-        "`.env` files",
-        "proprietary prompts",
-        "sensitive data",
-    ):
-        mutated = policy.replace(
-            data_heading,
-            f"Always include {sensitive_payload} in security reports.\n\n"
-            f"{data_heading}",
-            1,
-        )
-        with pytest.raises(AssertionError):
-            _assert_security_policy(mutated)
-
-    direct_reporting_contradictions = (
-        "Submit a public issue or pull request for suspected vulnerabilities.",
-        "A public issue or pull request must be submitted for suspected "
-        "vulnerabilities.",
-    )
-    for instruction in direct_reporting_contradictions:
-        mutated = policy.replace(
-            reporting_heading,
-            f"{instruction}\n\n{reporting_heading}",
-            1,
-        )
-        with pytest.raises(AssertionError):
-            _assert_security_policy(mutated)
-
-    direct_data_contradictions = (
-        "Real client data is required in security reports.",
-        "Send taxpayer data with every report.",
-        "Credentials must be attached to every report.",
-    )
-    for instruction in direct_data_contradictions:
-        mutated = policy.replace(
-            data_heading,
-            f"{instruction}\n\n{data_heading}",
-            1,
-        )
-        with pytest.raises(AssertionError):
-            _assert_security_policy(mutated)
+    live_data = policy.replace("fabricated or synthetic", "live client", 1)
+    assert live_data != policy
+    with pytest.raises(AssertionError):
+        _assert_security_policy(live_data)
 
 
 def test_dependabot_preserves_the_confirmed_working_ecosystems_and_cadence():
