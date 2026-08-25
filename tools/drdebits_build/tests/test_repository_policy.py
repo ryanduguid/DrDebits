@@ -180,7 +180,7 @@ def _assert_only_root_apesb_links(text: str) -> None:
     assert set(_apesb_url_targets(text)) <= ALLOWED_APESB_URLS
 
 
-def _normalise_prose(text: str) -> None:
+def _normalise_prose(text: str) -> str:
     return " ".join(text.casefold().split())
 
 
