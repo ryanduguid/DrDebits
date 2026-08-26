@@ -1,6 +1,7 @@
 """URL collection and outcome classification are tested offline with a
 monkeypatched urllib - no live network calls. Liveness is CI/local-only."""
 import socket
+import threading
 import urllib.error
 import urllib.request
 
@@ -192,3 +193,28 @@ def test_main_exits_0_when_only_unreachable(tmp_path, monkeypatch, capsys):
     assert "UNREACHABLE 403 https://x.invalid/blocked" in out
     # make_repo's own fixture source contributes one more URL (x.invalid/a).
     assert "checked 2: ok 0, dead 0, unreachable 2" in out
+
+
+def test_main_probes_urls_concurrently(tmp_path, monkeypatch, capsys):
+    """A serial probe loop can exceed the workflow's 15-minute job limit."""
+    rendezvous = threading.Barrier(2)
+    monkeypatch.setattr(
+        linkcheck,
+        "collect_urls",
+        lambda root: ["https://x.invalid/one", "https://x.invalid/two"],
+    )
+
+    def fake_check(url, timeout):
+        try:
+            rendezvous.wait(timeout=0.25)
+        except threading.BrokenBarrierError:
+            return "unreachable", "serial"
+        return "ok", "200"
+
+    monkeypatch.setattr(linkcheck, "check", fake_check)
+
+    rc = linkcheck.main(["--root", str(tmp_path)])
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert out == "checked 2: ok 2, dead 0, unreachable 0\n"
