@@ -33,7 +33,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          uv run --project tools/drdebits_build --locked python -m drdebits_build.linkcheck --root . | tee dead-links.txt || echo "failed=true" >> "$GITHUB_OUTPUT"
+          # Keep the serial two-attempt scan inside the job's 15-minute budget
+          # and stream findings so a cancelled run still identifies its progress.
+          uv run --project tools/drdebits_build --locked python -u -m drdebits_build.linkcheck --root . --timeout 5 | tee dead-links.txt || echo "failed=true" >> "$GITHUB_OUTPUT"
 
       - name: Open or update the report issue
         if: steps.links.outputs.failed == 'true'
