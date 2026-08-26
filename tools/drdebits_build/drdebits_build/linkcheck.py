@@ -6,6 +6,8 @@ import re
 import socket
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from pathlib import Path
 
 from .build import GENERATED, find_root, load_sources
@@ -118,17 +120,19 @@ def main(argv=None):
     parser.add_argument("--timeout", type=int, default=20)
     args = parser.parse_args(argv)
     root = Path(args.root) if args.root else find_root(Path.cwd())
+    urls = collect_urls(root)
     ok = dead = unreachable = 0
-    for url in collect_urls(root):
-        kind, detail = check(url, args.timeout)
-        if kind == "ok":
-            ok += 1
-        elif kind == "dead":
-            dead += 1
-            print(f"DEAD {detail} {url}")
-        else:
-            unreachable += 1
-            print(f"UNREACHABLE {detail} {url}")
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        results = executor.map(partial(check, timeout=args.timeout), urls)
+        for url, (kind, detail) in zip(urls, results):
+            if kind == "ok":
+                ok += 1
+            elif kind == "dead":
+                dead += 1
+                print(f"DEAD {detail} {url}")
+            else:
+                unreachable += 1
+                print(f"UNREACHABLE {detail} {url}")
     print(f"checked {ok + dead + unreachable}: ok {ok}, dead {dead}, unreachable {unreachable}")
     return 1 if dead else 0
 
