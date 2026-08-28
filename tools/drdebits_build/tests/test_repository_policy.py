@@ -5,6 +5,7 @@ from __future__ import annotations
 from html import unescape
 import re
 from pathlib import Path
+import tomllib
 from urllib.parse import unquote
 
 import pytest
@@ -503,6 +504,24 @@ def test_dependabot_preserves_the_confirmed_working_ecosystems_and_cadence():
             },
         ],
     }
+
+
+def test_uv_manifest_uses_canonical_dependency_names_for_dependabot():
+    manifest = tomllib.loads(
+        (ROOT / "tools" / "drdebits_build" / "pyproject.toml").read_text(
+            encoding="utf-8"
+        )
+    )
+    requirements = [
+        *manifest["project"]["dependencies"],
+        *manifest["project"]["optional-dependencies"]["dev"],
+        *manifest["build-system"]["requires"],
+    ]
+
+    for requirement in requirements:
+        declared_name = re.split(r"[<>=!~;\[]", requirement, maxsplit=1)[0]
+        canonical_name = re.sub(r"[-_.]+", "-", declared_name).lower()
+        assert declared_name == canonical_name, requirement
 
 
 def test_release_checklist_stages_and_verifies_before_publication():
