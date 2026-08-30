@@ -191,6 +191,91 @@ def test_source_check_date_drift_detected(tmp_path):
     assert any("README.md: source-check date" in f for f in failures)
 
 
+def test_review_due_not_after_source_check_date_detected(tmp_path):
+    """Check (g): advancing sources_checked_at past review_due - exactly what a
+    source recheck under MAINTENANCE step 8 does - must fail verify instead of
+    publishing a guide whose own frontmatter tells the model its contents are
+    already stale."""
+    root = make_repo(tmp_path)
+    meta = root / "src" / "data" / "metadata.yaml"
+    original = meta.read_text(encoding="utf-8")
+    meta.write_text(
+        original.replace(
+            'value: "2026-01-01T00:00:00+10:00"', 'value: "2026-06-01T00:00:00+10:00"'),
+        encoding="utf-8", newline="\n")
+    sync(root)  # rebuild so byte-compare passes; only the dates disagree
+    failures = run_verify(root)
+    assert any(
+        "metadata: review_due 2026-04-01 is not after sources_checked_at 2026-06-01" in f
+        for f in failures)
+
+    # Same day is not "after": a review that falls due on the check date is
+    # already due when the release ships.
+    meta.write_text(
+        original.replace('value: "2026-04-01"', 'value: "2026-01-01"'),
+        encoding="utf-8", newline="\n")
+    sync(root)
+    assert any("review_due 2026-01-01 is not after" in f for f in run_verify(root))
+
+    meta.write_text(
+        original.replace('value: "2026-04-01"', 'value: "next quarter"'),
+        encoding="utf-8", newline="\n")
+    sync(root)
+    assert any("review_due must be an ISO date" in f for f in run_verify(root))
+
+
+def test_missing_review_due_becomes_message_not_silent_pass(tmp_path):
+    """Deleting review_due must surface as a sources finding: the guide still
+    instructs the model to evaluate a frontmatter field that would no longer
+    exist."""
+    root = make_repo(tmp_path)
+    sync(root)
+    meta = root / "src" / "data" / "metadata.yaml"
+    text = meta.read_text(encoding="utf-8")
+    start = text.index("  - key: review_due")
+    end = text.index("  - key: checksum_files")
+    meta.write_text(text[:start] + text[end:], encoding="utf-8", newline="\n")
+    failures = run_verify(root)
+    assert any("sources:" in f and "review_due" in f for f in failures)
+
+
+def test_tpb_statement_count_and_range_drift_detected(tmp_path):
+    """Check (h): the guide's and README's hand-written statement count and GS
+    range are not derived by the build, so a catalogue change that leaves them
+    behind must fail verify instead of shipping a guide that contradicts its
+    own bundled catalogue."""
+    root = make_repo(tmp_path)
+    (root / "src" / "guide" / "020-sources.md").write_text(
+        "## Sources\n\n| TPB library | 1 indexed statements, GS01 to GS01 | note |\n\n"
+        "At the source-check date, the filtered TPB library index exposed 1 live "
+        "Guidance Statements, GS01 to GS01, across one result page.\n",
+        encoding="utf-8", newline="\n")
+    readme = root / "README.md"
+    readme.write_text(
+        readme.read_text(encoding="utf-8") + "\nCatalogue GS01 to GS01\n",
+        encoding="utf-8", newline="\n")
+    sync(root)
+    assert run_verify(root) == []
+
+    # Add a statement the way a source recheck would, bumping the counts
+    # validate_counts forces, but leaving the prose copies stale.
+    catalogue = root / "src" / "data" / "tpb-catalogue.yaml"
+    catalogue.write_text(
+        catalogue.read_text(encoding="utf-8")
+        + '  - id: "GS02"\n    title: "T2"\n    url: "https://x.invalid/b"\n'
+          '    trigger: "g"\n',
+        encoding="utf-8", newline="\n")
+    meta = root / "src" / "data" / "metadata.yaml"
+    meta.write_text(
+        meta.read_text(encoding="utf-8").replace('value: "1"', 'value: "2"'),
+        encoding="utf-8", newline="\n")
+    sync(root)  # rebuild so byte-compare passes; only the hand-written copies are stale
+    failures = run_verify(root)
+    assert any("drdebits.md: statement range 'GS01 to GS01'" in f for f in failures)
+    assert any("drdebits.md: statement count 1 does not match" in f for f in failures)
+    assert any("README.md: statement range 'GS01 to GS01'" in f for f in failures)
+
+
 def test_changelog_newest_entry_mismatch_detected(tmp_path):
     """Check (d): the newest (first) changelog entry must match guide_version."""
     root = make_repo(tmp_path)

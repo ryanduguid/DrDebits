@@ -2,10 +2,17 @@
 from __future__ import annotations
 
 import re
+from datetime import date
 from pathlib import Path
 
 from .build import GENERATED, STAMP_RE, BuildError, build_sha256sums, load_sources
 from .model import ModelError
+
+# The two shapes the hand-written TPB statement count and GS range are written
+# in outside the generated catalogue header: a bare id range, and a count
+# introducing one. Check (h) compares every match against the sources.
+GS_RANGE_RE = re.compile(r"GS\d+ to GS\d+")
+GS_COUNT_RE = re.compile(r"(\d+) (?:indexed statements|live Guidance Statements)")
 
 
 def run_verify(root):
@@ -131,5 +138,51 @@ def run_verify(root):
             failures.append(
                 f"CITATION.cff: date-released does not match newest changelog "
                 f"date {release_date}")
+
+    # (g) review_due is the one metadata field the guide tells every consuming
+    # LLM to act on: once it has passed, the guide labels its own contents
+    # SOURCE CURRENCY NOT CONFIRMED. A source recheck that advances
+    # sources_checked_at without advancing review_due would therefore publish a
+    # release that disables itself on the day it ships, so review_due must be a
+    # real date strictly after the source-check date.
+    review_due = s.meta["review_due"]
+    try:
+        due = date.fromisoformat(review_due)
+    except ValueError:
+        failures.append(
+            f"metadata: review_due must be an ISO date (YYYY-MM-DD), got {review_due!r}")
+    else:
+        checked = date.fromisoformat(s.meta["sources_checked_at"][:10])
+        if due <= checked:
+            failures.append(
+                f"metadata: review_due {review_due} is not after sources_checked_at "
+                f"{checked.isoformat()}; the release would ship already due for review")
+
+    # (h) the catalogue header derives its statement count and GS range from
+    # metadata and the catalogue rows, but the guide and README carry
+    # hand-written copies of both. Adding or withdrawing a statement would
+    # otherwise ship one release whose guide says one count and whose bundled
+    # catalogue says another, so every copy must agree with the same two
+    # sources the header is built from. Every occurrence is checked, not just
+    # the first, so a stale leftover beside a corrected copy is still caught.
+    # (README's shields.io badge carries a further URL-encoded copy that this
+    # check cannot see; MAINTENANCE step 8 owns that one.)
+    gs_count = s.meta["tpb_guidance_statement_count"]
+    gs_range = f"{s.catalogue[0]['id']} to {s.catalogue[-1]['id']}"
+    for rel in ("drdebits.md", "README.md"):
+        p = root / rel
+        if not p.is_file():
+            continue
+        text = p.read_text(encoding="utf-8")
+        for m in GS_RANGE_RE.finditer(text):
+            if m.group(0) != gs_range:
+                failures.append(
+                    f"{rel}: statement range {m.group(0)!r} does not match the "
+                    f"catalogue range {gs_range!r}")
+        for m in GS_COUNT_RE.finditer(text):
+            if m.group(1) != gs_count:
+                failures.append(
+                    f"{rel}: statement count {m.group(1)} does not match "
+                    f"tpb_guidance_statement_count {gs_count}")
 
     return failures

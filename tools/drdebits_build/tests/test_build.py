@@ -37,6 +37,8 @@ def make_repo(tmp_path: Path) -> Path:
             value: "1"
           - key: sources_checked_at
             value: "2026-01-01T00:00:00+10:00"
+          - key: review_due
+            value: "2026-04-01"
           - key: checksum_files
             value: "LICENSE|README.md|drdebits.md"
     """), encoding="utf-8", newline="\n")

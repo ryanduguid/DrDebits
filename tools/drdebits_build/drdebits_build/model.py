@@ -129,7 +129,8 @@ def load_apes_map(path):
 # run_verify's returns-messages contract.
 REQUIRED_METADATA_KEYS = (
     "guide_version", "release_tag", "guide_end_marker", "sources_checked_at",
-    "tpb_guidance_statement_count", "tpb_library_index_count", "checksum_files",
+    "review_due", "tpb_guidance_statement_count", "tpb_library_index_count",
+    "checksum_files",
 )
 
 

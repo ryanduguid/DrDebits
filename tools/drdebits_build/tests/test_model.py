@@ -125,7 +125,8 @@ def test_table_bound_values_reject_pipes_and_newlines(tmp_path):
 def test_required_metadata_keys_enforced():
     meta = {k: "x" for k in (
         "guide_version", "release_tag", "guide_end_marker", "sources_checked_at",
-        "tpb_guidance_statement_count", "tpb_library_index_count", "checksum_files")}
+        "review_due", "tpb_guidance_statement_count", "tpb_library_index_count",
+        "checksum_files")}
     validate_required_metadata(meta)
     del meta["guide_version"]
     with pytest.raises(ModelError, match="guide_version"):
