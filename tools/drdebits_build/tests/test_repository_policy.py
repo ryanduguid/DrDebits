@@ -214,8 +214,11 @@ STATUTORY_ATTRIBUTION_LEAD_IN = "under the *tax agent services act 2009 (tasa)*"
 
 
 def _assert_disclaimer_responsibility_framing(text: str) -> None:
-    """Items 1 and 2 of this section are DrDebits controls, not provisions of
-    either instrument, so the section must attribute them to the project."""
+    """The section states three requirements and cites no provision of either
+    instrument for any of them, so it must not open by telling the reader that
+    those instruments are what require them. Establishing which duties the
+    TASA and APES 110 in fact impose is the practitioner's job, not this
+    file's, which is the same line 060 draws about the guide's own MUST."""
     section = _normalise_prose(_section(text, "## 3. Human Practitioner Responsibility"))
     assert section.startswith(DISCLAIMER_RESPONSIBILITY_LEAD_IN)
     assert STATUTORY_ATTRIBUTION_LEAD_IN not in section
