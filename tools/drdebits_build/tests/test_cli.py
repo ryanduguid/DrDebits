@@ -1,7 +1,24 @@
 """CLI behaviour via main() return codes."""
+from datetime import date
+
+import pytest
+
+from drdebits_build import verify as verify_module
 from drdebits_build.__main__ import main
 from drdebits_build.verify import run_verify
 from tests.test_build import make_repo
+
+# The fixture repo's review date is fixed (due 2026-04-01), so the date the CLI
+# checks it against has to be fixed too, or these tests would start failing on
+# their own on that date. main() takes no date argument by design - verify's
+# whole job is to read the real clock - so the seam is the module function it
+# reads it through.
+TODAY = date(2026, 2, 1)
+
+
+@pytest.fixture(autouse=True)
+def _pin_verification_date(monkeypatch):
+    monkeypatch.setattr(verify_module, "_verification_date", lambda: TODAY)
 
 
 def test_build_then_verify_roundtrip(tmp_path, capsys):
@@ -33,7 +50,9 @@ def test_build_stamps_readme_and_maintenance_before_checksums(tmp_path):
     root = make_repo(tmp_path)
     (root / "README.md").write_text(
         "> Version: `0.0.1`\n\nSources last checked: 2026-01-01\n\n"
-        "Install uv `0.12.0` before building.\n",
+        "Install uv `0.12.0` before building.\n\n"
+        "| TPB Code GS01 to GS01 map | tools |\n"
+        "| catalogue | Complete live TPB Guidance Statement catalogue, GS01 to GS01 |\n",
         encoding="utf-8", newline="\n")
     (root / "MAINTENANCE.md").write_text(
         "Part of [DrDebits](./drdebits.md) `0.0.1`.\n", encoding="utf-8", newline="\n")

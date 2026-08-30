@@ -264,6 +264,7 @@ RELEASE_PROTOCOL_STEP_8_TOKENS = (
     "`GS` range",
     "TPB Code badge",
     "`tools/drdebits_build/tests/test_repository_policy.py`",
+    "`tools/drdebits_build/drdebits_build/verify.py`",
 )
 
 

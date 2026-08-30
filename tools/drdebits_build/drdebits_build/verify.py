@@ -14,9 +14,38 @@ from .model import ModelError
 GS_RANGE_RE = re.compile(r"GS\d+ to GS\d+")
 GS_COUNT_RE = re.compile(r"(\d+) (?:indexed statements|live Guidance Statements)")
 
+# How many copies of each shape each file must carry. Comparing only the text
+# the patterns above happen to match lets check (h) pass vacuously: a copy that
+# is deleted, or reworded past those patterns - "GS01-GS55" with an en dash,
+# "GS01 through GS55", a different count phrase - simply drops out of the scan,
+# and the stale claim ships unexamined beside a catalogue that contradicts it.
+# Requiring the documented number of copies makes an absent copy a failure
+# rather than silence. The copies are the ones MAINTENANCE step 8 tells a
+# maintainer to update: drdebits.md carries the source-status table row, the
+# source-status prose sentence and the workpaper-record catalogue line; README
+# carries its capability-table row and its bundled-file table row. README's
+# shields.io badge is deliberately not counted here - its copy is URL-encoded
+# ("GS01--GS55"), which neither pattern can see, and step 8 owns it.
+GS_COPY_COUNTS = {
+    "drdebits.md": {"range": 3, "count": 2},
+    "README.md": {"range": 2, "count": 0},
+}
 
-def run_verify(root):
+
+def _verification_date():
+    """The date verify treats as today.
+
+    Indirected through a function so a caller - the test suite in particular -
+    can pin it. Reading the wall clock inside the check itself would make every
+    assertion about review_due expire on the date it asserts about.
+    """
+    return date.today()
+
+
+def run_verify(root, today=None):
     root = Path(root)
+    if today is None:
+        today = _verification_date()
     try:
         s = load_sources(root)
     except (ModelError, BuildError, OSError) as exc:
@@ -144,7 +173,10 @@ def run_verify(root):
     # SOURCE CURRENCY NOT CONFIRMED. A source recheck that advances
     # sources_checked_at without advancing review_due would therefore publish a
     # release that disables itself on the day it ships, so review_due must be a
-    # real date strictly after the source-check date.
+    # real date strictly after the source-check date - and, because MAINTENANCE
+    # runs verify on the day of release, strictly after that day too. Checking
+    # only the two metadata dates against each other would bless a release
+    # whose review fell due months before anyone ran the gate.
     review_due = s.meta["review_due"]
     try:
         due = date.fromisoformat(review_due)
@@ -157,6 +189,11 @@ def run_verify(root):
             failures.append(
                 f"metadata: review_due {review_due} is not after sources_checked_at "
                 f"{checked.isoformat()}; the release would ship already due for review")
+        if due <= today:
+            failures.append(
+                f"metadata: review_due {review_due} is not after the verification date "
+                f"{today.isoformat()}; the sources are due for review now, so the guide "
+                "labels its own contents SOURCE CURRENCY NOT CONFIRMED")
 
     # (h) the catalogue header derives its statement count and GS range from
     # metadata and the catalogue rows, but the guide and README carry
@@ -164,25 +201,34 @@ def run_verify(root):
     # otherwise ship one release whose guide says one count and whose bundled
     # catalogue says another, so every copy must agree with the same two
     # sources the header is built from. Every occurrence is checked, not just
-    # the first, so a stale leftover beside a corrected copy is still caught.
-    # (README's shields.io badge carries a further URL-encoded copy that this
-    # check cannot see; MAINTENANCE step 8 owns that one.)
+    # the first, so a stale leftover beside a corrected copy is still caught -
+    # and the number of occurrences is checked too, so a copy that is deleted
+    # or reworded out of the patterns cannot escape by simply not matching.
+    # load_catalogue guarantees the rows are GS ids in ascending order, which
+    # is what makes the first and last of them the range endpoints.
     gs_count = s.meta["tpb_guidance_statement_count"]
     gs_range = f"{s.catalogue[0]['id']} to {s.catalogue[-1]['id']}"
-    for rel in ("drdebits.md", "README.md"):
+    for rel, expected in GS_COPY_COUNTS.items():
         p = root / rel
         if not p.is_file():
-            continue
+            continue  # already reported missing above
         text = p.read_text(encoding="utf-8")
-        for m in GS_RANGE_RE.finditer(text):
-            if m.group(0) != gs_range:
+        found = {"range": GS_RANGE_RE.findall(text), "count": GS_COUNT_RE.findall(text)}
+        for value in found["range"]:
+            if value != gs_range:
                 failures.append(
-                    f"{rel}: statement range {m.group(0)!r} does not match the "
+                    f"{rel}: statement range {value!r} does not match the "
                     f"catalogue range {gs_range!r}")
-        for m in GS_COUNT_RE.finditer(text):
-            if m.group(1) != gs_count:
+        for value in found["count"]:
+            if value != gs_count:
                 failures.append(
-                    f"{rel}: statement count {m.group(1)} does not match "
+                    f"{rel}: statement count {value} does not match "
                     f"tpb_guidance_statement_count {gs_count}")
+        for shape, values in found.items():
+            if len(values) != expected[shape]:
+                failures.append(
+                    f"{rel}: found {len(values)} statement {shape} copies, expected "
+                    f"{expected[shape]}; a hand-written copy has been removed or "
+                    "reworded past this check (MAINTENANCE step 8 lists them)")
 
     return failures

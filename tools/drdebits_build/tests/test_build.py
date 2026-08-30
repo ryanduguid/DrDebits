@@ -14,8 +14,13 @@ def make_repo(tmp_path: Path) -> Path:
     (tmp_path / "src" / "data").mkdir()
     (tmp_path / "drdebits.md").write_text("placeholder", encoding="utf-8")
     (tmp_path / "LICENSE").write_text("MIT-ish\n", encoding="utf-8", newline="\n")
+    # The two README GS-range copies MAINTENANCE step 8 names. verify requires
+    # the documented copies to be present, so the fixture repo has to carry the
+    # same hand-written copies as the real one.
     (tmp_path / "README.md").write_text(
-        "> Version: `0.9.9-test`\n\nSources last checked: 2026-01-01\n",
+        "> Version: `0.9.9-test`\n\nSources last checked: 2026-01-01\n\n"
+        "| TPB Code GS01 to GS01 map | tools |\n"
+        "| catalogue | Complete live TPB Guidance Statement catalogue, GS01 to GS01 |\n",
         encoding="utf-8", newline="\n")
     (tmp_path / "MAINTENANCE.md").write_text(
         "Part of [DrDebits](./drdebits.md) `0.9.9-test`.\n", encoding="utf-8", newline="\n")
@@ -23,6 +28,17 @@ def make_repo(tmp_path: Path) -> Path:
         "# G\n\n> Version: `0.9.9-test`\n>\n> Sources last checked: `2026-01-01`\n\nIntro.\n",
         encoding="utf-8", newline="\n")
     (tmp_path / "src" / "guide" / "010-rules.md").write_text("## Rules\n\nBe good.\n", encoding="utf-8", newline="\n")
+    # The three guide GS-range copies and two count copies MAINTENANCE step 8
+    # names: the source-status table row, its prose sentence and the
+    # workpaper-record catalogue line.
+    (tmp_path / "src" / "guide" / "020-sources.md").write_text(
+        "## Sources\n\n"
+        "| TPB library | 1 indexed statements, GS01 to GS01 | note |\n\n"
+        "At the source-check date, the filtered TPB library index exposed 1 live "
+        "Guidance Statements, GS01 to GS01, across one result page.\n\n"
+        "- reference/tpb-catalogue.md: complete live TPB Guidance Statement "
+        "catalogue, GS01 to GS01\n",
+        encoding="utf-8", newline="\n")
     (tmp_path / "src" / "data" / "metadata.yaml").write_text(textwrap.dedent("""\
         fields:
           - key: guide_version

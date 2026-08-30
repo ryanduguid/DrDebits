@@ -50,6 +50,36 @@ def test_catalogue_rejects_duplicate_ids_and_http(tmp_path):
         load_catalogue(write(tmp_path, "c3.yaml", good.replace("https://", "http://")))
 
 
+def test_catalogue_ids_must_be_gs_numbered_and_ascending(tmp_path):
+    """The catalogue header and verify both publish the first and last rows as
+    the authoritative "GSxx to GSyy" range. Uniqueness alone does not make that
+    claim true: a malformed or reordered catalogue would let both agree on an
+    inverted or nonsensical range, so the ids must be GS-numbered and in
+    ascending order at load."""
+    def catalogue(name, ids):
+        rows = "".join(
+            f'  - id: "{i}"\n    title: "T"\n'
+            f'    url: "https://example.invalid/{n}"\n    trigger: "x"\n'
+            for n, i in enumerate(ids))
+        return write(tmp_path, name, "entries:\n" + rows)
+
+    assert [r["id"] for r in load_catalogue(catalogue("ok.yaml", ["GS01", "GS02"]))] \
+        == ["GS01", "GS02"]
+    # Withdrawn statements leave gaps; a gap is still ascending.
+    assert len(load_catalogue(catalogue("gap.yaml", ["GS01", "GS09", "GS54"]))) == 3
+
+    for name, ids, match in (
+        ("desc.yaml", ["GS02", "GS01"], "does not come after"),
+        ("swap.yaml", ["GS55", "GS02", "GS01"], "does not come after"),
+        ("dupnum.yaml", ["GS01", "GS1"], "does not come after"),
+        ("bad.yaml", ["GS01", "GS02a"], "Guidance Statement id"),
+        ("nope.yaml", ["GS01", "TPB03"], "Guidance Statement id"),
+        ("bare.yaml", ["01", "02"], "Guidance Statement id"),
+    ):
+        with pytest.raises(ModelError, match=match):
+            load_catalogue(catalogue(name, ids))
+
+
 def test_behaviour_status_enum_and_empty_fields(tmp_path):
     tmpl = """\
         entries:
