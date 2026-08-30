@@ -1,9 +1,19 @@
 """Load and validate the YAML sources of truth. All leaf values are strings."""
 from __future__ import annotations
 
+import re
 from datetime import date
 
 import yaml
+
+# A catalogue id is a TPB Guidance Statement number. Both the generated
+# catalogue header and verify's range check publish the first and last rows as
+# the authoritative "GSxx to GSyy" range, so the rows have to be what that
+# claim assumes: real GS ids in ascending order. Without this, a reordered or
+# malformed catalogue rebuilds and verifies clean while publishing an inverted
+# or nonsensical range, because the builder and the verifier read the same two
+# rows and therefore agree with each other about bad data.
+CATALOGUE_ID_RE = re.compile(r"GS(\d+)\Z")
 
 ALLOWED_STATUSES = frozenset({
     "HARD_STOP", "ESCALATE", "NEEDS_FACTS", "PROCEED_DRAFT_ONLY",
@@ -93,7 +103,20 @@ def load_catalogue(path):
     rows = _rows(path, _read(path), "entries", ("id", "title", "url", "trigger"),
                  table_safe=True)
     _unique_ids(path, rows)
+    previous = None
     for r in rows:
+        match = CATALOGUE_ID_RE.match(r["id"])
+        if match is None:
+            raise ModelError(
+                f"{path}: id {r['id']!r} must be a Guidance Statement id "
+                "(GS followed by digits)")
+        number = int(match.group(1))
+        if previous is not None and number <= previous[0]:
+            raise ModelError(
+                f"{path}: id {r['id']} does not come after {previous[1]}; entries must "
+                "be in ascending id order, because the catalogue header and verify "
+                "both publish the first and last rows as the statement range")
+        previous = (number, r["id"])
         if not r["url"].startswith("https://"):
             raise ModelError(f"{path}: url for {r['id']} must be https")
     return rows
@@ -129,7 +152,8 @@ def load_apes_map(path):
 # run_verify's returns-messages contract.
 REQUIRED_METADATA_KEYS = (
     "guide_version", "release_tag", "guide_end_marker", "sources_checked_at",
-    "tpb_guidance_statement_count", "tpb_library_index_count", "checksum_files",
+    "review_due", "tpb_guidance_statement_count", "tpb_library_index_count",
+    "checksum_files",
 )
 
 

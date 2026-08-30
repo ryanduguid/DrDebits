@@ -15,7 +15,14 @@ def main(argv=None):
     parser.add_argument("command", choices=["build", "verify"])
     parser.add_argument("--root", default=None)
     args = parser.parse_args(argv)
-    root = Path(args.root) if args.root else find_root(Path.cwd())
+    # Root discovery is the first thing a user hits from outside a DrDebits
+    # tree, so it must produce the same clean message as every other error
+    # path rather than a traceback.
+    try:
+        root = Path(args.root) if args.root else find_root(Path.cwd())
+    except BuildError as exc:
+        print(f"{args.command}: {exc}", file=sys.stderr)
+        return 1
     if args.command == "build":
         try:
             s = load_sources(root)
