@@ -12,7 +12,7 @@ import pytest
 import yaml
 
 from drdebits_build.build import find_root
-from drdebits_build.model import load_metadata
+from drdebits_build.model import load_behaviour_tests, load_metadata
 
 
 ROOT = find_root(Path(__file__).resolve())
@@ -204,6 +204,26 @@ REPRODUCTION_DATA_POLICY = (
 )
 
 
+DISCLAIMER_RESPONSIBILITY_LEAD_IN = (
+    "drdebits requires, consistent with the responsibilities that the *tax "
+    "agent services act 2009 (tasa)* and *apes 110 code of ethics for "
+    "professional accountants* place on the practitioner, that a registered "
+    "tax agent, bas agent, or qualified professional accountant:"
+)
+STATUTORY_ATTRIBUTION_LEAD_IN = "under the *tax agent services act 2009 (tasa)*"
+
+
+def _assert_disclaimer_responsibility_framing(text: str) -> None:
+    """The section states three requirements and cites no provision of either
+    instrument for any of them, so it must not open by telling the reader that
+    those instruments are what require them. Establishing which duties the
+    TASA and APES 110 in fact impose is the practitioner's job, not this
+    file's, which is the same line 060 draws about the guide's own MUST."""
+    section = _normalise_prose(_section(text, "## 3. Human Practitioner Responsibility"))
+    assert section.startswith(DISCLAIMER_RESPONSIBILITY_LEAD_IN)
+    assert STATUTORY_ATTRIBUTION_LEAD_IN not in section
+
+
 def _assert_security_policy(text: str) -> None:
     supported = _normalise_prose(_section(text, "## Supported versions"))
     reporting = _normalise_prose(_section(text, "## Reporting a vulnerability"))
@@ -224,12 +244,46 @@ CHECKSUM_FILES = (
     "reference/apes-110-map.md",
     "tests/behaviour-tests.md",
 )
+PROHIBITED_CONCLUSION_TESTS = ("IND-001", "SAFE-001", "CERT-001")
 HISTORICAL_PRERELEASES = (
     "v0.1.0-draft",
     "v0.2.0-draft",
     "v0.3.0-draft",
     "v0.3.1-draft",
 )
+
+
+# Step 8 of the release protocol is the exhaustive "what to edit" list. Every
+# hand-written copy the build does not derive, and every assertion that pins
+# one, has to be named there: a maintainer who follows the step literally must
+# not end up with a self-contradictory release or a red suite.
+RELEASE_PROTOCOL_STEP_8_TOKENS = (
+    "`review_due`",
+    "`src/guide/000-header.md`",
+    "`src/guide/040-source-status.md`",
+    "`src/guide/150-apes-110-control-set.md`",
+    "`src/guide/180-workpaper-record.md`",
+    "`CITATION.cff`",
+    "`GS` range",
+    "TPB Code badge",
+    "`tools/drdebits_build/tests/test_repository_policy.py`",
+    "`tools/drdebits_build/drdebits_build/verify.py`",
+)
+
+
+def _release_protocol_step(text: str, number: int) -> str:
+    """Return one numbered step of the per-release protocol, which precedes the
+    GitHub release checklist's own numbered list."""
+    protocol = text.split("## GitHub release checklist", 1)[0]
+    match = re.search(rf"^{number}\. (.+)$", protocol, flags=re.MULTILINE)
+    assert match is not None, f"missing release protocol step {number}"
+    return match.group(1)
+
+
+def _assert_release_protocol_names_every_hand_written_copy(text: str) -> None:
+    step = _release_protocol_step(text, 8)
+    for token in RELEASE_PROTOCOL_STEP_8_TOKENS:
+        assert token in step, token
 
 
 def _assert_release_checklist(text: str) -> None:
@@ -522,6 +576,69 @@ def test_uv_manifest_uses_canonical_dependency_names_for_dependabot():
         declared_name = re.split(r"[<>=!~;\[]", requirement, maxsplit=1)[0]
         canonical_name = re.sub(r"[-_.]+", "-", declared_name).lower()
         assert declared_name == canonical_name, requirement
+
+
+def test_checksum_manifest_membership_matches_the_documented_bundle():
+    """`SHA256SUMS` membership is driven entirely by this metadata string, and
+    the generated manifest is byte-compared by verify, so pinning the string
+    pins the manifest. Without it a bad edit or merge could shrink the bundle
+    while README, MAINTENANCE and the guide's own integrity instruction keep
+    promising digests for all eight files."""
+    metadata = load_metadata(ROOT / "src" / "data" / "metadata.yaml")
+    assert metadata["checksum_files"].split("|") == list(CHECKSUM_FILES)
+
+
+def test_prohibited_conclusion_behaviour_tests_require_one_status():
+    """These three rows describe the same act: refuse a conclusion the guide
+    flatly prohibits, collect the facts, refer the decision to the authorised
+    human. Non-negotiable stops names reaching or certifying such a conclusion
+    as an absolute stop and the output contract permits exactly one status, so
+    all three must require HARD_STOP. Rows demanding different statuses for the
+    same behaviour cannot all be passed by any implementation that does not
+    hard-code the scenario names, which defeats a conformance suite."""
+    entries = load_behaviour_tests(ROOT / "src" / "data" / "behaviour-tests.yaml")
+    statuses = {
+        row["id"]: row["expected_status"]
+        for row in entries
+        if row["id"] in PROHIBITED_CONCLUSION_TESTS
+    }
+    assert sorted(statuses) == sorted(PROHIBITED_CONCLUSION_TESTS)
+    assert set(statuses.values()) == {"HARD_STOP"}, statuses
+
+
+def test_disclaimer_attributes_project_controls_to_the_project():
+    """The disclaimer's own job is legal carefulness, so it must not present
+    DrDebits controls as duties imposed by TASA or APES 110 - the move the
+    guide declines to make about its own instruction words."""
+    disclaimer = (ROOT / "DISCLAIMER.md").read_text(encoding="utf-8")
+    _assert_disclaimer_responsibility_framing(disclaimer)
+
+    statutory_attribution = disclaimer.replace(
+        "DrDebits requires, consistent with the responsibilities that the "
+        "*Tax Agent Services Act 2009 (TASA)* and *APES 110 Code of Ethics for "
+        "Professional Accountants* place on the practitioner, that a registered "
+        "tax agent, BAS agent, or qualified professional accountant:",
+        "Under the *Tax Agent Services Act 2009 (TASA)* and *APES 110 Code of "
+        "Ethics for Professional Accountants*, a registered tax agent, BAS "
+        "agent, or qualified professional accountant must:",
+        1,
+    )
+    assert statutory_attribution != disclaimer
+    with pytest.raises(AssertionError):
+        _assert_disclaimer_responsibility_framing(statutory_attribution)
+
+
+def test_release_protocol_step_8_lists_every_unguarded_copy():
+    maintenance = (ROOT / "MAINTENANCE.md").read_text(encoding="utf-8")
+    _assert_release_protocol_names_every_hand_written_copy(maintenance)
+
+    # A token elsewhere in the protocol cannot satisfy step 8: a maintainer
+    # working through that step must find it there.
+    moved = maintenance.replace(
+        "`tools/drdebits_build/tests/test_repository_policy.py`", "the suite", 1)
+    moved += "\n`tools/drdebits_build/tests/test_repository_policy.py`\n"
+    with pytest.raises(AssertionError):
+        _assert_release_protocol_names_every_hand_written_copy(moved)
 
 
 def test_release_checklist_stages_and_verifies_before_publication():

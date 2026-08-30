@@ -1,13 +1,44 @@
 """Acceptance: the real repo verifies clean; hand edits fail; version bump propagates."""
 import shutil
+from datetime import date
 from pathlib import Path
-from drdebits_build import model
+
+import pytest
+
+from drdebits_build import model, verify
 from drdebits_build.__main__ import main
 from drdebits_build.build import find_root
 
 REAL = find_root(Path(__file__).resolve())
 COPY_ITEMS = ["src", "drdebits.md", "reference", "tests", "SHA256SUMS",
               "README.md", "MAINTENANCE.md", "LICENSE", "CITATION.cff"]
+
+REAL_META = model.load_metadata(REAL / "src" / "data" / "metadata.yaml")
+# The date verify checks review_due against. Every test here drives verify
+# through main(), which takes no date argument, so an unpinned
+# _verification_date puts the wall clock into check (g): from the repo's own
+# review_due onward, test_real_repo_verifies and test_version_bump_propagates
+# would go red on a tree nobody touched. Pinning today to the repo's
+# source-check date restores the date independence these tests had before
+# check (g) existed, and check (g) itself requires review_due to be after that
+# date, so the pin can never bless a release the gate rejects. The
+# verification-date arm of check (g) is exercised with explicit dates in
+# tests/test_verify.py, which is where it belongs.
+PINNED_TODAY = date.fromisoformat(REAL_META["sources_checked_at"][:10])
+
+
+@pytest.fixture(autouse=True)
+def pin_verification_date(monkeypatch):
+    monkeypatch.setattr(verify, "_verification_date", lambda: PINNED_TODAY)
+
+
+def test_verification_date_is_pinned_not_read_from_the_wall_clock():
+    """Guard for the fixture above. It fails if the pin is removed, and it
+    fails if a source recheck ever advances sources_checked_at to or past
+    review_due, which is the one way the pinned date could hide a real
+    expiry from the tests below."""
+    assert verify._verification_date() == PINNED_TODAY
+    assert PINNED_TODAY < date.fromisoformat(REAL_META["review_due"])
 
 
 def clone_repo(tmp_path):
