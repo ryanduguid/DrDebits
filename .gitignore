@@ -31,3 +31,6 @@ env/
 *~
 .DS_Store
 Thumbs.db
+
+# Evaluation transcripts stay local; only evals/results/*.json (pass or fail per case) is committed
+evals/transcripts/
