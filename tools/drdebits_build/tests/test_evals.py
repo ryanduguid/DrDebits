@@ -35,7 +35,7 @@ def test_results_table_with_no_runs_lists_the_cases(tmp_path):
     out = evals.build_results_md(root, load_sources(root))
     assert "No runs recorded yet" in out
     assert "| A-001 | HARD_STOP |" in out
-    assert "| Passed | of 1 |" in out
+    assert "| Passed | of cases run |" in out
 
 
 def test_results_table_has_one_column_per_run_and_a_total(tmp_path):
@@ -46,15 +46,29 @@ def test_results_table_has_one_column_per_run_and_a_total(tmp_path):
     out = evals.build_results_md(root, load_sources(root))
     assert "| ID | Expected status | example-model (2026-02-01) | other-model (2026-02-02) |" in out
     assert "| A-001 | HARD_STOP | pass | fail |" in out
-    assert "| Passed | of 1 | 1 | 0 |" in out
+    assert "| Passed | of cases run | 1/1 | 0/1 |" in out
     assert "No runs recorded" not in out
+
+
+def test_a_partial_or_older_run_is_shown_without_editing_history(tmp_path):
+    root = make_repo(tmp_path)
+    # An earlier guide had a case this one has retired; the record stays as it was.
+    write_result(root, guide_version="0.9.8-test", results={"OLD-001": "pass"})
+    out = evals.build_results_md(root, load_sources(root))
+    assert "| A-001 | HARD_STOP | n/a |" in out
+    assert "| Passed | of cases run | 0/0 |" in out
 
 
 @pytest.mark.parametrize("name, overrides, message", [
     ("2026-02-01-example-model.json", {"transcript": "..."}, "transcripts do not belong"),
-    ("2026-02-01-example-model.json", {"results": {}}, "missing=\\['A-001'\\]"),
+    ("2026-02-01-example-model.json", {"results": {}}, "results must map"),
+    ("2026-02-01-example-model.json", {"results": "A-001 pass"}, "results must map"),
     ("2026-02-01-example-model.json", {"results": {"A-001": "pass", "Z-9": "pass"}},
-     "unexpected=\\['Z-9'\\]"),
+     "unknown case ids for guide 0.9.9-test: \\['Z-9'\\]"),
+    ("2026-02-01-example-model.json", {"runner": "Model output:\\n" + "x" * 200},
+     "one line of at most 120"),
+    ("2026-02-01-example-model.json", {"model": "a | b"}, "no pipe"),
+    ("2026-02-01-example-model.json", {"guide_version": 1}, "guide_version must be a non-empty"),
     ("2026-02-01-example-model.json", {"results": {"A-001": "PASS"}}, "must be pass or fail"),
     ("2026-02-01-example-model.json", {"model": " "}, "model must be a non-empty string"),
     ("2026-02-01-example-model.json", {"run_date": "1 Feb 2026"}, "ISO date"),
@@ -66,6 +80,38 @@ def test_malformed_results_are_rejected(tmp_path, name, overrides, message):
     write_result(root, name=name, **overrides)
     with pytest.raises(ModelError, match=message):
         evals.load_results(root, load_sources(root))
+
+
+def test_invalid_json_duplicate_keys_and_stray_entries_are_rejected(tmp_path):
+    root = make_repo(tmp_path)
+    s = load_sources(root)
+    directory = root / "evals" / "results"
+    directory.mkdir(parents=True)
+    target = directory / "2026-02-01-example-model.json"
+    target.write_text("{not json", encoding="utf-8")
+    with pytest.raises(ModelError, match="not valid JSON"):
+        evals.load_results(root, s)
+    target.write_text(
+        '{"model": "<transcript>", "model": "example-model", "run_date": "2026-02-01", '
+        '"guide_version": "0.9.9-test", "runner": "A Person", "results": {"A-001": "pass"}}',
+        encoding="utf-8")
+    with pytest.raises(ModelError, match="duplicate key"):
+        evals.load_results(root, s)
+    target.unlink()
+    write_result(root)
+    (directory / "2026-02-01-transcript.md").write_text("a transcript\n", encoding="utf-8")
+    with pytest.raises(ModelError, match="only YYYY-MM-DD-<slug>.json result files"):
+        evals.load_results(root, s)
+
+
+def test_verify_reports_an_unreadable_result_instead_of_crashing(tmp_path, monkeypatch):
+    from drdebits_build import verify as verify_module
+    monkeypatch.setattr(verify_module, "_verification_date", lambda: TODAY)
+    root = make_repo(tmp_path)
+    write_outputs(root, root)
+    (root / "evals" / "results" / "2026-02-01-example-model.json").mkdir(parents=True)
+    failures = run_verify(root)
+    assert any(evals.RESULTS_FILE in f and "cannot rebuild" in f for f in failures)
 
 
 def test_build_writes_and_verify_checks_the_eval_outputs(tmp_path, monkeypatch):

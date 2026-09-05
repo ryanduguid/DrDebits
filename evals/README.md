@@ -5,7 +5,7 @@ Manual evaluation of the DrDebits behaviour tests. `cases.json` is generated fro
 the result files in `results/`; edit neither by hand. The protocol, the result
 file shape and the rule that no prompt, output or transcript is committed are in
 [MAINTENANCE.md](../MAINTENANCE.md) under Evaluation runs. A result file looks
-like this, with one entry per case id in `cases.json`:
+like this, with an entry per case id from `cases.json` that the run covered:
 
 ```json
 {
