@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from . import model, render
+from . import evals, model, render
 
 
 class BuildError(Exception):
@@ -147,6 +147,7 @@ GENERATED = {
     "reference/tpb-catalogue.md": build_catalogue_md,
     "tests/behaviour-tests.md": build_behaviour_md,
     "reference/apes-110-map.md": build_apes_md,
+    evals.CASES_FILE: evals.build_cases,
 }
 
 
@@ -171,6 +172,8 @@ def write_outputs(root, outdir):
     outdir = Path(outdir)
     written = {rel: fn(s) for rel, fn in GENERATED.items()}
     written["SHA256SUMS"] = build_sha256sums(root, s)
+    # The results table depends on the recorded runs as well as src/.
+    written[evals.RESULTS_FILE] = evals.build_results_md(root, s)
     for rel, content in written.items():
         target = outdir / rel
         target.parent.mkdir(parents=True, exist_ok=True)

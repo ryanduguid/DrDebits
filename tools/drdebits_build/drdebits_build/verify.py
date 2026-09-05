@@ -5,6 +5,7 @@ import re
 from datetime import date
 from pathlib import Path
 
+from . import evals
 from .build import GENERATED, STAMP_RE, BuildError, build_sha256sums, load_sources
 from .model import ModelError
 
@@ -60,6 +61,12 @@ def run_verify(root, today=None):
     except (ModelError, BuildError, OSError) as exc:
         failures.append(f"SHA256SUMS: cannot rebuild ({exc})")
         # SHA256SUMS drops out of the parity check below; all other entries still checked
+
+    # A malformed result file is a finding too, not a crash.
+    try:
+        built[evals.RESULTS_FILE] = evals.build_results_md(root, s)
+    except (ModelError, BuildError, OSError) as exc:
+        failures.append(f"{evals.RESULTS_FILE}: cannot rebuild ({exc})")
 
     for rel, content in built.items():
         committed = root / rel

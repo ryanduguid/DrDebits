@@ -18,6 +18,14 @@ For each DrDebits release:
 
 If freshness cannot be confirmed, the LLM must label the affected material `SOURCE CURRENCY NOT CONFIRMED`, avoid calling it “latest” or “current”, and restrict the output to a draft requiring primary-source verification.
 
+## Evaluation runs
+
+The behaviour tests can be run against a model by hand and the outcome recorded without committing any prompt, output or transcript. The build owns every file under `evals/` except the result files a person writes.
+
+1. `uv run --project tools/drdebits_build python -m drdebits_build build` writes `evals/cases.json`, the behaviour tests exported from `src/data/behaviour-tests.yaml` with the guide version they belong to. Give a case's scenario to the model under the guide loaded as project context and judge the observable output against `expected_status`, `required_behaviour` and `side_effect_check`, as `tests/behaviour-tests.md` requires. The person running the model decides pass or fail; nothing in this repository calls a model.
+2. Record the run as `evals/results/YYYY-MM-DD-<slug>.json` with exactly these keys: `model`, `run_date`, `guide_version`, `runner` and `results`, where `results` maps case ids from `evals/cases.json` to `pass` or `fail`. A run may cover a subset of the cases; the table shows `n/a` where it did not. The four text fields are one line of at most 120 characters. Any other key, a duplicate key, a case id the current guide does not have, any other verdict, and any file under `evals/results/` that is not a result file fails the build and `verify`. A run recorded against an earlier guide keeps its record unchanged when a case is later added, renamed or retired. Keep prompts, outputs and transcripts outside the repository; `evals/transcripts/` is ignored for local working copies.
+3. Run `build` again to regenerate `evals/RESULTS.md`, one row per case and one column per run headed by the model, the guide version the run recorded and the date, then `verify`. Commit the result file and the regenerated table together. The evaluation files are not part of the verified guide bundle and `SHA256SUMS` does not cover them.
+
 ## GitHub release checklist
 
 For each future GitHub release:

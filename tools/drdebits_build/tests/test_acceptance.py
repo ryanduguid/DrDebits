@@ -10,7 +10,7 @@ from drdebits_build.__main__ import main
 from drdebits_build.build import find_root
 
 REAL = find_root(Path(__file__).resolve())
-COPY_ITEMS = ["src", "drdebits.md", "reference", "tests", "SHA256SUMS",
+COPY_ITEMS = ["src", "drdebits.md", "reference", "tests", "evals", "SHA256SUMS",
               "README.md", "MAINTENANCE.md", "LICENSE", "CITATION.cff"]
 
 REAL_META = model.load_metadata(REAL / "src" / "data" / "metadata.yaml")

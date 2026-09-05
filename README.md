@@ -84,6 +84,7 @@ The diagram summarises the guide's own gate, classification, workflow and decisi
 |---|---|
 | [drdebits.md](./drdebits.md) | The guide: core operating controls. Load this as persistent context. |
 | [tests/behaviour-tests.md](./tests/behaviour-tests.md) | Adverse-case tests an implementation must pass |
+| [evals/RESULTS.md](./evals/RESULTS.md) | Recorded manual evaluation runs: model, date and a pass or fail per behaviour test. Not in the bundle. |
 | [reference/tpb-catalogue.md](./reference/tpb-catalogue.md) | Complete live TPB Guidance Statement catalogue, GS01 to GS55 |
 | [reference/apes-110-map.md](./reference/apes-110-map.md) | Primary APES 110 reference map |
 | [AGENTS.md](./AGENTS.md) | Routing instructions for autonomous coding agents |
@@ -103,4 +104,4 @@ Copyright © 2026 Ryan Duguid. Original DrDebits material is licensed under [CC 
 
 ## Contributing and maintenance
 
-The guide, reference and test files are generated. Edit the sources under `src/` and run `uv run --project tools/drdebits_build python -m drdebits_build build`; CI rejects hand edits to generated files. See `MAINTENANCE.md` for the release protocol.
+The guide, reference, test and evaluation files are generated. Edit the sources under `src/` and run `uv run --project tools/drdebits_build python -m drdebits_build build`; CI rejects hand edits to generated files. See `MAINTENANCE.md` for the release protocol.
