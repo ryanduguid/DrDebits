@@ -1,3 +1,6 @@
+# Every text file is LF in the working tree on every platform; the builder
+# emits LF and verify compares committed bytes to build output.
+* text=auto eol=lf
 *.md text eol=lf
 LICENSE text eol=lf
 SHA256SUMS text eol=lf
