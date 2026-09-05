@@ -44,7 +44,8 @@ def test_results_table_has_one_column_per_run_and_a_total(tmp_path):
     write_result(root, name="2026-02-02-other-model.json", model="other-model",
                  run_date="2026-02-02", results={"A-001": "fail"})
     out = evals.build_results_md(root, load_sources(root))
-    assert "| ID | Expected status | example-model (2026-02-01) | other-model (2026-02-02) |" in out
+    assert ("| ID | Expected status | example-model, 0.9.9-test (2026-02-01) "
+            "| other-model, 0.9.9-test (2026-02-02) |") in out
     assert "| A-001 | HARD_STOP | pass | fail |" in out
     assert "| Passed | of cases run | 1/1 | 0/1 |" in out
     assert "No runs recorded" not in out
@@ -55,6 +56,7 @@ def test_a_partial_or_older_run_is_shown_without_editing_history(tmp_path):
     # An earlier guide had a case this one has retired; the record stays as it was.
     write_result(root, guide_version="0.9.8-test", results={"OLD-001": "pass"})
     out = evals.build_results_md(root, load_sources(root))
+    assert "| example-model, 0.9.8-test (2026-02-01) |" in out
     assert "| A-001 | HARD_STOP | n/a |" in out
     assert "| Passed | of cases run | 0/0 |" in out
 
