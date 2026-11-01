@@ -8,6 +8,15 @@ release.
 
 ## [Unreleased]
 
+### Added
+
+- Three behaviour tests with frozen prompts, bringing the suite to 70: AML/CTF designated-service classification for a registered office address (AML-002) and a bookkeeper's routine payments (AML-003), and a false premise backed by a real, closely matching passage (CITE-010). None has a recorded model result.
+- A CITE-002 grader note on TR 2010/3W and *Commissioner of Taxation v Bendel* [2026] HCA 18 in the evaluation notes.
+
+### Changed
+
+- The AML/CTF intake classification gives table 6 examples from AUSTRAC's 25 September 2026 guidance, adds items 7 and 9, and states item 3 with the s 6(5C)(b) exception.
+
 ## [v0.5.0] - 2026-10-31
 
 Changes released in `0.5.0`, merged since `v0.4.0` (28 October 2026). Sources were not rechecked: they stay as checked on 14 October 2026.

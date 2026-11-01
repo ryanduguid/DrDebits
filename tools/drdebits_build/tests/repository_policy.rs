@@ -452,7 +452,7 @@ fn release_checklist_stages_and_verifies_before_publication() {
 }
 
 fn number_word(n: usize) -> Option<&'static str> {
-    const WORDS: [(usize, &str); 30] = [
+    const WORDS: [(usize, &str); 31] = [
         (27, "Twenty-seven"),
         (28, "Twenty-eight"),
         (29, "Twenty-nine"),
@@ -483,6 +483,7 @@ fn number_word(n: usize) -> Option<&'static str> {
         (54, "Fifty-four"),
         (55, "Fifty-five"),
         (67, "Sixty-seven"),
+        (70, "Seventy"),
     ];
     WORDS.iter().find(|(k, _)| *k == n).map(|(_, w)| *w)
 }
