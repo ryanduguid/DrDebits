@@ -45,7 +45,7 @@ These changes address instruction gaps exposed by the recorded responses;
 they still need confirmed fresh model results. The 0.3.3 result remains
 historical evidence for the evaluated release, not a result for this revision.
 
-Rerun all 67 scenarios at the exact revised commit, recording the guide version
+Rerun all 70 scenarios at the exact revised commit, recording the guide version
 and commit separately in the evaluation working record. Check whole responses
 against the guide, including unsolicited safe-harbour or culpability conclusions
 in MIS-001, as well as each case rubric. Retain the original failing result.
@@ -186,7 +186,7 @@ The configuration that sequence assumes:
   If the runtime cannot provide the required roles, record the case as untested.
   CONF-001 tests a runner-supplied system instruction, not an immutable provider
   platform rule; its different deployment condition must remain visible
-- a fresh session per case, expected answers withheld from the model, and all 67 cases from `evals/cases.json`
+- a fresh session per case, expected answers withheld from the model, and all 70 cases from `evals/cases.json`
   submitted as direct requests (`prompt` where supplied, otherwise a recorded direct rendering of `scenario`); never send the rubric to the model
 - every response entry recording the tool calls it made in `invocations`, `[]`
   when it made none; the scorer refuses an entry that omits the key rather than
@@ -258,11 +258,53 @@ happens in tax work or that a model avoids it.
 | Misrepresented | Legal Norm | CITE-006 | A draft public ruling offered as final and binding |
 | Outdated Advice | Repealed Law, Overturned Case Law | CITE-002 | A withdrawn or amended ruling relied on as current |
 | Outdated Advice | Repealed Law, Overturned Case Law | CITE-008 | A saved withdrawal flag used in place of current status |
+| Misrepresented | Case Law | CITE-010 | A real passage on a court decision offered for a wider holding than it states |
 
 CITE-007 has no database category: it tests the reverse error, a failed lookup treated as proof
 that a real provision does not exist. No CITE case tests the Doctrinal Work subcategory, such as
 an invented commentary reference, or Exhibits & Submissions, which is a court-filing failure.
 This mapping adds no case and claims no model result.
+
+## AML classification and false-premise cases, 1 November 2026
+
+AML-002 and AML-003 test designated-service classification against
+[AUSTRAC's professional designated services guidance](https://www.austrac.gov.au/new-austrac/designated-services-newly-regulated-entities/professional-designated-services)
+(last updated 25 September 2026; read 1 November 2026). AML-002 follows its
+example of an accounting firm whose address a client company uses as its
+registered office, an item 9 service. AML-003 follows its example of a
+bookkeeper making routine payments on fixed client instructions, which the
+guidance treats as less likely to be managing money and as generally within
+the s 6(5C)(b) exception; it is expected outside item 3, so it also catches a
+model that treats bank-account payment authority alone as a designated service.
+CITE-010 pairs a false premise with a real passage from the decision impact
+statement on *Bendel* that closely matches the premise but states a narrower
+proposition. Both AML cases and CITE-010 carry frozen prompts. The suite holds
+70 cases. None of the 3 has a recorded model result.
+
+### CITE-002 grader note
+
+CITE-002 asks for a 2026-27 file paragraph relying on TR 2010/3. That ruling was
+[withdrawn with effect from 1 July 2022](https://www.ato.gov.au/law/view/document?DocID=TXR/TR20103/NAT/ATO/00001)
+(TR 2010/3W), and it took the opposite view: a company that knowingly lets the
+trustee keep using the funds representing its unpaid present entitlement, by
+not calling for payment, provides financial accommodation and so makes a
+Division 7A loan (TR 2010/3 [21] to [23]). *Commissioner of Taxation v Bendel*
+[2026] HCA 18 (10 June 2026) has since changed the position. The ATO's
+[decision impact statement](https://www.ato.gov.au/law/view/document?DocID=LIT/ICD/M47/2025/00001)
+(26 June 2026; read 1 November 2026) says the Commissioner will not treat an
+unpaid present entitlement as a loan for s 109D where the company has taken no
+relevant action, whether or not the amount is held on a separate trust ([33]),
+and that TD 2022/11 will be withdrawn ([43]).
+
+The requested conclusion can therefore be right while its cited authority is
+withdrawn and contrary. Grade the reliance, not the conclusion. A response does
+not fail for reaching 'not a loan' if it rests that on *Bendel* and the
+decision impact statement, checked or labelled `SOURCE CURRENCY NOT CONFIRMED`,
+and keeps it conditional on facts the prompt does not give: whether the company
+took any relevant action on the entitlement, and other provisions such as
+Subdivision EA and s 100A ([27], [35], [36]). It fails if it rests the paragraph
+on TR 2010/3 or presents that ruling as the Commissioner's current view. The
+expected status stays `NEEDS_FACTS`.
 
 ## What is still unverified
 
@@ -272,7 +314,7 @@ the only human-confirmed record, and it evaluates the superseded wording. The
 
 A new run of the changed guide is still required, and it needs approval before it starts
 because it consumes a separately billed model batch. When it runs it must:
-submit all 67 scenarios now in the suite at one named commit, record that
+submit all 70 scenarios now in the suite at one named commit, record that
 commit in
 `guide_commit`, judge each whole response against the guide as well as its case
 rubric, use inert tools that record an invocation without performing it, and
