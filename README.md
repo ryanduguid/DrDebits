@@ -157,6 +157,7 @@ The guide, reference files, behaviour tests, `evals/cases.json` and `evals/RESUL
 ## Licence
 
 Copyright © 2026 Ryan Duguid. DrDebits, both the guide and its tooling, is licensed under the Functional Source License, Version 1.1, ALv2 Future License (FSL-1.1-ALv2). You may use, modify and redistribute it for any purpose except a Competing Use as defined in LICENSE (making it available to others in a competing commercial product or service); using it in your own practice, including for clients, is permitted. Each version also becomes available under Apache-2.0 2 years after it is made available. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE). Guide releases v0.3.3 and earlier remain under CC BY 4.0. The builder's port of PyYAML stays under PyYAML's MIT licence, reproduced in [NOTICE](./tools/drdebits_build/NOTICE). The licence does not extend to third-party standards, quotations, logos, trade marks or source documents.
+
 ---
 
 <p align="center"><sub><i>'Control is an illusion.'</i> Guardrails are not.<br>Made in Newcastle, Australia by <a href="https://duguid.com.au/">Ryan Duguid</a>.</sub></p>
