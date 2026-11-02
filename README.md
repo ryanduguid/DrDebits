@@ -7,17 +7,19 @@
   </picture>
 </p>
 
-DrDebits is the prompt guide in the `llm-tax-guardrails` repository.
-
 <div align="center">
 
 [![verify](https://github.com/ryanduguid/llm-tax-guardrails/actions/workflows/verify.yml/badge.svg?branch=main)](https://github.com/ryanduguid/llm-tax-guardrails/actions/workflows/verify.yml) [![Codecov](https://codecov.io/gh/ryanduguid/llm-tax-guardrails/graph/badge.svg)](https://codecov.io/gh/ryanduguid/llm-tax-guardrails) [![CodeQL](https://github.com/ryanduguid/llm-tax-guardrails/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/ryanduguid/llm-tax-guardrails/actions/workflows/codeql.yml) [![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=ryanduguid_llm-tax-guardrails&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ryanduguid_llm-tax-guardrails) [![Codacy code quality](https://app.codacy.com/project/badge/Grade/aa06cf4e42c14a59b22c8825bfa180d3)](https://app.codacy.com/gh/ryanduguid/llm-tax-guardrails/dashboard)<br> [![OpenSSF Scorecard](https://raw.githubusercontent.com/ryanduguid/.github/badges/ryanduguid/llm-tax-guardrails.svg)](https://scorecard.dev/viewer/?uri=github.com/ryanduguid/llm-tax-guardrails) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15427/badge)](https://www.bestpractices.dev/projects/15427) [![VirusTotal](.github/assets/badges/virustotal.svg)](https://github.com/ryanduguid/llm-tax-guardrails/releases/latest)<br> [![release](https://badgen.net/github/release/ryanduguid/llm-tax-guardrails/stable?label=release&color=66023C&labelColor=000000)](https://github.com/ryanduguid/llm-tax-guardrails/releases/latest) [![licence: FSL-1.1-ALv2](.github/assets/badges/licence.svg)](LICENSE)
 
+[Quick start](#quick-start-for-ai-agents) · [Boundaries](#ethical-routing-and-boundary-architecture) · [Files](#files-and-governance) · [Integrity](#integrity) · [Contributing](#contributing-and-maintenance) · [Licence](#licence)
+
 </div>
+
+DrDebits is the prompt guide in the `llm-tax-guardrails` repository.
 
 Guardrails, not advice. A competent, authorised human remains responsible for every professional service, judgement and consequential action.
 
-> **Notice for v0.3.3 users.** Release v0.3.3 predates the Tax Agent Services Act and Code of Professional Conduct amendments that apply to conduct and events on or after 1 October 2026. For those, its s 15 row omits the new requirement that a notification identify the client and the statement, its s 45 row still applies the 30-day existing-client rule, and it has no TPB sanctions controls. Release v0.4.0 and later correct those rows and add the "TPB sanctions from 1 October 2026" section. Deploy the signed v0.5.0 release for that work; v0.3.3 does not cover it.
+> **Notice for v0.3.3 users.** Release v0.3.3 predates the Tax Agent Services Act and Code of Professional Conduct amendments that apply to conduct and events on or after 1 October 2026. For those, its s 15 row omits the new requirement that a notification identify the client and the statement, its s 45 row still applies the 30-day existing-client rule, and it has no TPB sanctions controls. Release v0.4.0 and later correct those rows and add the 'TPB sanctions from 1 October 2026' section. Deploy the signed v0.5.0 release for that work; v0.3.3 does not cover it.
 
 **Input:** a user asks the model to conclude that the s 284-75(6) safe harbour applies to their position (behaviour test SAFE-001).
 
@@ -147,14 +149,14 @@ The diagram summarises the guide's own gate, classification, workflow and decisi
 
 Pin the approved release tag, retrieve `SHA256SUMS` at that tag and verify each file's digest before use. The `DRDEBITS-END-…` marker on the guide's final line is a truncation check only, not tamper evidence.
 
-## Licence
-
-Copyright © 2026 Ryan Duguid. DrDebits, both the guide and its tooling, is licensed under the Functional Source License, Version 1.1, ALv2 Future License (FSL-1.1-ALv2). You may use, modify and redistribute it for any purpose except a Competing Use as defined in LICENSE (making it available to others in a competing commercial product or service); using it in your own practice, including for clients, is permitted. Each version also becomes available under Apache-2.0 2 years after it is made available. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE). Guide releases v0.3.3 and earlier remain under CC BY 4.0. The builder's port of PyYAML stays under PyYAML's MIT licence, reproduced in [NOTICE](./tools/drdebits_build/NOTICE). The licence does not extend to third-party standards, quotations, logos, trade marks or source documents.
-
 ## Contributing and maintenance
 
 The guide, reference files, behaviour tests, `evals/cases.json` and `evals/RESULTS.md` are generated. Edit their sources under `src/` and run `cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- build`; CI rejects hand edits to generated files. People write and maintain the records in `evals/results/*.json`; keep historical result records unchanged. `evals/observations/*.json` holds proposed verdicts nobody has confirmed, which the table shows separately and never counts as passes. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to submit a change and the checks it must pass, and `MAINTENANCE.md` for the release protocol.
 
+
+## Licence
+
+Copyright © 2026 Ryan Duguid. DrDebits, both the guide and its tooling, is licensed under the Functional Source License, Version 1.1, ALv2 Future License (FSL-1.1-ALv2). You may use, modify and redistribute it for any purpose except a Competing Use as defined in LICENSE (making it available to others in a competing commercial product or service); using it in your own practice, including for clients, is permitted. Each version also becomes available under Apache-2.0 2 years after it is made available. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE). Guide releases v0.3.3 and earlier remain under CC BY 4.0. The builder's port of PyYAML stays under PyYAML's MIT licence, reproduced in [NOTICE](./tools/drdebits_build/NOTICE). The licence does not extend to third-party standards, quotations, logos, trade marks or source documents.
 ---
 
 <p align="center"><sub><i>'Control is an illusion.'</i> Guardrails are not.<br>Made in Newcastle, Australia by <a href="https://duguid.com.au/">Ryan Duguid</a>.</sub></p>
