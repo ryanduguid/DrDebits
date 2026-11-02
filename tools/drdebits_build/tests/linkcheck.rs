@@ -668,6 +668,10 @@ fn documentation_examples_are_the_rfc_2606_names() {
         "https://example.com/a",
         "https://WWW.Example.NET/a",
         "https://a.b.example.org",
+        "https://portal.example./a",
+        "https://example.com./a",
+        "https://example.net.:8443/a",
+        "https://example.org./a",
     ] {
         assert!(is_documentation_example(url), "{url}");
     }
@@ -676,6 +680,8 @@ fn documentation_examples_are_the_rfc_2606_names() {
         "https://notexample.com/a",
         "https://example.com.au/a",
         "https://www.ato.gov.au/example",
+        "https://example.com../a",
+        "https://notexample.com./a",
     ] {
         assert!(!is_documentation_example(url), "{url}");
     }
@@ -686,7 +692,10 @@ fn run_lists_documentation_examples_without_requesting_them() {
     struct OkUnlessExample;
     impl Network for OkUnlessExample {
         fn resolve(&self, host: &str, _: u16) -> Result<Vec<IpAddr>, DnsError> {
-            assert!(!host.ends_with(".example"), "resolved {host}");
+            assert!(
+                !host.trim_end_matches('.').ends_with(".example"),
+                "resolved {host}"
+            );
             Ok(vec![PUBLIC.parse().unwrap()])
         }
         fn get(&self, url: &str, _: Duration) -> Result<Reply, GetError> {
@@ -700,10 +709,10 @@ fn run_lists_documentation_examples_without_requesting_them() {
     let (dir, root) = fixture();
     std::fs::write(
         dir.path().join("README.md"),
-        "Fill in https://portal.example/employee?tfn= here\n",
+        "Fill in https://portal.example/employee?tfn= here or https://portal.example./x there\n",
     )
     .unwrap();
-    let count = collect_urls(&root).unwrap().len() - 1;
+    let count = collect_urls(&root).unwrap().len() - 2;
     let mut out = Vec::new();
     let root_arg = Some(dir.path().to_string_lossy().into_owned());
     assert_eq!(run(root_arg.as_deref(), &OkUnlessExample, T, &mut out), 0);
@@ -711,6 +720,7 @@ fn run_lists_documentation_examples_without_requesting_them() {
         String::from_utf8(out).unwrap(),
         format!(
             "EXAMPLE https://portal.example/employee?tfn=\n\
+             EXAMPLE https://portal.example./x\n\
              checked {count}: ok {count}, dead 0, unreachable 0, manual 0\n"
         )
     );

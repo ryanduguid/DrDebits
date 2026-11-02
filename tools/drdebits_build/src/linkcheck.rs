@@ -61,9 +61,11 @@ pub fn needs_manual_check(url: &str) -> bool {
 /// Whether `url` names a host RFC 2606 reserves for documentation: the
 /// `.example` top-level domain or example.com, example.net or example.org.
 /// Such a link, like the synthetic portal in a behaviour-test prompt, only
-/// illustrates a format and can never be live.
+/// illustrates a format and can never be live. A fully qualified name's
+/// trailing dot names the same host.
 pub fn is_documentation_example(url: &str) -> bool {
     urlsplit(url).and_then(|s| s.hostname).is_some_and(|h| {
+        let h = h.strip_suffix('.').unwrap_or(&h);
         ["example", "example.com", "example.net", "example.org"]
             .iter()
             .any(|d| h == *d || h.ends_with(&format!(".{d}")))
