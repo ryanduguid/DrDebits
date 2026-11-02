@@ -12,6 +12,9 @@ Register records that carry no compilation ID, reported as `INCOMPLETE`).
 The link check returns `3` when every link it reached is live and the rest are
 `MANUAL` links: TPB and AUSTRAC pages, one ATO legal database page and the
 ATO advice-and-guidance page, which block GitHub's runners. Check those by hand from another connection.
+Links on the names RFC 2606 reserves for documentation (`.example`,
+example.com, example.net and example.org), such as the synthetic portal in a
+behaviour-test prompt, are listed as `EXAMPLE` and never requested.
 The workflows retain the report in their logs and job summary, update one
 open report issue, and fail on every nonzero exit except the link check's `3`,
 which keeps the issue open without failing. A successful later check closes

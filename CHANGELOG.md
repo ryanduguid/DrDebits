@@ -17,6 +17,10 @@ release.
 
 - The AML/CTF intake classification gives table 6 examples from AUSTRAC's 25 September 2026 guidance, adds items 7 and 9, and states item 3 with the s 6(5C)(b) exception.
 
+### Fixed
+
+- The weekly link check no longer reports the synthetic `portal.example` link in a behaviour-test prompt as dead: links on RFC 2606 documentation names are listed as `EXAMPLE` and never requested.
+
 ## [v0.5.0] - 2026-10-31
 
 Changes released in `0.5.0`, merged since `v0.4.0` (28 October 2026). Sources were not rechecked: they stay as checked on 14 October 2026.

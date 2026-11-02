@@ -11,7 +11,7 @@ use common::fixture;
 use drdebits::builder;
 use drdebits::linkcheck::{
     DnsError, GetError, Live, Network, Reply, agent_config, check, collect_urls,
-    needs_manual_check, report, resolve_public, run, system_lookup,
+    is_documentation_example, needs_manual_check, report, resolve_public, run, system_lookup,
 };
 
 const PUBLIC: &str = "93.184.216.34";
@@ -659,4 +659,69 @@ fn run_checks_every_collected_url() {
     let missing = Some(empty.path().to_string_lossy().into_owned());
     assert_eq!(run(missing.as_deref(), &AllOk, T, &mut out), 1);
     assert!(out.is_empty());
+}
+
+#[test]
+fn documentation_examples_are_the_rfc_2606_names() {
+    for url in [
+        "https://portal.example/employee?tfn=",
+        "https://example.com/a",
+        "https://WWW.Example.NET/a",
+        "https://a.b.example.org",
+        "https://portal.example./a",
+        "https://example.com./a",
+        "https://example.net.:8443/a",
+        "https://example.org./a",
+    ] {
+        assert!(is_documentation_example(url), "{url}");
+    }
+    for url in [
+        "https://x.invalid/a",
+        "https://notexample.com/a",
+        "https://example.com.au/a",
+        "https://www.ato.gov.au/example",
+        "https://example.com../a",
+        "https://notexample.com./a",
+    ] {
+        assert!(!is_documentation_example(url), "{url}");
+    }
+}
+
+#[test]
+fn run_lists_documentation_examples_without_requesting_them() {
+    struct OkUnlessExample;
+    impl Network for OkUnlessExample {
+        fn resolve(&self, host: &str, _: u16) -> Result<Vec<IpAddr>, DnsError> {
+            assert!(
+                !host.trim_end_matches('.').ends_with(".example"),
+                "resolved {host}"
+            );
+            Ok(vec![PUBLIC.parse().unwrap()])
+        }
+        fn get(&self, url: &str, _: Duration) -> Result<Reply, GetError> {
+            assert!(!is_documentation_example(url), "requested {url}");
+            Ok(Reply {
+                status: 200,
+                location: None,
+            })
+        }
+    }
+    let (dir, root) = fixture();
+    std::fs::write(
+        dir.path().join("README.md"),
+        "Fill in https://portal.example/employee?tfn= here or https://portal.example./x there\n",
+    )
+    .unwrap();
+    let count = collect_urls(&root).unwrap().len() - 2;
+    let mut out = Vec::new();
+    let root_arg = Some(dir.path().to_string_lossy().into_owned());
+    assert_eq!(run(root_arg.as_deref(), &OkUnlessExample, T, &mut out), 0);
+    assert_eq!(
+        String::from_utf8(out).unwrap(),
+        format!(
+            "EXAMPLE https://portal.example/employee?tfn=\n\
+             EXAMPLE https://portal.example./x\n\
+             checked {count}: ok {count}, dead 0, unreachable 0, manual 0\n"
+        )
+    );
 }

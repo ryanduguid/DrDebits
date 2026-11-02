@@ -58,6 +58,20 @@ pub fn needs_manual_check(url: &str) -> bool {
             .is_some_and(|h| MANUAL_HOSTS.contains(&h.as_str()))
 }
 
+/// Whether `url` names a host RFC 2606 reserves for documentation: the
+/// `.example` top-level domain or example.com, example.net or example.org.
+/// Such a link, like the synthetic portal in a behaviour-test prompt, only
+/// illustrates a format and can never be live. A fully qualified name's
+/// trailing dot names the same host.
+pub fn is_documentation_example(url: &str) -> bool {
+    urlsplit(url).and_then(|s| s.hostname).is_some_and(|h| {
+        let h = h.strip_suffix('.').unwrap_or(&h);
+        ["example", "example.com", "example.net", "example.org"]
+            .iter()
+            .any(|d| h == *d || h.ends_with(&format!(".{d}")))
+    })
+}
+
 pub fn collect_urls(root: &PyPath) -> Result<Vec<String>, Fail> {
     let s = builder::load_sources(root)?;
     let mut texts: Vec<String> = render_generated(&s).into_iter().map(|(_, t)| t).collect();
@@ -475,7 +489,8 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
 }
 
 /// Check every URL the sources and hand-written files carry through
-/// `network`, and return the exit code `report` gives.
+/// `network`, and return the exit code `report` gives. Documentation
+/// examples are listed as EXAMPLE and never requested.
 pub fn run(
     root: Option<&str>,
     network: &dyn Network,
@@ -489,6 +504,11 @@ pub fn run(
             return 1;
         }
     };
+    let (examples, urls): (Vec<String>, Vec<String>) =
+        urls.into_iter().partition(|u| is_documentation_example(u));
+    for url in &examples {
+        let _ = writeln!(out, "EXAMPLE {url}");
+    }
     report(network, &urls, timeout, out)
 }
 
