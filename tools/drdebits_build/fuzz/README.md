@@ -13,7 +13,7 @@ cargo install cargo-fuzz --locked --version 0.13.2
 cargo +nightly-2026-10-15 fuzz run sources fuzz/corpus -- -max_total_time=60 -max_len=4096 -timeout=2 -rss_limit_mb=1024
 ```
 
-CI runs the target after main pushes, weekly and on demand, with read-only
+CI runs the target weekly and on demand, with read-only
 repository access. The test suite replays the seed corpus on every supported
 platform (`tests/fuzz_corpus.rs`). libFuzzer needs a nightly toolchain, so
 coverage-guided fuzzing runs on Linux. A successful run is bounded evidence,
