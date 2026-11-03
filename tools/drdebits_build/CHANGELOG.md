@@ -58,7 +58,9 @@ suite replays it on every platform.
   calculation whose dollar and percentage inputs are facts or earlier
   results, and for each such figure it cannot read. A malformed facts file
   exits 2. The check flags amounts it cannot trace and cannot certify one
-  it can; without `--facts` the gate is unchanged.
+  it can; without `--facts` the gate is unchanged. For each amount equal to
+  a fact, a note names that fact, a match in value rather than a source; an
+  amount equal to 2 or more facts is noted as ambiguous with every name.
 
 Standard streams now preserve the Python release's failure behaviour: pending
 stdout that cannot flush exits 120, `PYTHONUNBUFFERED` fails at the print and

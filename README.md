@@ -94,7 +94,11 @@ listed for review rather than matched in part. Plain numbers without `$` or
 `%` are not checked, so a calculation from plain numbers alone supports its
 result, and other currencies are not read. This check can only ask for
 review, never block, and it cannot certify a figure: an amount that matches a
-fact or a calculation may still be wrong.
+fact or a calculation may still be wrong. For each amount equal to a supplied
+fact, a note names that fact, as in
+`$1,100 is equal in amount to fact 'invoice total'`: a match in value, not
+evidence that the figure came from that fact. An amount equal to 2 or more
+facts is noted as ambiguous with every name, and the gate does not pick one.
 
 ## Ethical routing and boundary architecture
 

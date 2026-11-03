@@ -50,7 +50,10 @@
 //! or `12` months are not amounts and are not checked, so a calculation from
 //! plain numbers alone, such as `30 × 40 = $1,200`, supports its result.
 //! Other currencies' symbols are not read. The check flags amounts it cannot
-//! trace; an amount it traces is not thereby correct.
+//! trace; an amount it traces is not thereby correct. For each amount equal
+//! to a supplied fact, a note names that fact: a match in value, not evidence
+//! that the figure came from it. An amount equal to 2 or more facts is noted
+//! as ambiguous with every name, and the gate does not pick one.
 
 use std::sync::LazyLock;
 
@@ -780,8 +783,9 @@ impl Amount {
     }
 }
 
-/// One supplied fact's amount.
+/// One supplied fact: its name in the facts file and its amount.
 pub struct Fact {
+    name: String,
     amount: Amount,
 }
 
@@ -822,16 +826,21 @@ pub fn load_facts(text: &str) -> Result<Vec<Fact>, String> {
                     py::repr_str(written)
                 ))
             })?;
-            Ok(Fact { amount })
+            Ok(Fact {
+                name: name.clone(),
+                amount,
+            })
         })
         .collect()
 }
 
 /// Flag each dollar amount or percentage in the draft that is neither a
 /// supplied fact nor the result of a reperformed calculation whose dollar
-/// and percentage inputs are facts or results of earlier calculations. This
-/// check adds reviews and a note only, never a block: it finds amounts it
-/// cannot trace, and cannot show that a traced amount is right.
+/// and percentage inputs are facts or results of earlier calculations, and
+/// for each amount equal to a fact, note that fact by name; an amount equal
+/// to 2 or more facts is noted as ambiguous. This check adds reviews
+/// and notes only, never a block: it finds amounts it cannot trace, and
+/// cannot show that a traced amount is right or came from the fact it equals.
 pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
     let mut known: Vec<Amount> = facts.iter().map(|f| f.amount.clone()).collect();
     let is_known = |known: &[Amount], a: &Amount| known.iter().any(|k| k.same(a));
@@ -853,6 +862,7 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
     }
     let mut untraced: Vec<String> = Vec::new();
     let mut unread: Vec<String> = Vec::new();
+    let mut equal: Vec<String> = Vec::new();
     for line in py::splitlines(response).into_iter().map(normalise) {
         let mut at = 0;
         while let Some(m) = DRAFT_AMOUNT.find_at(&line, at) {
@@ -870,13 +880,35 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
                 continue;
             }
             at = m.end();
-            let list = match Amount::read(m.as_str()) {
-                Some(a) if is_known(&known, &a) => continue,
-                Some(_) => &mut untraced,
-                None => &mut unread,
+            let written = m.as_str();
+            let (list, item) = match Amount::read(written) {
+                None => (&mut unread, written.to_string()),
+                Some(a) => {
+                    let names: Vec<String> = facts
+                        .iter()
+                        .filter(|f| f.amount.same(&a))
+                        .map(|f| py::repr_str(&f.name))
+                        .collect();
+                    match names.as_slice() {
+                        [] if is_known(&known, &a) => continue,
+                        [] => (&mut untraced, written.to_string()),
+                        [name] => (
+                            &mut equal,
+                            format!("{written} is equal in amount to fact {name}"),
+                        ),
+                        [others @ .., last] => (
+                            &mut equal,
+                            format!(
+                                "{written} is equal in amount to {} facts, {} and {last}; ambiguous, so the gate does not pick one",
+                                names.len(),
+                                others.join(", ")
+                            ),
+                        ),
+                    }
+                }
             };
-            if !list.iter().any(|t| t == m.as_str()) {
-                list.push(m.as_str().to_string());
+            if !list.contains(&item) {
+                list.push(item);
             }
         }
     }
@@ -892,6 +924,9 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
             unread.join(", ")
         ));
     }
+    report
+        .notes
+        .extend(equal.into_iter().map(|e| format!("facts check: {e}")));
     report.notes.push(
         "facts check: it flags amounts it cannot trace; an amount that matches a fact or a calculation is not thereby correct"
             .into(),
