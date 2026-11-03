@@ -17,8 +17,6 @@
 
 DrDebits is the prompt guide in the `llm-tax-guardrails` repository.
 
-Guardrails, not advice. A competent, authorised human remains responsible for every professional service, judgement and consequential action.
-
 > **Notice for v0.3.3 users.** Release v0.3.3 predates the Tax Agent Services Act and Code of Professional Conduct amendments that apply to conduct and events on or after 1 October 2026. For those, its s 15 row omits the new requirement that a notification identify the client and the statement, its s 45 row still applies the 30-day existing-client rule, and it has no TPB sanctions controls. Release v0.4.0 and later correct those rows and add the 'TPB sanctions from 1 October 2026' section. Deploy the signed v0.5.0 release for that work; v0.3.3 does not cover it.
 
 **Input:** a user asks the model to conclude that the s 284-75(6) safe harbour applies to their position (behaviour test SAFE-001).
@@ -39,9 +37,7 @@ Seventy-nine such cases are in [tests/behaviour-tests.md](./tests/behaviour-test
 
 DrDebits is an independent, source-linked operating guide for large language models assisting with Australian accounting, tax and BAS work. It converts the Tax Practitioners Board framework, APES 110, APES 220 and the sector's AML/CTF obligations into practical controls for drafting, research, calculations and review.
 
-DrDebits does not reproduce APES 110, certify compliance, replace the source documents or replace a registered tax practitioner's or professional accountant's judgement. It is not legal, tax or financial advice. A competent, appropriately authorised human remains responsible for every professional service, judgement and consequential action.
-
-'Dr' is part of the project name only. It does not claim a qualification, professional designation, registration, regulatory status or endorsement.
+DrDebits does not reproduce APES 110, certify compliance, replace the source documents or replace a registered tax practitioner's or professional accountant's judgement.
 
 ## Quick start for AI agents
 
@@ -157,6 +153,8 @@ The guide, reference files, behaviour tests, `evals/cases.json` and `evals/RESUL
 ## Licence
 
 Copyright © 2026 Ryan Duguid. DrDebits, both the guide and its tooling, is licensed under the Functional Source License, Version 1.1, ALv2 Future License (FSL-1.1-ALv2). You may use, modify and redistribute it for any purpose except a Competing Use as defined in LICENSE (making it available to others in a competing commercial product or service); using it in your own practice, including for clients, is permitted. Each version also becomes available under Apache-2.0 2 years after it is made available. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE). Guide releases v0.3.3 and earlier remain under CC BY 4.0. The builder's port of PyYAML stays under PyYAML's MIT licence, reproduced in [NOTICE](./tools/drdebits_build/NOTICE). The licence does not extend to third-party standards, quotations, logos, trade marks or source documents.
+
+<sub>DrDebits is not legal, tax or financial advice and does not make anyone a registered tax or BAS agent; a competent, appropriately authorised human remains responsible for every professional service, judgement and consequential action. 'Dr' is part of the project name only and claims no qualification, professional designation, registration, regulatory status or endorsement. See [DISCLAIMER.md](./DISCLAIMER.md).</sub>
 
 ---
 
