@@ -15,6 +15,7 @@ release.
 
 ### Changed
 
+- `gate --facts` adds a note for each draft amount equal to a supplied fact, naming the fact: `$1,100 is equal in amount to fact 'invoice total'`. The note records a match in value, not where the figure came from. An amount equal to 2 or more facts is noted as ambiguous with every name, and the gate does not pick one. Reviews, verdicts and exit codes are unchanged.
 - The AML/CTF intake classification gives table 6 examples from AUSTRAC's 25 September 2026 guidance, adds items 7 and 9, and states item 3 with the s 6(5C)(b) exception.
 
 ### Fixed

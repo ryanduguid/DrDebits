@@ -436,6 +436,9 @@ fn the_command_reports_and_exits_by_verdict() {
 }
 
 const FACTS: &str = r#"{"facts": {"invoice total": "$1,100"}}"#;
+/// The note for `DRAFT`'s `$1,100` with `FACTS`.
+const NAMED: &str = "facts check: $1,100 is equal in amount to fact 'invoice total'";
+const CAVEAT: &str = "facts check: it flags amounts it cannot trace; an amount that matches a fact or a calculation is not thereby correct";
 
 /// The gate's findings with the facts check run on `text`.
 fn with_facts(text: &str, facts: &str) -> gate::Report {
@@ -455,9 +458,45 @@ fn facts_reviews(report: &gate::Report) -> Vec<&str> {
 
 #[test]
 fn a_supplied_fact_and_a_shown_calculation_pass_the_facts_check() {
-    // $1,100 is supplied; $100.00 and the later $100 are the result of
-    // `$1,100 / 11 = $100.00`.
+    // $1,100 is supplied, and its 2 mentions are named once; $100.00 and the
+    // later $100 are the result of `$1,100 / 11 = $100.00`, equal to no fact.
     let report = with_facts(DRAFT, FACTS);
+    assert_eq!(
+        report.verdict(),
+        ("PASS", EXIT_PASS),
+        "{:?}",
+        report.reviews
+    );
+    assert_eq!(report.notes, [NAMED, CAVEAT]);
+    // Without --facts the gate adds no facts-check note.
+    assert!(check(DRAFT, &conclusions()).notes.is_empty());
+}
+
+#[test]
+fn a_wrong_figure_equals_no_fact_and_asks_for_review() {
+    // The stated total is mistyped; the calculation still uses the fact.
+    let text = DRAFT.replace("Invoice total $1,100", "Invoice total $1,010");
+    let report = with_facts(&text, FACTS);
+    assert_eq!(
+        report.verdict(),
+        ("REVIEW", EXIT_REVIEW),
+        "{:?}",
+        report.blocks
+    );
+    assert_eq!(
+        facts_reviews(&report),
+        [
+            "facts check: $1,010 not in the facts file or derived by a reperformed calculation; a person must trace each to its source"
+        ]
+    );
+    assert_eq!(report.notes, [NAMED, CAVEAT]);
+}
+
+#[test]
+fn an_amount_equal_to_2_facts_is_ambiguous_and_neither_is_picked() {
+    let facts = r#"{"facts": {"invoice total": "$1,100", "Wexler McGill retainer": "1100.00"}}"#;
+    let report = with_facts(DRAFT, facts);
+    // Still equal to a fact, so the verdict is the single-fact one.
     assert_eq!(
         report.verdict(),
         ("PASS", EXIT_PASS),
@@ -467,11 +506,35 @@ fn a_supplied_fact_and_a_shown_calculation_pass_the_facts_check() {
     assert_eq!(
         report.notes,
         [
-            "facts check: it flags amounts it cannot trace; an amount that matches a fact or a calculation is not thereby correct"
+            "facts check: $1,100 is equal in amount to 2 facts, 'invoice total' and 'Wexler McGill retainer'; ambiguous, so the gate does not pick one",
+            CAVEAT
         ]
     );
-    // Without --facts the gate adds no facts-check note.
-    assert!(check(DRAFT, &conclusions()).notes.is_empty());
+}
+
+#[test]
+fn each_written_amount_names_every_fact_it_equals() {
+    // A percentage and a dollar amount of the same magnitude are not
+    // ambiguous; a name prints as a quoted literal, so it keeps to one line.
+    let facts = r#"{"facts": {"fee": "$10", "rate": "10%", "a": "$5", "b": "5", "c": "$5.00", "line\nbreak": "$7"}}"#;
+    let report = with_facts("A $10 fee at 10%, then $5, $5.00 and $7.", facts);
+    let notes: Vec<&str> = report
+        .notes
+        .iter()
+        .map(String::as_str)
+        .filter(|n| n.starts_with("facts check:"))
+        .collect();
+    assert_eq!(
+        notes,
+        [
+            "facts check: $10 is equal in amount to fact 'fee'",
+            "facts check: 10% is equal in amount to fact 'rate'",
+            "facts check: $5 is equal in amount to 3 facts, 'a', 'b' and 'c'; ambiguous, so the gate does not pick one",
+            "facts check: $5.00 is equal in amount to 3 facts, 'a', 'b' and 'c'; ambiguous, so the gate does not pick one",
+            "facts check: $7 is equal in amount to fact 'line\\nbreak'",
+            CAVEAT,
+        ]
+    );
 }
 
 #[test]
@@ -636,6 +699,11 @@ fn the_command_reads_a_facts_file() {
         "{}",
         out.stdout
     );
+    assert!(
+        out.stdout.contains(&format!("  note: {NAMED}\n")),
+        "{}",
+        out.stdout
+    );
     let out = gate(&["--facts", "facts.json", "--json", "invented.md"]);
     assert_eq!(
         out.code,
@@ -651,6 +719,11 @@ fn the_command_reads_a_facts_file() {
     );
     assert!(
         out.stdout.contains("facts check: $1,200 not"),
+        "{}",
+        out.stdout
+    );
+    assert!(
+        out.stdout.contains(&format!("\"{NAMED}\"")),
         "{}",
         out.stdout
     );
