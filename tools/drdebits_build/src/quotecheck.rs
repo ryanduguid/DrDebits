@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Offline quote evidence checks; text membership never establishes legal support.
 
 use unicode_normalization::UnicodeNormalization;

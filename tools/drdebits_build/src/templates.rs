@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! The fixed prose the generated files carry. Placeholders in braces are
 //! filled by `builder::format_named`.
 

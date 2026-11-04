@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Compilation currency: parsing the pins and naming a mismatch (ported from
 //! test_sources.py). The Register is replaced by a scripted responder.
 

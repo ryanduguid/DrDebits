@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Inert source reads and mechanical scoring (ported from test_harness.py).
 //!
 //! These exercise the scorer against mock responses. A mock response tests the

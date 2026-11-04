@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Rebuild-and-compare verification. Returns findings instead of failing.
 //!
 //! An `Err` means the checks themselves could not run, which the CLI reports

@@ -1,3 +1,6 @@
+# Copyright 2026 Ryan Duguid
+# SPDX-License-Identifier: FSL-1.1-ALv2
+
 """Skip a workflow's jobs on documentation-only pull requests, and check the gate.
 
 usage: python3 .github/ci/docs_only.py select [--checked PREFIX ...]

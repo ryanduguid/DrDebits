@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Command-line behaviour through the binary (ported from test_cli.py).
 //!
 //! The binary reads the real clock, so these tests move the fixture's review
