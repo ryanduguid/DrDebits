@@ -559,7 +559,7 @@ fn the_tax_reform_cases_keep_the_dates_they_test() {
             "for the 2027-28 income year and later years",
         ),
         ("FUT-006", "5 November 2026", "had passed only the House"),
-        ("FUT-006", "2026-27", "would apply from 1 July 2028"),
+        ("FUT-006", "2026-27", "it would start at 1 July 2028"),
     ] {
         let case = cases
             .iter()
