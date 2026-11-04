@@ -1116,6 +1116,44 @@ fn a_listed_section_with_a_malformed_year_is_not_read() {
 }
 
 #[test]
+fn a_citation_wrapped_across_lines_is_read_whole() {
+    // A line break is whitespace: each wrapped citation is read, unlisted
+    // ones ask for review and is shown on one line.
+    for (text, review) in [
+        ("TR\n2019/7", unlisted("TR 2019/7")),
+        (
+            "s\n8-1 of the Income Tax\n  Assessment Act 1997",
+            unlisted("s 8-1 of the Income Tax Assessment Act 1997"),
+        ),
+        ("TR\n2006", unread("TR 2006")),
+    ] {
+        let draft = cited().replace("- None identified.", &format!("- {text}."));
+        let report = with_authorities(&draft, AUTHORITIES);
+        assert_eq!(
+            report.verdict(),
+            ("REVIEW", EXIT_REVIEW),
+            "{text}: {:?}",
+            report.reviews
+        );
+        assert_eq!(
+            authorities_reviews(&report),
+            [review.as_str()],
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+    // A listed citation wrapped inside a list item still matches.
+    let draft = cited().replace("- None identified.", "- Under TR\n  2006/10.");
+    let report = with_authorities(&draft, AUTHORITIES);
+    assert_eq!(
+        report.verdict(),
+        ("PASS", EXIT_PASS),
+        "{:?}",
+        report.reviews
+    );
+}
+
+#[test]
 fn the_authorities_check_only_adds_its_own_findings() {
     only_adds_its_own_findings("authorities check:", |text| {
         with_authorities(text, AUTHORITIES)

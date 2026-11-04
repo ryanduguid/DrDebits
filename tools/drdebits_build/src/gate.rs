@@ -59,8 +59,9 @@
 //! file's closed list. The gate reads 2 kinds of citation: a section of an Act
 //! named in full, `s 8-1 of the Income Tax Assessment Act 1997` (`section`
 //! may replace `s`), and a ruling id in one of the series `SERIES` lists, such
-//! as `TR 2006/10`, `LCR 2026/D1` or `TPB(GS) 55/2026`. Citations compare
-//! exactly, whitespace aside: `s 8-1(1)` is not `s 8-1`, and the withdrawal
+//! as `TR 2006/10`, `LCR 2026/D1` or `TPB(GS) 55/2026`. A citation may wrap
+//! across lines. Citations compare exactly, whitespace and line breaks
+//! aside: `s 8-1(1)` is not `s 8-1`, and the withdrawal
 //! `TR 2010/3W` is not `TR 2010/3`. A citation not in the list asks for
 //! REVIEW, and so does section-like or ruling-like text the gate cannot read
 //! whole, such as `s 8-1 ITAA 1997`, `ss 30-35 and 30-40` or `TR 2024`. A
@@ -1036,25 +1037,30 @@ pub fn load_authorities(text: &str) -> Result<Vec<Authority>, String> {
 pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut Report) {
     let mut unlisted: Vec<String> = Vec::new();
     let mut unread: Vec<String> = Vec::new();
-    for line in py::splitlines(response).into_iter().map(normalise) {
-        for m in AUTHORITY_TEXT.find_iter(&line) {
-            // `client's 2 trusts`: a possessive, not a section. A quotation
-            // opening on `'s 8-1` is still read.
-            let mut before = line[..m.start()].chars().rev();
-            if matches!(before.next(), Some('\'' | '’'))
-                && before.next().is_some_and(char::is_alphanumeric)
-            {
-                continue;
-            }
-            let written = m.as_str().to_string();
-            let list = match Authority::read(&written) {
-                None => &mut unread,
-                Some(a) if authorities.contains(&a) => continue,
-                Some(_) => &mut unlisted,
-            };
-            if !list.contains(&written) {
-                list.push(written);
-            }
+    // One text, so a citation wrapped across lines (`TR` then `2019/7`) is
+    // read whole; each line loses its Markdown marks first.
+    let text = py::splitlines(response)
+        .into_iter()
+        .map(normalise)
+        .collect::<Vec<_>>()
+        .join("\n");
+    for m in AUTHORITY_TEXT.find_iter(&text) {
+        // `client's 2 trusts`: a possessive, not a section. A quotation
+        // opening on `'s 8-1` is still read.
+        let mut before = text[..m.start()].chars().rev();
+        if matches!(before.next(), Some('\'' | '’'))
+            && before.next().is_some_and(char::is_alphanumeric)
+        {
+            continue;
+        }
+        let written = m.as_str().split_whitespace().collect::<Vec<_>>().join(" ");
+        let list = match Authority::read(&written) {
+            None => &mut unread,
+            Some(a) if authorities.contains(&a) => continue,
+            Some(_) => &mut unlisted,
+        };
+        if !list.contains(&written) {
+            list.push(written);
         }
     }
     if !unlisted.is_empty() {
