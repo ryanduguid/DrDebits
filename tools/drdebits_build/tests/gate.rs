@@ -5,8 +5,8 @@ mod common;
 
 use common::*;
 use drdebits::gate::{
-    self, EXIT_BLOCK, EXIT_COULD_NOT_RUN, EXIT_PASS, EXIT_REVIEW, calculations, check, check_facts,
-    load_facts,
+    self, EXIT_BLOCK, EXIT_COULD_NOT_RUN, EXIT_PASS, EXIT_REVIEW, calculations, check,
+    check_authorities, check_facts, load_authorities, load_facts,
 };
 use drdebits::model::Conclusion;
 
@@ -860,10 +860,17 @@ fn a_bare_result_is_dollars_only_when_its_calculation_leaves_no_doubt() {
 
 #[test]
 fn the_facts_check_only_adds_its_own_findings() {
-    // Every gate fixture gives the same status, blocks, calculations and
-    // other findings with and without the facts check.
+    only_adds_its_own_findings("facts check:", |text| with_facts(text, FACTS));
+}
+
+/// Every gate fixture gives the same status, blocks, calculations and other
+/// findings with and without an optional check, whose findings start with
+/// `prefix`; the check can raise PASS to REVIEW, never to BLOCK.
+fn only_adds_its_own_findings(prefix: &str, with_check: impl Fn(&str) -> gate::Report) {
     let fixtures = [
         DRAFT.to_string(),
+        cited(),
+        cited().replace("TR 2006/10.", "TR 2019/7 and s 8-1 ITAA 1997."),
         STOP.to_string(),
         DRAFT.replace("= $100.00", "= $110.00"),
         DRAFT.replace("$1,100 / 11 = $100.00", "$1,100 / 0 = $0"),
@@ -878,10 +885,10 @@ fn the_facts_check_only_adds_its_own_findings() {
         ),
         DRAFT.replace("- None identified.", "- ($100) + $50 = $150; $9 and 7%."),
     ];
-    let facts_finding = |s: &String| s.starts_with("facts check:");
+    let own_finding = |s: &String| s.starts_with(prefix);
     for text in &fixtures {
         let without = check(text, &conclusions());
-        let with = with_facts(text, FACTS);
+        let with = with_check(text);
         assert_eq!(with.status, without.status, "{text}");
         assert_eq!(with.blocks, without.blocks, "{text}");
         let shown = |r: &gate::Report| {
@@ -894,17 +901,334 @@ fn the_facts_check_only_adds_its_own_findings() {
         let other = |items: &[String]| {
             items
                 .iter()
-                .filter(|s| !facts_finding(s))
+                .filter(|s| !own_finding(s))
                 .cloned()
                 .collect::<Vec<_>>()
         };
         assert_eq!(other(&with.reviews), without.reviews, "{text}");
         assert_eq!(other(&with.notes), without.notes, "{text}");
-        assert!(!without.reviews.iter().any(facts_finding), "{text}");
-        assert!(!without.notes.iter().any(facts_finding), "{text}");
-        // The facts check can raise PASS to REVIEW, never to BLOCK.
+        assert!(!without.reviews.iter().any(own_finding), "{text}");
+        assert!(!without.notes.iter().any(own_finding), "{text}");
+        // The check can raise PASS to REVIEW, never to BLOCK.
         if without.verdict().1 != EXIT_BLOCK {
             assert_ne!(with.verdict().1, EXIT_BLOCK, "{text}");
         }
+    }
+}
+
+const AUTHORITIES: &str = r#"{"authorities": ["s 9-70 of the A New Tax System (Goods and Services Tax) Act 1999", "TR 2006/10"]}"#;
+const AUTHORITIES_CAVEAT: &str = "authorities check: it reads only a section of a named Act and a ruling id; a listed authority is not thereby current or correctly applied";
+
+/// `DRAFT` with its authority cited in full, and a ruling.
+fn cited() -> String {
+    DRAFT.replace(
+        "- GST Act s 9-70.",
+        "- s 9-70 of the A New Tax System (Goods and Services Tax) Act 1999; TR 2006/10.",
+    )
+}
+
+/// The gate's findings with the authorities check run on `text`.
+fn with_authorities(text: &str, authorities: &str) -> gate::Report {
+    let mut report = check(text, &conclusions());
+    check_authorities(text, &load_authorities(authorities).unwrap(), &mut report);
+    report
+}
+
+fn authorities_reviews(report: &gate::Report) -> Vec<&str> {
+    report
+        .reviews
+        .iter()
+        .map(String::as_str)
+        .filter(|r| r.starts_with("authorities check:"))
+        .collect()
+}
+
+fn unlisted(written: &str) -> String {
+    format!(
+        "authorities check: {written} not in the authorities file; a person must check each against its source"
+    )
+}
+
+fn unread(written: &str) -> String {
+    format!(
+        "authorities check: could not read {written} as a section of a named Act or a ruling id; a person must check each"
+    )
+}
+
+#[test]
+fn listed_authorities_pass_the_authorities_check() {
+    let report = with_authorities(&cited(), AUTHORITIES);
+    assert_eq!(
+        report.verdict(),
+        ("PASS", EXIT_PASS),
+        "{:?}",
+        report.reviews
+    );
+    assert_eq!(report.notes, [AUTHORITIES_CAVEAT]);
+    // Without --authorities the gate adds no authorities-check finding.
+    assert!(check(&cited(), &conclusions()).notes.is_empty());
+}
+
+#[test]
+fn an_unlisted_authority_asks_for_review() {
+    // A ruling the reviewer did not accept, and another section of a listed
+    // Act; each is reported once, in order.
+    let text = cited().replace(
+        "TR 2006/10.",
+        "TR 2006/10 and TR 2019/7, then s 9-75 of the A New Tax System (Goods and Services Tax) Act 1999 and TR 2019/7 again.",
+    );
+    let report = with_authorities(&text, AUTHORITIES);
+    assert_eq!(
+        report.verdict(),
+        ("REVIEW", EXIT_REVIEW),
+        "{:?}",
+        report.blocks
+    );
+    assert_eq!(
+        authorities_reviews(&report),
+        [unlisted(
+            "TR 2019/7, s 9-75 of the A New Tax System (Goods and Services Tax) Act 1999"
+        )]
+    );
+    assert_eq!(report.notes, [AUTHORITIES_CAVEAT]);
+}
+
+#[test]
+fn the_check_reads_a_section_of_a_named_act_and_a_ruling_id() {
+    let listed = r#"{"authorities": [
+        "s 8-1 of the Income Tax Assessment Act 1997",
+        "s 6(5C)(b) of the Anti-Money Laundering and Counter-Terrorism Financing Act 2006",
+        "s 6D(4) of the Privacy Act 1988",
+        "s 100A of the Income Tax Assessment Act 1936",
+        "TR 2006/10", "TR 93/31", "LCR 2026/D1", "TR 2010/3W", "PS LA 1998/1",
+        "TPB(GS) 55/2026", "GSTD 2026/1", "PCG 2016/1"
+    ]}"#;
+    // Each citation is read whole, whatever its spacing, emphasis or
+    // surrounding punctuation, and found in the list.
+    for text in [
+        "Under s 8-1 of the Income Tax Assessment Act 1997, the outgoing is deductible.",
+        "Section 8-1 of the Income Tax Assessment Act 1997 applies.",
+        "**s 8-1** of the  Income Tax\u{a0}Assessment Act 1997",
+        "'s 8-1 of the Income Tax Assessment Act 1997'",
+        "see s 6(5C)(b) of the Anti-Money Laundering and Counter-Terrorism Financing Act 2006",
+        "(s 6D(4) of the Privacy Act 1988)",
+        "s 100A of the Income Tax Assessment Act 1936 (Cth)",
+        "TR 2006/10, TR 93/31 and LCR 2026/D1.",
+        "the withdrawal TR 2010/3W",
+        "PS  LA 1998/1 and `TPB(GS) 55/2026`",
+        "GSTD 2026/1; PCG 2016/1",
+        // A possessive or a contraction before a number is not a section.
+        "The client's 2 trusts, the Commissioner’s 3 letters; it's 5 pm.",
+    ] {
+        let report = with_authorities(text, listed);
+        assert!(
+            authorities_reviews(&report).is_empty(),
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+}
+
+#[test]
+fn a_citation_matches_only_the_same_authority() {
+    let listed = r#"{"authorities": ["s 8-1 of the Income Tax Assessment Act 1997", "TR 2010/3"]}"#;
+    for text in [
+        // A subsection, or the section of another Act, is another authority.
+        "s 8-1(1) of the Income Tax Assessment Act 1997",
+        "s 8-1 of the Income Tax Assessment Act 1936",
+        "s 8-1 of the Income Tax Rates Act 1986",
+        // A withdrawal, an addendum and a draft are other documents.
+        "TR 2010/3W",
+        "TR 2010/3A1",
+        "TR 2010/D3",
+        "GSTR 2010/3",
+    ] {
+        let report = with_authorities(text, listed);
+        assert_eq!(
+            authorities_reviews(&report),
+            [unlisted(text)],
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+}
+
+#[test]
+fn authority_like_text_the_gate_cannot_read_is_reported() {
+    for (text, written) in [
+        // An abbreviated or unnamed Act.
+        ("s 8-1 ITAA 1997", "s 8-1"),
+        ("under s 8-1 of the ITAA 1997", "s 8-1"),
+        ("GST Act s 9-70.", "s 9-70"),
+        ("s 8-1 of the Income Tax Assessment Act", "s 8-1"),
+        // A list of sections.
+        (
+            "ss 30-35 and 30-40 of the Tax Agent Services Act 2009",
+            "ss 30-35",
+        ),
+        ("sections 15, 45 and 101", "sections 15"),
+        // A ruling id without its number, run together or with a lowercase
+        // suffix.
+        ("TR 2006", "TR 2006"),
+        ("TR2006/10", "TR2006/10"),
+        ("TR 2006/10a", "TR 2006/10a"),
+    ] {
+        let draft = cited().replace("- None identified.", &format!("- {text}"));
+        let report = with_authorities(&draft, AUTHORITIES);
+        assert_eq!(
+            report.verdict(),
+            ("REVIEW", EXIT_REVIEW),
+            "{text}: {:?}",
+            report.blocks
+        );
+        assert_eq!(
+            authorities_reviews(&report),
+            [unread(written)],
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+}
+
+#[test]
+fn the_authorities_check_only_adds_its_own_findings() {
+    only_adds_its_own_findings("authorities check:", |text| {
+        with_authorities(text, AUTHORITIES)
+    });
+}
+
+#[test]
+fn a_malformed_authorities_file_is_refused() {
+    for (text, reason) in [
+        ("{", "not valid JSON"),
+        ("[]", "top level must be an object"),
+        (
+            r#"{"authorities": ["TR 2006/10"], "facts": {}}"#,
+            "unknown key 'facts'",
+        ),
+        (
+            r#"{"authorities": []}"#,
+            "'authorities' must list authorities",
+        ),
+        (
+            r#"{"authorities": {"a": "TR 2006/10"}}"#,
+            "'authorities' must list authorities",
+        ),
+        (
+            r#"{"authorities": [2006]}"#,
+            "each authority must be written as text",
+        ),
+        (
+            r#"{"authorities": ["ITAA 1997 s 8-1"]}"#,
+            "not an authority the gate can read: 'ITAA 1997 s 8-1'",
+        ),
+        (r#"{"authorities": ["s 8-1"]}"#, "not an authority"),
+        (r#"{"authorities": [" TR 2006/10"]}"#, "not an authority"),
+        (
+            r#"{"authorities": ["TR 2006/10, TR 93/31"]}"#,
+            "not an authority",
+        ),
+        (r#"{"authorities": [""]}"#, "not an authority"),
+    ] {
+        let Err(e) = load_authorities(text) else {
+            panic!("{text} was accepted");
+        };
+        assert!(e.starts_with("authorities file: "), "{text}: {e}");
+        assert!(e.contains(reason), "{text}: {e}");
+    }
+}
+
+#[test]
+fn the_command_reads_an_authorities_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = repo_root();
+    let root = root.to_str().unwrap();
+    std::fs::write(dir.path().join("cited.md"), cited()).unwrap();
+    std::fs::write(
+        dir.path().join("unlisted.md"),
+        cited().replace("TR 2006/10.", "TR 2019/7."),
+    )
+    .unwrap();
+    std::fs::write(dir.path().join("authorities.json"), AUTHORITIES).unwrap();
+    std::fs::write(dir.path().join("facts.json"), FACTS).unwrap();
+    std::fs::write(dir.path().join("bad.json"), r#"{"authorities": ["s 8-1"]}"#).unwrap();
+    let gate = |args: &[&str]| {
+        let mut all = vec!["--root", root, "gate"];
+        all.extend(args);
+        run_in(dir.path(), &all, false)
+    };
+    let out = gate(&["--authorities", "authorities.json", "cited.md"]);
+    assert_eq!(
+        out.code,
+        i32::from(EXIT_PASS),
+        "{}{}",
+        out.stdout,
+        out.stderr
+    );
+    assert!(
+        out.stdout
+            .contains(&format!("  note: {AUTHORITIES_CAVEAT}\n")),
+        "{}",
+        out.stdout
+    );
+    let out = gate(&["--authorities", "authorities.json", "--json", "unlisted.md"]);
+    assert_eq!(
+        out.code,
+        i32::from(EXIT_REVIEW),
+        "{}{}",
+        out.stdout,
+        out.stderr
+    );
+    assert!(
+        out.stdout.contains("\"verdict\": \"REVIEW\""),
+        "{}",
+        out.stdout
+    );
+    assert!(
+        out.stdout
+            .contains(&format!("\"{}\"", unlisted("TR 2019/7"))),
+        "{}",
+        out.stdout
+    );
+    // With --facts as well, both checks run.
+    let out = gate(&[
+        "--facts",
+        "facts.json",
+        "--authorities",
+        "authorities.json",
+        "cited.md",
+    ]);
+    assert_eq!(
+        out.code,
+        i32::from(EXIT_PASS),
+        "{}{}",
+        out.stdout,
+        out.stderr
+    );
+    assert!(
+        out.stdout.contains(&format!("  note: {NAMED}\n")),
+        "{}",
+        out.stdout
+    );
+    assert!(
+        out.stdout
+            .contains(&format!("  note: {AUTHORITIES_CAVEAT}\n")),
+        "{}",
+        out.stdout
+    );
+    for authorities in ["bad.json", "absent.json"] {
+        let out = gate(&["--authorities", authorities, "cited.md"]);
+        assert_eq!(
+            out.code,
+            i32::from(EXIT_COULD_NOT_RUN),
+            "{authorities}: {}",
+            out.stdout
+        );
+        assert!(
+            out.stderr.starts_with("gate: authorities file: "),
+            "{authorities}: {}",
+            out.stderr
+        );
+        assert!(out.stdout.is_empty(), "{authorities}: {}", out.stdout);
     }
 }
