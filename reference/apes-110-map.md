@@ -26,7 +26,7 @@ In APES 110, `R` and `AUST R` identify requirement paragraphs. `A` paragraphs ar
 | Audit and review independence | Part 4A |
 | Other assurance independence | Part 4B |
 | Sustainability-assurance ethics | Part 5 sections 5100 to 5390 within paragraph 5100.2, including sections 5360 and 5380 |
-| Sustainability-assurance independence | Part 5 sections 5400 to 5600 according to paragraphs 5400.3a to 5400.3d; Part 4B where paragraph 5400.3e routes the engagement there |
+| Sustainability-assurance independence | Part 5 sections 5400 to 5600 according to paragraphs 5400.3a to 5400.3d, with the provisions for value chain components from 1 July 2028 unless early adopted; Part 4B where paragraph 5400.3e routes the engagement there |
 
 Key paragraph-level retrieval points are:
 

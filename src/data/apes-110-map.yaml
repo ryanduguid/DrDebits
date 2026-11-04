@@ -34,7 +34,7 @@ contexts:
   - label: "Sustainability-assurance ethics"
     value: "Part 5 sections 5100 to 5390 within paragraph 5100.2, including sections 5360 and 5380"
   - label: "Sustainability-assurance independence"
-    value: "Part 5 sections 5400 to 5600 according to paragraphs 5400.3a to 5400.3d; Part 4B where paragraph 5400.3e routes the engagement there"
+    value: "Part 5 sections 5400 to 5600 according to paragraphs 5400.3a to 5400.3d, with the provisions for value chain components from 1 July 2028 unless early adopted; Part 4B where paragraph 5400.3e routes the engagement there"
 retrieval_points:
   - label: "Scope and responsibility"
     value: "`R1.2 to R1.4`, `1.5`; `5100.2 to 5100.2b`, `R5100.6`; `5400.3a to 5400.3e`"
