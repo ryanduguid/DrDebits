@@ -10,6 +10,7 @@ sections:
   - "Contract terms and outputs"
   - "Competence and training"
   - "Automated decisions"
+  - "Source authority"
 entries:
   - id: "VA-01"
     section: "Authority and accountability"
@@ -233,3 +234,9 @@ entries:
     evidence: "A written statement covering all 3 kinds for the product as the firm configures it, naming the functions that produce advisory output. A vendor’s statement that a person reviews the output, or that the product is outside APP 1.7, is recorded as a claim: whether APP 1.7 applies to the firm’s use is the firm’s own conclusion."
     obligation: "Privacy Act 1988, APP 1.7 to 1.9, binding an APP entity from 10 December 2026 for decisions made after commencement (Privacy and Other Legislation Amendment Act 2024, Sch 1 items 88 and 89), with APP entity status turning on ss 6C to 6EA; OAIC APP Guidelines Chapter 1, version 2.0, and APP 1.7-1.9 fact sheet (both September 2026), which are regulatory guidance, not law, and say providers should give clear, high-level information; DrDebits Data and privacy gate (automated-decision transparency check). This row is new in release v0.5.0 and is not in v0.4.0."
     if_absent: "Record the question as unanswered, with what the firm could not establish about the product. If the firm’s check reaches APP 1.8, seek evidence the firm can rely on and leave the policy content to its authorised privacy lead; do not fill the gap with assumed product details."
+  - id: "VA-38"
+    section: "Source authority"
+    question: "Does the product rank its sources by authority, and does it show which layer each cited source belongs to?"
+    evidence: "The ranking the product applies (Acts, regulations and binding court decisions; public rulings to the extent they bind the Commissioner; practical compliance guidelines and practice statements; other material), the layer shown beside each citation, and a test file citing a private ruling, which the product should treat as binding only for its applicant and never as precedent."
+    obligation: "TASA Code item 10 (correct application of tax law); TPB(GS) 55/2026 (verify AI content throughout the workflow); DrDebits penalty and safe-harbour layer (distinguish the authority layers). This row is new after release v0.5.0."
+    if_absent: "The firm checks the authority of every cited source itself before relying on it, and records a private ruling cited as precedent as a finding."

@@ -10,6 +10,8 @@ release.
 
 ### Added
 
+- An AI tool register, reviewed at least annually and on any tool, model or vendor change, and an incident log for failures found in use, among the AI-specific TPB rules. The GS 55 concordance's CC-35 now points to them; beyond the per-task workflow checks, the guide still sets no periodic monitoring of output quality.
+- Vendor checklist question VA-38, in a new 'Source authority' section: does the product rank sources by authority and show each citation's layer, treating a private ruling as binding only for its applicant.
 - Three behaviour tests with frozen prompts, bringing the suite to 70: AML/CTF designated-service classification for a registered office address (AML-002) and a bookkeeper's routine payments (AML-003), and a false premise backed by a real, closely matching passage (CITE-010). None has a recorded model result.
 - Four behaviour tests with frozen prompts, bringing the suite to 83, for measures of the *Treasury Laws Amendment (Tax Reform No. 1) Act 2026* applied outside their periods: the 50% CGT discount on a sale after 1 July 2027 (FUT-002), the negative gearing quarantine dated from the wrong income year and the 12 May 2026 cut-off (FUT-003), the standard deduction for work-related expenses claimed for 2025-26 (FUT-004) and the Working Australians tax offset claimed for 2026-27 (FUT-005). None has a recorded model result.
 - A CITE-002 grader note on TR 2010/3W and *Commissioner of Taxation v Bendel* [2026] HCA 18 in the evaluation notes.
@@ -17,6 +19,7 @@ release.
 
 ### Changed
 
+- The APES 110 map's Part 5 independence row gives the 1 July 2028 start, unless early adopted, for the provisions on value chain components, from APESB's amending standard of 8 July 2025.
 - `gate --facts` adds a note for each draft amount equal to a supplied fact, naming the fact: `$1,100 is equal in amount to fact 'invoice total'`. The note records a match in value, not where the figure came from. An amount equal to 2 or more facts is noted as ambiguous with every name, and the gate does not pick one. Reviews, verdicts and exit codes are unchanged.
 - The AML/CTF intake classification gives table 6 examples from AUSTRAC's 25 September 2026 guidance, adds items 7 and 9, and states item 3 with the s 6(5C)(b) exception.
 
