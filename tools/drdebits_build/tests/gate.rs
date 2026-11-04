@@ -1091,6 +1091,31 @@ fn authority_like_text_the_gate_cannot_read_is_reported() {
 }
 
 #[test]
+fn a_listed_section_with_a_malformed_year_is_not_read() {
+    // The year must end the citation: `Act 19970` is not `Act 1997`.
+    let listed = r#"{"authorities": ["s 9-70 of the A New Tax System (Goods and Services Tax) Act 1999", "TR 2006/10", "s 8-1 of the Income Tax Assessment Act 1997"]}"#;
+    for text in [
+        "s 8-1 of the Income Tax Assessment Act 19970",
+        "s 8-1 of the Income Tax Assessment Act 1997a",
+    ] {
+        let draft = cited().replace("- None identified.", &format!("- {text}."));
+        let report = with_authorities(&draft, listed);
+        assert_eq!(
+            report.verdict(),
+            ("REVIEW", EXIT_REVIEW),
+            "{text}: {:?}",
+            report.reviews
+        );
+        assert_eq!(
+            authorities_reviews(&report),
+            [unread("s 8-1")],
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+}
+
+#[test]
 fn the_authorities_check_only_adds_its_own_findings() {
     only_adds_its_own_findings("authorities check:", |text| {
         with_authorities(text, AUTHORITIES)

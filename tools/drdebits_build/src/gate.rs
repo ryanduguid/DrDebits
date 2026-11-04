@@ -954,9 +954,9 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
 const SERIES: &str = r"TR|TD|LCR|GSTR|GSTD|MT|CR|PR|SGR|PCG|PS\s+LA|TPB\(GS\)";
 /// An Act named in full: capitalised words, connectives and bracketed
 /// phrases ending in `Act` and its year, such as `A New Tax System (Goods and
-/// Services Tax) Act 1999`.
-const ACT: &str =
-    r"[A-Z][\w'’-]*(?:\s+(?:[A-Z][\w'’-]*|and|of|for|the|to|on|in|an|a|\([^()]*\)))*\s+Act\s+\d{4}";
+/// Services Tax) Act 1999`. The year ends the word, so `Act 19970` and
+/// `Act 1997a` name no Act.
+const ACT: &str = r"[A-Z][\w'’-]*(?:\s+(?:[A-Z][\w'’-]*|and|of|for|the|to|on|in|an|a|\([^()]*\)))*\s+Act\s+\d{4}\b";
 /// Anything in a draft that looks like a ruling id or a section reference,
 /// taken whole with any `of the <Act>` that follows, so a citation the gate
 /// cannot read is reported rather than skipped.
