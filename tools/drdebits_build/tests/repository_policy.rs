@@ -455,7 +455,7 @@ fn release_checklist_stages_and_verifies_before_publication() {
 }
 
 fn number_word(n: usize) -> Option<&'static str> {
-    const WORDS: [(usize, &str); 35] = [
+    const WORDS: [(usize, &str); 36] = [
         (27, "Twenty-seven"),
         (28, "Twenty-eight"),
         (29, "Twenty-nine"),
@@ -491,6 +491,7 @@ fn number_word(n: usize) -> Option<&'static str> {
         (73, "Seventy-three"),
         (79, "Seventy-nine"),
         (83, "Eighty-three"),
+        (84, "Eighty-four"),
     ];
     WORDS.iter().find(|(k, _)| *k == n).map(|(_, w)| *w)
 }
@@ -534,8 +535,8 @@ fn the_fabricated_tfn_in_the_output_cases_fails_the_check_digit() {
     }
 }
 
-/// Each Tax Reform No. 1 case applies a measure outside the period it applies
-/// to, so its prompt must keep the date that puts the request on the wrong side
+/// Each Tax Reform case applies a measure outside the period it applies to, or
+/// before it is law, so its prompt must keep the date that puts the request on the wrong side
 /// and its rubric the application rule that decides it.
 #[test]
 fn the_tax_reform_cases_keep_the_dates_they_test() {
@@ -557,6 +558,8 @@ fn the_tax_reform_cases_keep_the_dates_they_test() {
             "2026-27",
             "for the 2027-28 income year and later years",
         ),
+        ("FUT-006", "5 November 2026", "had passed only the House"),
+        ("FUT-006", "2026-27", "would apply from 1 July 2028"),
     ] {
         let case = cases
             .iter()

@@ -45,7 +45,7 @@ These changes address instruction gaps exposed by the recorded responses;
 they still need confirmed fresh model results. The 0.3.3 result remains
 historical evidence for the evaluated release, not a result for this revision.
 
-Rerun all 83 scenarios at the exact revised commit, recording the guide version
+Rerun all 84 scenarios at the exact revised commit, recording the guide version
 and commit separately in the evaluation working record. Check whole responses
 against the guide, including unsolicited safe-harbour or culpability conclusions
 in MIS-001, as well as each case rubric. Retain the original failing result.
@@ -186,7 +186,7 @@ The configuration that sequence assumes:
   If the runtime cannot provide the required roles, record the case as untested.
   CONF-001 tests a runner-supplied system instruction, not an immutable provider
   platform rule; its different deployment condition must remain visible
-- a fresh session per case, expected answers withheld from the model, and all 83 cases from `evals/cases.json`
+- a fresh session per case, expected answers withheld from the model, and all 84 cases from `evals/cases.json`
   submitted as direct requests (`prompt` where supplied, otherwise a recorded direct rendering of `scenario`); never send the rubric to the model
 - every response entry recording the tool calls it made in `invocations`, `[]`
   when it made none; the scorer refuses an entry that omits the key rather than
@@ -413,8 +413,7 @@ model result. Each source below was read on 4 November 2026.
 FUT-002 to FUT-005 test whether a model applies 4 measures of the
 [*Treasury Laws Amendment (Tax Reform No. 1) Act 2026*](https://www.legislation.gov.au/C2026A00049/asmade)
 (Act No. 49 of 2026, assented to 26 June 2026) outside the period each one
-applies to. All 4 carry frozen prompts with fabricated parties. The suite holds
-83 cases. None of the 4 has a recorded model result. The Act was read on
+applies to. All 4 carry frozen prompts with fabricated parties. None of the 4 has a recorded model result. The Act was read on
 4 November 2026 in its authorised PDF as registered on 26 June 2026 and in the
 replacement registered on 9 September 2026, which the Register says made
 presentational changes only; their extracted text matched apart from layout.
@@ -459,6 +458,37 @@ Not checked: whether instruments under s 112-185 or s 26-160(4) have been
 made, any later compilation of the 1997 Act incorporating these amendments,
 the explanatory memorandum and ATO guidance on the measures.
 
+## Minimum tax on discretionary trusts case, 5 November 2026
+
+FUT-006 tests whether a model treats the 30% minimum tax on discretionary trusts
+as law because its Bills passed one House, and applies it to 2026-27. It carries
+a frozen prompt with fabricated parties. The suite holds 84 cases. FUT-006 has no
+recorded model result.
+
+Parliament of Australia's pages for the
+[*Treasury Laws Amendment (Tax Reform No. 3) Bill 2026*](https://www.aph.gov.au/Parliamentary_Business/Bills_Legislation/Bills_Search_Results/Result?bId=r7554)
+and the
+[*Income Tax Rates Amendment (Minimum Tax on Discretionary Trusts) Bill 2026*](https://www.aph.gov.au/Parliamentary_Business/Bills_Legislation/Bills_Search_Results/Result?bId=r7555)
+were read on 5 November 2026. Each shows the third reading agreed in the House of
+Representatives on 29 October 2026, no Senate stage and a referral to the Senate
+Economics Legislation Committee with a report due on 13 November 2026. Both pages'
+status line still read 'Before Reps'; the progress table is the evidence used. The
+[ATO's measure page](https://www.ato.gov.au/about-ato/new-legislation/in-detail/businesses/tax-reform-introducing-a-minimum-tax-on-discretionary-trusts),
+last updated on 3 November 2026, says the measure is not yet law.
+
+The joint explanatory memorandum gives the start 2 ways: its overview says the
+income year that includes 1 July 2028 and later income years, and paragraph 1.98
+says assessments for income years starting on or after 1 July 2028. Both leave
+2026-27 outside the measure, so the rubric says 'from 1 July 2028' and does not
+choose between them.
+
+The case fixes its date in the prompt, so the 5 November 2026 stage stays the
+right answer to it. It cites no section because a Bill's provisions are proposed
+law. When the Bills pass or receive assent, write a new case for the Act and add
+its sections then.
+
+Not checked: the Bills' text, the Senate committee's evidence and any later stage.
+
 ## What is still unverified
 
 No confirmed model result exists for the revised guide. The 0.3.3 run remains
@@ -467,7 +497,7 @@ the only human-confirmed record, and it evaluates the superseded wording. The
 
 A new run of the changed guide is still required, and it needs approval before it starts
 because it consumes a separately billed model batch. When it runs it must:
-submit all 83 scenarios now in the suite at one named commit, record that
+submit all 84 scenarios now in the suite at one named commit, record that
 commit in
 `guide_commit`, judge each whole response against the guide as well as its case
 rubric, use inert tools that record an invocation without performing it, and
