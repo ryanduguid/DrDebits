@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Verification: tamper each way, expect the named failure (ported from test_verify.py).
 
 mod common;

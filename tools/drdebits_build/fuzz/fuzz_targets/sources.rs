@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Fabricated bytes to the YAML source reader and the decision-status reader.
 #![no_main]
 

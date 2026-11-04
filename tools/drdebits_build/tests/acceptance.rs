@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! The real repository verifies clean, hand edits fail, and a version bump
 //! propagates (ported from test_acceptance.py).
 //!

@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Issue migration and recovery, exercised through the workflows' own shell
 //! steps (ported from test_monitoring_workflows.py). Only the GitHub
 //! transport is stubbed; the real jq selection and shell control flow run,

@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Exact quotations, conversion differences and incomplete coverage
 //! (ported from test_quotecheck.py). Values Python had to reject at run time
 //! (a boolean or float character count, a truthy completeness flag) cannot be

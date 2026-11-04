@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! JSON read and written as the original builder's `json` module did.
 //!
 //! Records and responses are read with Python's C scanner semantics, so a

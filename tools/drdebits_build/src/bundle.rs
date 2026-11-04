@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Install an approved manifest's complete bundle without overwriting a copy.
 //!
 //! The approved manifest digest comes from the deployer's trusted release
