@@ -1,6 +1,3 @@
-// Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: FSL-1.1-ALv2
-
 //! The Python behaviours the original builder's output depended on.
 //!
 //! The builder was a Python program, and its findings quote Python's own
