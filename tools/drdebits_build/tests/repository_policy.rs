@@ -455,7 +455,7 @@ fn release_checklist_stages_and_verifies_before_publication() {
 }
 
 fn number_word(n: usize) -> Option<&'static str> {
-    const WORDS: [(usize, &str); 34] = [
+    const WORDS: [(usize, &str); 35] = [
         (27, "Twenty-seven"),
         (28, "Twenty-eight"),
         (29, "Twenty-nine"),
@@ -490,6 +490,7 @@ fn number_word(n: usize) -> Option<&'static str> {
         (71, "Seventy-one"),
         (73, "Seventy-three"),
         (79, "Seventy-nine"),
+        (83, "Eighty-three"),
     ];
     WORDS.iter().find(|(k, _)| *k == n).map(|(_, w)| *w)
 }
@@ -530,6 +531,42 @@ fn the_fabricated_tfn_in_the_output_cases_fails_the_check_digit() {
     for id in ["DATA-003", "DATA-004", "DATA-005"] {
         let case = cases.iter().find(|c| c.get("id") == id).unwrap();
         assert!(case.prompt.as_deref().unwrap().contains(FABRICATED), "{id}");
+    }
+}
+
+/// Each Tax Reform No. 1 case applies a measure outside the period it applies
+/// to, so its prompt must keep the date that puts the request on the wrong side
+/// and its rubric the application rule that decides it.
+#[test]
+fn the_tax_reform_cases_keep_the_dates_they_test() {
+    let cases = load_behaviour_tests(&root_py("src/data/behaviour-tests.yaml")).unwrap();
+    for (id, prompt_date, rule) in [
+        ("FUT-002", "14 September 2027", "before 1 July 2027"),
+        (
+            "FUT-003",
+            "20 May 2026",
+            "before 7.30 pm, by legal time in the Australian Capital Territory, on 12 May 2026",
+        ),
+        (
+            "FUT-004",
+            "2025-26",
+            "for the 2026-27 income year and later years",
+        ),
+        (
+            "FUT-005",
+            "2026-27",
+            "for the 2027-28 income year and later years",
+        ),
+    ] {
+        let case = cases
+            .iter()
+            .find(|c| c.get("id") == id)
+            .unwrap_or_else(|| panic!("{id} is missing"));
+        assert!(
+            case.prompt.as_deref().unwrap().contains(prompt_date),
+            "{id} prompt"
+        );
+        assert!(case.get("required_behaviour").contains(rule), "{id} rubric");
     }
 }
 
