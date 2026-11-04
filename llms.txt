@@ -23,7 +23,7 @@ Sources last checked: 2026-10-14
 
 ## Reuse
 
-- [Reusing this code](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/AGENTS.md#reusing-this-code): Ryan Duguid's work under FSL-1.1-ALv2; keep its notices and licence; public credit is requested.
+- [Reusing this code](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/AGENTS.md#reusing-this-code): Ryan Duguid's work under the Ryan Duguid Public Attribution Licence, Version 1.0 (LicenseRef-Duguid-Public-Attribution-1.0), which is FSL-1.1-ALv2 plus a public attribution condition; keep its notices and licence; where the Public Attribution Condition applies, a copy or port made available outside the user's organisation must credit Ryan Duguid publicly.
 
 ## Optional
 
