@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Evaluation records for the behaviour tests.
 //!
 //! The build exports the behaviour tests as `evals/cases.json` for a person

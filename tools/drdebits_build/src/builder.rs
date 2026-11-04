@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Assemble the runtime files from src/. Deterministic, LF, UTF-8.
 
 use std::path::Path;

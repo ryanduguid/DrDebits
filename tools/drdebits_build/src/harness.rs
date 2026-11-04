@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Offline source reads and mechanical evaluation scoring.
 //!
 //! A model's evaluation runtime must supply inert action tools and capture

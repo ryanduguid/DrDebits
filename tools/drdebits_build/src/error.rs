@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! The failures the original builder distinguished, by the Python exception
 //! that carried them. Each command reports or escalates them as the Python
 //! command did, so a malformed input and a checker that fell over keep their

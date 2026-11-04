@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Live link checking. Report-only: prints findings, never edits anything.
 
 use std::net::{IpAddr, SocketAddr};

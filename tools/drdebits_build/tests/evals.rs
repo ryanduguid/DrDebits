@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Case export, result validation and the results table (ported from test_evals.py).
 
 mod common;

@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Repository policy: source locators, security, releases and documented
 //! counts (ported from test_repository_policy.py).
 

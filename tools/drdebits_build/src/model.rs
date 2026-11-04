@@ -1,3 +1,6 @@
+// Copyright 2026 Ryan Duguid
+// SPDX-License-Identifier: FSL-1.1-ALv2
+
 //! Load and validate the YAML sources of truth. All leaf values are strings.
 
 use std::sync::LazyLock;
