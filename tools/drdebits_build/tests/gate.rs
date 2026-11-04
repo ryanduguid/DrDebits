@@ -917,7 +917,7 @@ fn only_adds_its_own_findings(prefix: &str, with_check: impl Fn(&str) -> gate::R
 }
 
 const AUTHORITIES: &str = r#"{"authorities": ["s 9-70 of the A New Tax System (Goods and Services Tax) Act 1999", "TR 2006/10"]}"#;
-const AUTHORITIES_CAVEAT: &str = "authorities check: it reads only a section of a named Act and a ruling id; a listed authority is not thereby current or correctly applied";
+const AUTHORITIES_CAVEAT: &str = "authorities check: it reads only a section of a named Act and a ruling id, so a pass does not show that every authority the draft cites was checked; a listed authority is not thereby current or correctly applied";
 
 /// `DRAFT` with its authority cited in full, and a ruling.
 fn cited() -> String {

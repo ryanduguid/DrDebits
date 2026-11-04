@@ -12,7 +12,7 @@ release.
 
 - Three behaviour tests with frozen prompts, bringing the suite to 70: AML/CTF designated-service classification for a registered office address (AML-002) and a bookkeeper's routine payments (AML-003), and a false premise backed by a real, closely matching passage (CITE-010). None has a recorded model result.
 - A CITE-002 grader note on TR 2010/3W and *Commissioner of Taxation v Bendel* [2026] HCA 18 in the evaluation notes.
-- `gate --authorities FILE` asks for review, never a block, of each authority a draft cites that is not on the reviewer's closed list. It reads a section of an Act named in full, such as `s 8-1 of the Income Tax Assessment Act 1997`, and a ruling id in the TR, TD, LCR, GSTR, GSTD, MT, CR, PR, SGR, PCG, PS LA or TPB(GS) series, compares them exactly and also lists section-like or ruling-like text it cannot read whole. A malformed authorities file exits 2; verdicts and exit codes are otherwise unchanged.
+- `gate --authorities FILE` asks for review, never a block, of each section of an Act named in full, such as `s 8-1 of the Income Tax Assessment Act 1997`, and each ruling id in the TR, TD, LCR, GSTR, GSTD, MT, CR, PR, SGR, PCG, PS LA or TPB(GS) series that a draft cites and the reviewer's closed list omits. It compares them exactly and also lists section-like or ruling-like text it cannot read whole. Other citations are not checked, so a pass does not establish that every cited authority was checked. A malformed authorities file exits 2; verdicts and exit codes are otherwise unchanged.
 
 ### Changed
 

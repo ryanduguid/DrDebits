@@ -55,18 +55,19 @@
 //! that the figure came from it. An amount equal to 2 or more facts is noted
 //! as ambiguous with every name, and the gate does not pick one.
 //!
-//! With `--authorities FILE`, each authority the draft cites must be in the
-//! file's closed list. The gate reads 2 kinds of citation: a section of an Act
-//! named in full, `s 8-1 of the Income Tax Assessment Act 1997` (`section`
-//! may replace `s`), and a ruling id in one of the series `SERIES` lists, such
-//! as `TR 2006/10`, `LCR 2026/D1` or `TPB(GS) 55/2026`. A citation may wrap
-//! across lines. Citations compare exactly, whitespace and line breaks
-//! aside: `s 8-1(1)` is not `s 8-1`, and the withdrawal
-//! `TR 2010/3W` is not `TR 2010/3`. A citation not in the list asks for
+//! With `--authorities FILE`, each authority the draft cites in one of 2
+//! forms must be in the file's closed list: a section of an Act named in
+//! full, `s 8-1 of the Income Tax Assessment Act 1997` (`section` may replace
+//! `s`), and a ruling id in one of the series `SERIES` lists, such as
+//! `TR 2006/10`, `LCR 2026/D1` or `TPB(GS) 55/2026`. A citation may wrap
+//! across lines. Citations compare exactly, whitespace and line breaks aside:
+//! `s 8-1(1)` is not `s 8-1`, and the withdrawal `TR 2010/3W` is not
+//! `TR 2010/3`. A citation not in the list asks for
 //! REVIEW, and so does section-like or ruling-like text the gate cannot read
 //! whole, such as `s 8-1 ITAA 1997`, `ss 30-35 and 30-40` or `TR 2024`. A
 //! possessive such as `the client's 2 trusts` is not a section. Divisions,
-//! Parts, Schedules, cases, bare Act names and other series are not read.
+//! Parts, Schedules, cases, bare Act names and other series are not read, so
+//! a PASS does not show that every authority the draft cites was checked.
 //! This check never blocks, and a listed authority is not thereby current or
 //! correctly applied.
 
@@ -1077,7 +1078,7 @@ pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut
         ));
     }
     report.notes.push(
-        "authorities check: it reads only a section of a named Act and a ruling id; a listed authority is not thereby current or correctly applied"
+        "authorities check: it reads only a section of a named Act and a ruling id, so a pass does not show that every authority the draft cites was checked; a listed authority is not thereby current or correctly applied"
             .into(),
     );
 }
@@ -1125,7 +1126,8 @@ pub struct Args {
     #[arg(long)]
     facts: Option<String>,
     /// A JSON authorities file; each section of a named Act or ruling id the
-    /// draft cites that is not listed asks for review.
+    /// draft cites that is not listed asks for review. Other citations are
+    /// not checked.
     #[arg(long)]
     authorities: Option<String>,
 }

@@ -66,6 +66,8 @@ suite replays it on every platform.
   or ruling id the draft cites that is not on the list, compared exactly, and
   for each section-like or ruling-like text it cannot read whole. A malformed
   authorities file exits 2; without `--authorities` the gate is unchanged.
+  Other citations are not checked, so a pass does not establish that every
+  cited authority was checked.
 
 Standard streams now preserve the Python release's failure behaviour: pending
 stdout that cannot flush exits 120, `PYTHONUNBUFFERED` fails at the print and
