@@ -1072,6 +1072,8 @@ fn authority_like_text_the_gate_cannot_read_is_reported() {
         ("TR 2006", "TR 2006"),
         ("TR2006/10", "TR2006/10"),
         ("TR 2006/10a", "TR 2006/10a"),
+        // A year of 3 digits: ruling years have 2 (before 1999) or 4.
+        ("TR 123/1", "TR 123/1"),
     ] {
         let draft = cited().replace("- None identified.", &format!("- {text}"));
         let report = with_authorities(&draft, AUTHORITIES);
@@ -1192,6 +1194,10 @@ fn a_malformed_authorities_file_is_refused() {
             "not an authority",
         ),
         (r#"{"authorities": [""]}"#, "not an authority"),
+        (
+            r#"{"authorities": ["TR 123/1"]}"#,
+            "not an authority the gate can read: 'TR 123/1'",
+        ),
     ] {
         let Err(e) = load_authorities(text) else {
             panic!("{text} was accepted");
@@ -1215,6 +1221,11 @@ fn the_command_reads_an_authorities_file() {
     std::fs::write(dir.path().join("authorities.json"), AUTHORITIES).unwrap();
     std::fs::write(dir.path().join("facts.json"), FACTS).unwrap();
     std::fs::write(dir.path().join("bad.json"), r#"{"authorities": ["s 8-1"]}"#).unwrap();
+    std::fs::write(
+        dir.path().join("bad-year.json"),
+        r#"{"authorities": ["TR 123/1"]}"#,
+    )
+    .unwrap();
     let gate = |args: &[&str]| {
         let mut all = vec!["--root", root, "gate"];
         all.extend(args);
@@ -1279,7 +1290,7 @@ fn the_command_reads_an_authorities_file() {
         "{}",
         out.stdout
     );
-    for authorities in ["bad.json", "absent.json"] {
+    for authorities in ["bad.json", "bad-year.json", "absent.json"] {
         let out = gate(&["--authorities", authorities, "cited.md"]);
         assert_eq!(
             out.code,

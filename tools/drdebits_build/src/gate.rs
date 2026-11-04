@@ -967,11 +967,12 @@ static AUTHORITY_TEXT: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
-/// A readable citation: a ruling id, with an optional draft `D` before its
-/// number and a suffix such as `W` or `A1`, or one section of a named Act.
+/// A readable citation: a ruling id, whose first part has 2 or 4 digits (a
+/// year before 1999 has 2), with an optional draft `D` before its number and
+/// a suffix such as `W` or `A1`, or one section of a named Act.
 static AUTHORITY: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"^(?:({SERIES})\s+(\d{{2,4}}/D?\d{{1,4}}(?:[A-Z]+\d*)?)|(?i:s|section)\s+(\d+[A-Z]*(?:-\d+[A-Z]*)?(?:\([0-9A-Za-z]+\))*)\s+of\s+the\s+({ACT}))$"
+        r"^(?:({SERIES})\s+((?:\d{{2}}|\d{{4}})/D?\d{{1,4}}(?:[A-Z]+\d*)?)|(?i:s|section)\s+(\d+[A-Z]*(?:-\d+[A-Z]*)?(?:\([0-9A-Za-z]+\))*)\s+of\s+the\s+({ACT}))$"
     ))
     .expect("pattern")
 });
