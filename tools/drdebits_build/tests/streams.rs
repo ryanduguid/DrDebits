@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: FSL-1.1-ALv2
+// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
 
 //! A lost report cannot be a successful check. These cases were compared with
 //! the Python release, including its buffered shutdown and argparse behaviour.
