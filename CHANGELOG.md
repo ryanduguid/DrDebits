@@ -10,7 +10,7 @@ release.
 
 ### Added
 
-- An AI tool register, reviewed at least annually and on any tool, model or vendor change, and an incident log for failures found in use, among the AI-specific TPB rules. This closes the in-use monitoring gap the GS 55 concordance recorded at CC-35.
+- An AI tool register, reviewed at least annually and on any tool, model or vendor change, and an incident log for failures found in use, among the AI-specific TPB rules. The GS 55 concordance's CC-35 now points to them; beyond the per-task workflow checks, the guide still sets no periodic monitoring of output quality.
 - Vendor checklist question VA-38, in a new 'Source authority' section: does the product rank sources by authority and show each citation's layer, treating a private ruling as binding only for its applicant.
 - Three behaviour tests with frozen prompts, bringing the suite to 70: AML/CTF designated-service classification for a registered office address (AML-002) and a bookkeeper's routine payments (AML-003), and a false premise backed by a real, closely matching passage (CITE-010). None has a recorded model result.
 - A CITE-002 grader note on TR 2010/3W and *Commissioner of Taxation v Bendel* [2026] HCA 18 in the evaluation notes.
