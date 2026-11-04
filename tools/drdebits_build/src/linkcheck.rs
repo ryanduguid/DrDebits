@@ -637,6 +637,8 @@ mod tests {
         let timeout = ureq::unversioned::transport::NextTimeout {
             after: Duration::from_secs(5).into(),
             reason: ureq::Timeout::Global,
+            per_read: None,
+            per_write: None,
         };
         let addrs = resolver
             .resolve(&uri, &agent_config(Duration::from_secs(5)), timeout)
