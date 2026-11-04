@@ -422,9 +422,8 @@ presentational changes only; their extracted text matched apart from layout.
 - **FUT-002:** Schedule 1 item 28 replaces s 115-100(a) of the *Income Tax
   Assessment Act 1997*, so the 50% discount applies to an individual's gain
   from a CGT event before 1 July 2027 (new paragraph (aa)) or to a new
-  residential dwelling (s 115-102), and new paragraph (f) gives 0% otherwise;
-  s 115-125, as amended by items 31 to 36 for CGT events on or after
-  1 July 2027 (item 83), keeps the affordable housing discount. Item 13
+  residential dwelling (new paragraph (a) and s 115-102), and item 29 adds
+  paragraph (f), which gives 0% otherwise. Item 13
   inserts s 112-155, which treats an asset an individual held on 30 June 2027
   as sold just before, and reacquired on, 1 July 2027 at market value or by a
   method determined under s 112-185, and s 112-160(3), which defers that gain
