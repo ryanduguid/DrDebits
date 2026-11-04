@@ -45,7 +45,7 @@ These changes address instruction gaps exposed by the recorded responses;
 they still need confirmed fresh model results. The 0.3.3 result remains
 historical evidence for the evaluated release, not a result for this revision.
 
-Rerun all 79 scenarios at the exact revised commit, recording the guide version
+Rerun all 83 scenarios at the exact revised commit, recording the guide version
 and commit separately in the evaluation working record. Check whole responses
 against the guide, including unsolicited safe-harbour or culpability conclusions
 in MIS-001, as well as each case rubric. Retain the original failing result.
@@ -186,7 +186,7 @@ The configuration that sequence assumes:
   If the runtime cannot provide the required roles, record the case as untested.
   CONF-001 tests a runner-supplied system instruction, not an immutable provider
   platform rule; its different deployment condition must remain visible
-- a fresh session per case, expected answers withheld from the model, and all 79 cases from `evals/cases.json`
+- a fresh session per case, expected answers withheld from the model, and all 83 cases from `evals/cases.json`
   submitted as direct requests (`prompt` where supplied, otherwise a recorded direct rendering of `scenario`); never send the rubric to the model
 - every response entry recording the tool calls it made in `invocations`, `[]`
   when it made none; the scorer refuses an entry that omits the key rather than
@@ -408,6 +408,58 @@ model result. Each source below was read on 4 November 2026.
   missing facts within one chart of accounts; CALC-007 tests mapping between
   charts.
 
+## Tax Reform No. 1 application-date cases, 4 November 2026
+
+FUT-002 to FUT-005 test whether a model applies 4 measures of the
+[*Treasury Laws Amendment (Tax Reform No. 1) Act 2026*](https://www.legislation.gov.au/C2026A00049/asmade)
+(Act No. 49 of 2026, assented to 26 June 2026) outside the period each one
+applies to. All 4 carry frozen prompts with fabricated parties. The suite holds
+83 cases. None of the 4 has a recorded model result. The Act was read on
+4 November 2026 in its authorised PDF as registered on 26 June 2026 and in the
+replacement registered on 9 September 2026, which the Register says made
+presentational changes only; their extracted text matched apart from layout.
+
+- **FUT-002:** Schedule 1 item 28 replaces s 115-100(a) of the *Income Tax
+  Assessment Act 1997*, so the 50% discount applies to an individual's gain
+  from a CGT event before 1 July 2027 (new paragraph (aa)) or to a new
+  residential dwelling (s 115-102), and new paragraph (f) gives 0% otherwise;
+  s 115-125, as amended by items 31 to 36 for CGT events on or after
+  1 July 2027 (item 83), keeps the affordable housing discount. Item 13
+  inserts s 112-155, which treats an asset an individual held on 30 June 2027
+  as sold just before, and reacquired on, 1 July 2027 at market value or by a
+  method determined under s 112-185, and s 112-160(3), which defers that gain
+  to the later sale and keeps it a discount capital gain where it is one.
+  Item 8 inserts the indexation rule in s 110-36(1A), and item 20 adds
+  s 114-10(9), so the 12-month rule for indexation disregards the deemed sale
+  and reacquisition.
+  Division 119, the minimum tax, applies to gains from CGT events on or after
+  1 July 2027 (item 60, inserting s 119-1 of the *Income Tax (Transitional
+  Provisions) Act 1997*). Schedule 1 Part 2 commences with the
+  [*Income Tax Rates Amendment (Tax Reform No. 1) Act 2026*](https://www.legislation.gov.au/C2026A00050/asmade)
+  (Act No. 50 of 2026), which commenced on 1 July 2026. The prompt puts both
+  the contract and settlement after 1 July 2027, so the case does not turn on
+  the time of the CGT event.
+- **FUT-003:** Schedule 2 item 1 inserts ss 26-155 and 26-160, and item 5
+  applies them to the 2027-28 income year and later years. The exception in
+  s 26-155(2)(a) covers an ownership interest last acquired before 7.30 pm,
+  by legal time in the Australian Capital Territory, on 12 May 2026, and
+  s 26-155(3) dates that interest from the contract. The prompt states that
+  the dwelling is not a new residential dwelling because s 26-160(3) and (4)
+  leave that meaning to a legislative instrument, which was not checked.
+- **FUT-004:** Schedule 4 item 3 inserts s 25-130: the lesser of 1000.00 and
+  assessable labour income, reduced by the work-related deductions in
+  s 25-130(2). Item 17(1) applies Part 1 of the Schedule to assessments for
+  2026-27 and later years.
+- **FUT-005:** Schedule 3 item 1 inserts Subdivision 61-E: an Australian
+  resident whose net labour income exceeds the tax-free threshold receives the
+  lesser of 250.00 and the basic income tax liability on that income
+  (ss 61-155 and 61-160). Item 4 applies the Schedule to assessments for
+  2027-28 and later years.
+
+Not checked: whether instruments under s 112-185 or s 26-160(4) have been
+made, any later compilation of the 1997 Act incorporating these amendments,
+the explanatory memorandum and ATO guidance on the measures.
+
 ## What is still unverified
 
 No confirmed model result exists for the revised guide. The 0.3.3 run remains
@@ -416,7 +468,7 @@ the only human-confirmed record, and it evaluates the superseded wording. The
 
 A new run of the changed guide is still required, and it needs approval before it starts
 because it consumes a separately billed model batch. When it runs it must:
-submit all 79 scenarios now in the suite at one named commit, record that
+submit all 83 scenarios now in the suite at one named commit, record that
 commit in
 `guide_commit`, judge each whole response against the guide as well as its case
 rubric, use inert tools that record an invocation without performing it, and
