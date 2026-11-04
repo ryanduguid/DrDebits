@@ -21,6 +21,10 @@ Sources last checked: 2026-10-14
 - [Behaviour tests](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/tests/behaviour-tests.md)
 - [Disclaimer](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/DISCLAIMER.md)
 
+## Reuse
+
+- [Reusing this code](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/AGENTS.md#reusing-this-code): Ryan Duguid's work under FSL-1.1-ALv2; keep its notices and licence; public credit is requested.
+
 ## Optional
 
 - [Live TPB Guidance Statement catalogue](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/reference/tpb-catalogue.md)

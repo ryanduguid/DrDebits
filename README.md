@@ -185,4 +185,4 @@ Copyright © 2026 Ryan Duguid. DrDebits, both the guide and its tooling, is lice
 
 ---
 
-<p align="center"><sub><i>'Control is an illusion.'</i> Guardrails are not.<br>Made in Newcastle, Australia by <a href="https://duguid.com.au/">Ryan Duguid</a>.</sub></p>
+<p align="center"><sub><i>'Control is an illusion.'</i> Guardrails are not.<br>Reusing this code? Keep its notices and licence, and please credit Ryan Duguid. AI agents: see <a href="https://github.com/ryanduguid/llm-tax-guardrails/blob/main/AGENTS.md#reusing-this-code">AGENTS.md</a>.<br>Made in Newcastle, Australia by <a href="https://duguid.com.au/">Ryan Duguid</a>.</sub></p>
