@@ -54,6 +54,22 @@
 //! to a supplied fact, a note names that fact: a match in value, not evidence
 //! that the figure came from it. An amount equal to 2 or more facts is noted
 //! as ambiguous with every name, and the gate does not pick one.
+//!
+//! With `--authorities FILE`, each authority the draft cites in one of 2
+//! forms must be in the file's closed list: a section of an Act named in
+//! full, `s 8-1 of the Income Tax Assessment Act 1997` (`section` may replace
+//! `s`), and a ruling id in one of the series `SERIES` lists, such as
+//! `TR 2006/10`, `LCR 2026/D1` or `TPB(GS) 55/2026`. A citation may wrap
+//! across lines. Citations compare exactly, whitespace and line breaks aside:
+//! `s 8-1(1)` is not `s 8-1`, and the withdrawal `TR 2010/3W` is not
+//! `TR 2010/3`. A citation not in the list asks for
+//! REVIEW, and so does section-like or ruling-like text the gate cannot read
+//! whole, such as `s 8-1 ITAA 1997`, `ss 30-35 and 30-40` or `TR 2024`. A
+//! possessive such as `the client's 2 trusts` is not a section. Divisions,
+//! Parts, Schedules, cases, bare Act names and other series are not read, so
+//! a PASS does not show that every authority the draft cites was checked.
+//! This check never blocks, and a listed authority is not thereby current or
+//! correctly applied.
 
 use std::sync::LazyLock;
 
@@ -933,6 +949,140 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
     );
 }
 
+/// The ruling series the authorities check reads: the public ruling types the
+/// ATO names (TR, TD, LCR, GSTR, MT, CR, PR), GST determinations and
+/// superannuation guarantee rulings, practical compliance guidelines, law
+/// administration practice statements and TPB Guidance Statements.
+const SERIES: &str = r"TR|TD|LCR|GSTR|GSTD|MT|CR|PR|SGR|PCG|PS\s+LA|TPB\(GS\)";
+/// An Act named in full: capitalised words, connectives and bracketed
+/// phrases ending in `Act` and its year, such as `A New Tax System (Goods and
+/// Services Tax) Act 1999`. The year ends the word, so `Act 19970` and
+/// `Act 1997a` name no Act.
+const ACT: &str = r"[A-Z][\w'’-]*(?:\s+(?:[A-Z][\w'’-]*|and|of|for|the|to|on|in|an|a|\([^()]*\)))*\s+Act\s+\d{4}\b";
+/// Anything in a draft that looks like a ruling id or a section reference,
+/// taken whole with any `of the <Act>` that follows, so a citation the gate
+/// cannot read is reported rather than skipped.
+static AUTHORITY_TEXT: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(&format!(
+        r"\b(?:{SERIES})\s*\d[\w/]*|\b(?i:ss?|sections?)\s+\d[\w-]*(?:\([0-9A-Za-z]+\))*(?:\s+of\s+the\s+{ACT})?"
+    ))
+    .expect("pattern")
+});
+/// A readable citation: a ruling id, whose first part has 2 or 4 digits (a
+/// year before 1999 has 2), with an optional draft `D` before its number and
+/// a suffix such as `W` or `A1`, or one section of a named Act.
+static AUTHORITY: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(&format!(
+        r"^(?:({SERIES})\s+((?:\d{{2}}|\d{{4}})/D?\d{{1,4}}(?:[A-Z]+\d*)?)|(?i:s|section)\s+(\d+[A-Z]*(?:-\d+[A-Z]*)?(?:\([0-9A-Za-z]+\))*)\s+of\s+the\s+({ACT}))$"
+    ))
+    .expect("pattern")
+});
+
+/// One cited or listed authority, in the form it compares by: `s <section>
+/// of the <Act>` or `<series> <id>`, with single spaces.
+#[derive(PartialEq)]
+pub struct Authority(String);
+
+impl Authority {
+    fn read(text: &str) -> Option<Authority> {
+        let c = AUTHORITY.captures(text)?;
+        let words = |i: usize| c[i].split_whitespace().collect::<Vec<_>>().join(" ");
+        Some(Authority(match c.get(1) {
+            Some(_) => format!("{} {}", words(1), &c[2]),
+            None => format!("s {} of the {}", &c[3], words(4)),
+        }))
+    }
+}
+
+/// Read an authorities file: a JSON object whose only key, `authorities`,
+/// lists each accepted authority as text in a form the gate reads, such as
+/// `"s 8-1 of the Income Tax Assessment Act 1997"` or `"TR 2006/10"`.
+pub fn load_authorities(text: &str) -> Result<Vec<Authority>, String> {
+    let fail = |m: String| format!("authorities file: {m}");
+    let payload = pyjson::loads(text).map_err(|e| fail(format!("not valid JSON ({e})")))?;
+    let Json::Object(top) = &payload else {
+        return Err(fail("top level must be an object".into()));
+    };
+    if let Some((key, _)) = top.iter().find(|(k, _)| k != "authorities") {
+        return Err(fail(format!(
+            "unknown key {}; the only key is 'authorities'",
+            py::repr_str(key)
+        )));
+    }
+    let items = match payload.get("authorities") {
+        Some(Json::Array(items)) if !items.is_empty() => items,
+        _ => return Err(fail("'authorities' must list authorities".into())),
+    };
+    items
+        .iter()
+        .map(|value| {
+            let written = value.as_str().ok_or_else(|| {
+                fail(format!(
+                    "each authority must be written as text, such as \"s 8-1 of the Income Tax Assessment Act 1997\" or \"TR 2006/10\"; found {}",
+                    value.repr()
+                ))
+            })?;
+            Authority::read(written).ok_or_else(|| {
+                fail(format!(
+                    "not an authority the gate can read: {}",
+                    py::repr_str(written)
+                ))
+            })
+        })
+        .collect()
+}
+
+/// Flag each section of a named Act or ruling id the draft cites that is not
+/// in the authorities list, and each section-like or ruling-like text the
+/// gate cannot read. This check adds reviews and a note only, never a block:
+/// it cannot show that a listed authority is current or correctly applied.
+pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut Report) {
+    let mut unlisted: Vec<String> = Vec::new();
+    let mut unread: Vec<String> = Vec::new();
+    // One text, so a citation wrapped across lines (`TR` then `2019/7`) is
+    // read whole; each line loses its Markdown marks first.
+    let text = py::splitlines(response)
+        .into_iter()
+        .map(normalise)
+        .collect::<Vec<_>>()
+        .join("\n");
+    for m in AUTHORITY_TEXT.find_iter(&text) {
+        // `client's 2 trusts`: a possessive, not a section. A quotation
+        // opening on `'s 8-1` is still read.
+        let mut before = text[..m.start()].chars().rev();
+        if matches!(before.next(), Some('\'' | '’'))
+            && before.next().is_some_and(char::is_alphanumeric)
+        {
+            continue;
+        }
+        let written = m.as_str().split_whitespace().collect::<Vec<_>>().join(" ");
+        let list = match Authority::read(&written) {
+            None => &mut unread,
+            Some(a) if authorities.contains(&a) => continue,
+            Some(_) => &mut unlisted,
+        };
+        if !list.contains(&written) {
+            list.push(written);
+        }
+    }
+    if !unlisted.is_empty() {
+        report.reviews.push(format!(
+            "authorities check: {} not in the authorities file; a person must check each against its source",
+            unlisted.join(", ")
+        ));
+    }
+    if !unread.is_empty() {
+        report.reviews.push(format!(
+            "authorities check: could not read {} as a section of a named Act or a ruling id; a person must check each",
+            unread.join(", ")
+        ));
+    }
+    report.notes.push(
+        "authorities check: it reads only a section of a named Act and a ruling id, so a pass does not show that every authority the draft cites was checked; a listed authority is not thereby current or correctly applied"
+            .into(),
+    );
+}
+
 fn report_json(report: &Report) -> Json {
     let list = |items: &[String]| Json::Array(items.iter().map(|s| Json::str_obj(s)).collect());
     let (verdict, _) = report.verdict();
@@ -975,6 +1125,11 @@ pub struct Args {
     /// is neither a fact nor a shown calculation's result asks for review.
     #[arg(long)]
     facts: Option<String>,
+    /// A JSON authorities file; each section of a named Act or ruling id the
+    /// draft cites that is not listed asks for review. Other citations are
+    /// not checked.
+    #[arg(long)]
+    authorities: Option<String>,
 }
 
 fn read_response(path: &str) -> Result<String, Fail> {
@@ -988,6 +1143,20 @@ fn read_response(path: &str) -> Result<String, Fail> {
     }
 }
 
+/// Read and parse the `--facts` or `--authorities` file, when one is given.
+fn load_list<T>(
+    path: Option<&str>,
+    what: &str,
+    parse: fn(&str) -> Result<T, String>,
+) -> Result<Option<T>, String> {
+    path.map(|path| {
+        builder::read_text(&PyPath::new(path))
+            .map_err(|e| format!("{what} file: {e}"))
+            .and_then(|text| parse(&text))
+    })
+    .transpose()
+}
+
 pub fn main(root: Option<&str>, args: Args) -> u8 {
     let loaded = crate::root_for(root)
         .and_then(|root| builder::load_sources(&root))
@@ -999,14 +1168,13 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
             return EXIT_COULD_NOT_RUN;
         }
     };
-    let facts = match args.facts.as_deref().map(|path| {
-        builder::read_text(&PyPath::new(path))
-            .map_err(|e| format!("facts file: {e}"))
-            .and_then(|text| load_facts(&text))
-    }) {
-        None => None,
-        Some(Ok(facts)) => Some(facts),
-        Some(Err(e)) => {
+    let lists = load_list(args.facts.as_deref(), "facts", load_facts).and_then(|facts| {
+        let authorities = load_list(args.authorities.as_deref(), "authorities", load_authorities)?;
+        Ok((facts, authorities))
+    });
+    let (facts, authorities) = match lists {
+        Ok(lists) => lists,
+        Err(e) => {
             errln!("gate: {e}");
             return EXIT_COULD_NOT_RUN;
         }
@@ -1014,6 +1182,9 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
     let mut report = check(&response, &sources.whole_response.prohibited_conclusions);
     if let Some(facts) = &facts {
         check_facts(&response, facts, &mut report);
+    }
+    if let Some(authorities) = &authorities {
+        check_authorities(&response, authorities, &mut report);
     }
     let (verdict, code) = report.verdict();
     if args.json {

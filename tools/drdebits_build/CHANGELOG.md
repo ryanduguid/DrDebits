@@ -61,6 +61,13 @@ suite replays it on every platform.
   it can; without `--facts` the gate is unchanged. For each amount equal to
   a fact, a note names that fact, a match in value rather than a source; an
   amount equal to 2 or more facts is noted as ambiguous with every name.
+- `gate --authorities FILE` reads a JSON list of accepted authorities and asks
+  for review (exit 3), never a block, for each section of an Act named in full
+  or ruling id the draft cites that is not on the list, compared exactly, and
+  for each section-like or ruling-like text it cannot read whole. A malformed
+  authorities file exits 2; without `--authorities` the gate is unchanged.
+  Other citations are not checked, so a pass does not establish that every
+  cited authority was checked.
 
 Standard streams now preserve the Python release's failure behaviour: pending
 stdout that cannot flush exits 120, `PYTHONUNBUFFERED` fails at the print and
