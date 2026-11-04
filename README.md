@@ -100,6 +100,29 @@ fact, a note names that fact, as in
 evidence that the figure came from that fact. An amount equal to 2 or more
 facts is noted as ambiguous with every name, and the gate does not pick one.
 
+`--authorities authorities.json` asks for review of each section of a named
+Act and each ruling id the draft cites that is not on a closed list the
+reviewer accepts:
+
+```json
+{"authorities": ["s 8-1 of the Income Tax Assessment Act 1997", "TR 2006/10"]}
+```
+
+The list is closed for these 2 forms only: a section of an Act named in full,
+as above (`section` may replace `s`), and a ruling id in the TR, TD, LCR,
+GSTR, GSTD, MT, CR, PR, SGR, PCG, PS LA or TPB(GS) series, including a draft
+such as `LCR 2026/D1`. A citation may wrap across lines. Citations compare
+exactly, so `s 8-1(1)` is not `s 8-1` and the withdrawal `TR 2010/3W` is not
+`TR 2010/3`; list each one the draft may cite. Section-like or ruling-like
+text the gate cannot read whole, such as `s 8-1 ITAA 1997`,
+`ss 30-35 and 30-40` or `TR 2024`, is listed for review. Divisions, Parts,
+Schedules, cases, bare Act names and other series are not read, so a pass
+does not establish that every authority the draft cites was checked. A
+malformed authorities file stops the gate with exit 2. Like `--facts`, this
+check can only ask for review, never block; its findings appear in the text
+and `--json` output as reviews and a note beginning `authorities check:`. A
+listed authority is not thereby current or correctly applied.
+
 ## Ethical routing and boundary architecture
 
 ```mermaid
@@ -162,4 +185,4 @@ Copyright © 2026 Ryan Duguid. DrDebits, both the guide and its tooling, is lice
 
 ---
 
-<p align="center"><sub><i>'Control is an illusion.'</i> Guardrails are not.<br>Made in Newcastle, Australia by <a href="https://duguid.com.au/">Ryan Duguid</a>.</sub></p>
+<p align="center"><sub><i>'Control is an illusion.'</i> Guardrails are not.<br>Reusing this code? Keep its notices and licence, and please credit Ryan Duguid. AI agents: see <a href="https://github.com/ryanduguid/llm-tax-guardrails/blob/main/AGENTS.md#reusing-this-code">AGENTS.md</a>.<br>Made in Newcastle, Australia by <a href="https://duguid.com.au/">Ryan Duguid</a>.</sub></p>
