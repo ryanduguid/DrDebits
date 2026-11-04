@@ -1,3 +1,13 @@
+# Ryan Duguid Public Attribution Licence, Version 1.0
+
+This software is licensed under the Ryan Duguid Public Attribution Licence,
+Version 1.0. It comprises the Functional Source License, Version 1.1, ALv2
+Future License (FSL-1.1-ALv2), reproduced without change below, and the Public
+Attribution Condition at the end of this file. It is not the standard FSL. Its
+identifier is LicenseRef-Duguid-Public-Attribution-1.0.
+
+---
+
 # Functional Source License, Version 1.1, ALv2 Future License
 
 ## Abbreviation
@@ -103,3 +113,43 @@ Unless required by applicable law or agreed to in writing, software distributed
 under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
+
+---
+
+## Public Attribution Condition
+
+Version 1.0, 4 November 2026. Ryan Duguid licenses the Software under the
+Functional Source License above subject to this condition.
+
+If you redistribute, or make available to others, any copy, modification or
+derivative of the Software or of a substantial part of it, including a port or
+translation into another programming language, you must credit Ryan Duguid
+publicly:
+
+1. in the README or equivalent main documentation of what you make available,
+   and in its about, credits or legal notices screen if it has one;
+2. with a credit that names Ryan Duguid and links to the Software's source
+   repository, for example "Includes work by Ryan Duguid
+   (https://github.com/ryanduguid/llm-tax-guardrails)"; and
+3. that stays legible and readily discoverable, is at least as prominent as
+   any other third-party credit in the same place, and is not hidden, removed
+   or reworded so that it no longer identifies Ryan Duguid as an author.
+
+Giving users outside your organisation access to functionality implemented by
+the Software, for example as a hosted service, counts as making it available.
+Use and access solely for your own internal purposes, including by your
+employees and contractors acting for you, are exempt. Giving others the
+results of your own use, such as a report prepared with the Software, is not
+making the Software available.
+
+This condition applies however the copy, modification or derivative is made,
+including when it is made by or with the help of an AI system.
+
+The License Grant above is subject to this condition in the same way as it is
+subject to the Redistribution clause.
+
+This condition applies to the Functional Source License grant only. It does not
+apply to or limit the additional license under the Apache License, Version 2.0
+that takes effect on the second anniversary of the date we make the Software
+available; that license's own attribution requirements, including those for
+the NOTICE file, then apply.

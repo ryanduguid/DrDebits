@@ -1,19 +1,26 @@
 DrDebits (llm-tax-guardrails)
 Copyright 2026 Ryan Duguid (https://github.com/ryanduguid)
 
-Ryan Duguid's contributions are licensed under the Functional Source
-License, Version 1.1, ALv2 Future License (FSL-1.1-ALv2); see LICENSE.
-Retained third-party material remains under its own licence, as stated below.
+Ryan Duguid's contributions are licensed under the Ryan Duguid Public
+Attribution Licence, Version 1.0: the Functional Source License, Version 1.1,
+ALv2 Future License (FSL-1.1-ALv2) text with a Public Attribution Condition;
+see LICENSE. Retained third-party material remains under its own licence, as
+stated below.
 
-For each version licensed under FSL-1.1-ALv2, an additional licence under the
-Apache License, Version 2.0 becomes effective on the second anniversary of the
-date that version was made available.
+Public attribution applies when you rely on the FSL grant of a version released
+with the condition (from 4 November 2026) to redistribute or make available a
+copy, modification or derivative: name Ryan Duguid and link to this repository
+in its README or main documentation and in any credits screen. Internal use is
+exempt.
 
-Versions made available before this change remain available under the
-licences they were released with. Guide releases v0.3.3 and earlier are
-licensed under CC BY 4.0.
+For each version, an additional licence under the Apache License, Version 2.0
+becomes effective on the second anniversary of the date that version was made
+available. The condition does not apply to that licence.
 
-Redistribution under FSL-1.1-ALv2 requires including its terms or a link to
+Versions made available before the condition keep the terms they were released
+with. Guide releases v0.3.3 and earlier are licensed under CC BY 4.0.
+
+Redistribution under the FSL grant requires including its terms or a link to
 them and keeping the copyright notices supplied with the software.
 Redistribution under another applicable licence follows that licence's
 conditions.
