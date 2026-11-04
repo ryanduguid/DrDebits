@@ -1,6 +1,3 @@
-// Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: FSL-1.1-ALv2
-
 //! The YAML and JSON readers against a table of how the Python builder read
 //! the same texts. `tests/data/python_readers.json` was recorded once from the
 //! base-revision builder (PyYAML 6.0.3, CPython's json scanner): for each text,

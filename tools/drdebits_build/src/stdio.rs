@@ -1,6 +1,3 @@
-// Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: FSL-1.1-ALv2
-
 //! stdout and stderr as the Python release had them, failures included.
 //!
 //! stdout is line-buffered on a terminal, unbuffered with `PYTHONUNBUFFERED`,

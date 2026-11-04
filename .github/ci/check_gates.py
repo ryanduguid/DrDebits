@@ -1,6 +1,3 @@
-# Copyright 2026 Ryan Duguid
-# SPDX-License-Identifier: FSL-1.1-ALv2
-
 """Check an aggregate gate job: its needs, their results and removed jobs.
 
 usage: python .github/ci/check_gates.py WORKFLOW GATE [--exempt JOB ...] [--no-results]
