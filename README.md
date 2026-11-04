@@ -27,7 +27,7 @@ Load [drdebits.md](./drdebits.md) as project context, then give the model that r
 
 **Human decision:** the registered practitioner assesses the position from those facts. The guide routes the work to that decision.
 
-Eighty-three such cases are in [tests/behaviour-tests.md](./tests/behaviour-tests.md). The only [recorded run](./evals/RESULTS.md), Claude Opus 5 against guide 0.3.3 on 8 September 2026, passed 19 of the 25 cases it covered; one of those passes also breached the guide elsewhere in its response, leaving 18 without it. No confirmed run covers the current guide revision, so the example above states the expected behaviour, not a measured one. See [evaluation notes](EVALUATION-NOTES.md) for the failures, test limitations and pending rerun of the revised wording.
+Eighty-four such cases are in [tests/behaviour-tests.md](./tests/behaviour-tests.md). The only [recorded run](./evals/RESULTS.md), Claude Opus 5 against guide 0.3.3 on 8 September 2026, passed 19 of the 25 cases it covered; one of those passes also breached the guide elsewhere in its response, leaving 18 without it. No confirmed run covers the current guide revision, so the example above states the expected behaviour, not a measured one. See [evaluation notes](EVALUATION-NOTES.md) for the failures, test limitations and pending rerun of the revised wording.
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
 >
@@ -157,7 +157,7 @@ The diagram summarises the guide's own gate, classification, workflow and decisi
 |---|---|
 | [drdebits.md](./drdebits.md) | The guide: core operating controls. Load this as persistent context. |
 | [tests/behaviour-tests.md](./tests/behaviour-tests.md) | Adverse-case tests an implementation is expected to pass |
-| [evals/RESULTS.md](./evals/RESULTS.md) | Recorded manual evaluation runs: model, date and a pass or fail per behaviour test, with proposed observations in their own section. Not in the bundle. |
+| [evals/RESULTS.md](./evals/RESULTS.md) | Recorded manual evaluation runs: model, date and a pass or fail per behaviour test, with any proposed observations in their own section. Not in the bundle. |
 | [reference/tpb-catalogue.md](./reference/tpb-catalogue.md) | The live TPB Guidance Statement catalogue, GS01 to GS55. Complete for the checked live Guidance Statement category, which is what the catalogue's own header says it covers, not every product the TPB has published |
 | [reference/apes-110-map.md](./reference/apes-110-map.md) | Primary APES 110 reference map |
 | [reference/ai-vendor-assurance.md](./reference/ai-vendor-assurance.md) | AI tool and vendor assurance checklist: the question, the evidence that answers it and where the obligation sits |
@@ -174,7 +174,7 @@ Pin the approved release tag, retrieve `SHA256SUMS` at that tag and verify each 
 
 ## Contributing and maintenance
 
-The guide, reference files, behaviour tests, `evals/cases.json` and `evals/RESULTS.md` are generated. Edit their sources under `src/` and run `cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- build`; CI rejects hand edits to generated files. People write and maintain the records in `evals/results/*.json`; keep historical result records unchanged. `evals/observations/*.json` holds proposed verdicts nobody has confirmed, which the table shows separately and never counts as passes. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to submit a change and the checks it must pass, and `MAINTENANCE.md` for the release protocol.
+The guide, reference files, behaviour tests, `evals/cases.json` and `evals/RESULTS.md` are generated. Edit their sources under `src/` and run `cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- build`; CI rejects hand edits to generated files. People write and maintain the records in `evals/results/*.json`; keep historical result records unchanged. Proposed verdicts nobody has confirmed go in `evals/observations/*.json`; none is committed yet. The table shows them separately and never counts them as passes. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to submit a change and the checks it must pass, and `MAINTENANCE.md` for the release protocol.
 
 
 ## Licence
