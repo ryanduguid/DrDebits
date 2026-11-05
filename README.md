@@ -15,9 +15,9 @@
 
 </div>
 
-DrDebits is the prompt guide in the `llm-tax-guardrails` repository.
+DrDebits is an independent, source-linked prompt guide in the `llm-tax-guardrails` repository for accountants and tax and BAS agents using large language models on Australian work, covering drafting, research, calculations and review.
 
-> **Notice for v0.3.3 users.** Release v0.3.3 predates the Tax Agent Services Act and Code of Professional Conduct amendments that apply to conduct and events on or after 1 October 2026. For those, its s 15 row omits the new requirement that a notification identify the client and the statement, its s 45 row still applies the 30-day existing-client rule, and it has no TPB sanctions controls. Release v0.4.0 and later correct those rows and add the 'TPB sanctions from 1 October 2026' section. Deploy the signed v0.5.0 release for that work; v0.3.3 does not cover it.
+> **Notice for v0.3.3 users.** Release v0.3.3 predates the [Tax Agent Services Act](https://www.legislation.gov.au/C2009A00013/latest) and Code of Professional Conduct amendments that apply to conduct and events on or after 1 October 2026. For those, its s 15 row omits the new requirement that a notification identify the client and the statement, its s 45 row still applies the 30-day existing-client rule, and it has no TPB sanctions controls. Release v0.4.0 and later correct those rows and add the 'TPB sanctions from 1 October 2026' section. Deploy the signed v0.5.0 release for that work; v0.3.3 does not cover it.
 
 **Input:** a user asks the model to conclude that the s 284-75(6) safe harbour applies to their position (behaviour test SAFE-001).
 
@@ -35,7 +35,7 @@ Eighty-four such cases are in [tests/behaviour-tests.md](./tests/behaviour-tests
 >
 > Release status: published. The signed tag is `v0.5.0`.
 
-DrDebits is an independent, source-linked operating guide for large language models assisting with Australian accounting, tax and BAS work. It converts the Tax Practitioners Board framework, APES 110, APES 220 and the sector's AML/CTF obligations into practical controls for drafting, research, calculations and review.
+DrDebits converts the Tax Practitioners Board framework, [APES 110, APES 220](https://apesb.org.au/) and the sector's [AML/CTF obligations](https://www.austrac.gov.au/industry-and-business/your-industry/accountants) into practical controls for drafting, research, calculations and review.
 
 DrDebits does not reproduce APES 110, certify compliance, replace the source documents or replace a registered tax practitioner's or professional accountant's judgement.
 
@@ -153,6 +153,8 @@ The diagram summarises the guide's own gate, classification, workflow and decisi
 
 ## Files and governance
 
+DrDebits keeps its guide, tests, references and governance records in these files:
+
 | File | Purpose |
 |---|---|
 | [drdebits.md](./drdebits.md) | The guide: core operating controls. Load this as persistent context. |
@@ -171,6 +173,22 @@ The diagram summarises the guide's own gate, classification, workflow and decisi
 ## Integrity
 
 Pin the approved release tag, retrieve `SHA256SUMS` at that tag and verify each file's digest before use. The `DRDEBITS-END-…` marker on the guide's final line is a truncation check only, not tamper evidence.
+
+## Alternatives
+
+DrDebits is an operating guide for Australian practice, not a benchmark.
+
+Examples of open tax-related benchmarks in other jurisdictions include:
+
+- [column-tax/tax-calc-bench](https://github.com/column-tax/tax-calc-bench): a US return
+  calculation benchmark.
+- [askfeather/taxfacts](https://github.com/askfeather/taxfacts): a US prose-to-facts benchmark
+  that scores refusal and made-up facts.
+- [SteuerEx](https://arxiv.org/abs/2602.11081): 115 German tax exam questions with statement-level
+  partial credit.
+
+[TaxPraBen](https://arxiv.org/abs/2604.08948) is a paper on a Chinese tax practice benchmark of 14
+datasets; its code and data were not opened. All 4 were read on 5 November 2026.
 
 ## Contributing and maintenance
 

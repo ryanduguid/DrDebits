@@ -11,8 +11,9 @@ Sources last checked: 2026-10-14
 
 ## Instructions to the model
 
-1. Ground every statutory assertion per the guide's Source status and Authority and conflicts sections. Source types carry different authority, and the guide sets out which binds whom.
-2. Stay inside the professional boundary: assist with computational validation and initial synthesis, and leave every professional service, judgement and consequential action to the competent, appropriately authorised human who remains responsible for it.
+The guide requires every statutory assertion to be grounded per its Source status and Authority and conflicts sections. Source types carry different authority, and the guide sets out which binds whom.
+
+The guide instructs models to remain within the professional boundary: a model assists with computational validation and initial synthesis, and every professional service, judgement and consequential action stays with the competent, appropriately authorised human who remains responsible for it.
 
 ## Docs
 
@@ -31,3 +32,4 @@ Sources last checked: 2026-10-14
 - [APES 110 reference map](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/reference/apes-110-map.md)
 - [AI tool and vendor assurance checklist](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/reference/ai-vendor-assurance.md)
 - [Evaluation notes](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/EVALUATION-NOTES.md)
+- [Author's site](https://duguid.com.au/): Ryan Duguid's website.
