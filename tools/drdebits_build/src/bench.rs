@@ -5,13 +5,16 @@
 //! keys and a scorer. Nothing here calls a model.
 //!
 //! `bench keys` recomputes each key that follows from a rule, from the inputs
-//! the key records and a published table of non-business days, and compares
-//! every key with the recorded engine output. `bench score` marks a file of
+//! the key records and a published table of non-business days. It does not read
+//! the sources of the other keys. It takes each engine value from the recorded
+//! output and compares it with the key. `bench score` marks a file of
 //! answers on 2 separate axes, because a right figure can rest on the wrong
 //! section: the value, and the authority cited for it. Authorities compare at
-//! section level, so `s 109E(6)` meets a key naming `s 109E`. A right section
-//! beside a readable wrong one is mixed, so citing every section earns nothing,
-//! and a Division, bare Act name or other form the gate cannot read counts as
+//! section level, so `s 109E(6)` meets a key naming `s 109E`, and each section
+//! a key lists is enough alone. A right section beside a readable wrong one is
+//! mixed, so citing every section earns nothing. A right section beside a form
+//! the gate cannot read is partly unreadable, because that form could be wrong.
+//! A Division, bare Act name or other unreadable form alone counts as
 //! unreadable, not as wrong.
 //!
 //! A key is what its documented source and the published derivation give. It
@@ -33,6 +36,10 @@ pub const QUESTIONS_FILE: &str = "benchmarks/payday-div7a/questions.json";
 pub const KEYS_FILE: &str = "benchmarks/payday-div7a/keys.json";
 pub const CALENDAR_FILE: &str = "benchmarks/payday-div7a/business-days.json";
 pub const ENGINE_FILE: &str = "benchmarks/payday-div7a/engine-check.json";
+
+/// What `keys.json` must say about several listed authorities, because the
+/// scorer applies exactly this.
+const AUTHORITY_RULE: &str = "Each section listed under a key is enough alone. For Payday Super keys either s 6 or s 18C counts as right, because each states the period relied on.";
 
 pub const EXIT_OK: u8 = 0;
 pub const EXIT_MISMATCH: u8 = 1;
@@ -191,6 +198,9 @@ fn with_canary(payload: Json, rel: &str) -> Result<Json, String> {
 pub fn load_keys(root: &PyPath) -> Result<Vec<Key>, String> {
     let questions = with_canary(read_json(root, QUESTIONS_FILE)?, QUESTIONS_FILE)?;
     let keys = with_canary(read_json(root, KEYS_FILE)?, KEYS_FILE)?;
+    if keys.get("authority_rule").and_then(Json::as_str) != Some(AUTHORITY_RULE) {
+        return Err(format!("{KEYS_FILE}: authority_rule is missing or changed"));
+    }
     let asked = items(&questions, "questions", QUESTIONS_FILE)?
         .iter()
         .map(|q| text(q, "id", QUESTIONS_FILE))
@@ -313,26 +323,86 @@ fn matches(kind: Kind, key: &str, answer: &str) -> bool {
 #[derive(Debug, PartialEq)]
 pub struct KeyReport {
     pub computed: usize,
-    pub from_source: usize,
+    /// Keys with no rule. Their sources are not read here.
+    pub not_recomputed: usize,
     pub engine_checked: usize,
     pub problems: Vec<String>,
 }
 
-/// Recompute what can be recomputed and compare every key with the engine record.
+/// The value at `path` in a recorded engine output, in the key's form. The
+/// record's own `value` plays no part, so it cannot stand in for the output.
+fn engine_value(check: &Json, at: &str) -> Result<String, String> {
+    let output = check
+        .get("output")
+        .ok_or(format!("{at}: output is missing"))?;
+    let read = check.get("read").ok_or(format!("{at}: read is missing"))?;
+    let Some(Json::Array(path)) = read.get("path") else {
+        return Err(format!("{at}: read path must be a list"));
+    };
+    let found = path
+        .iter()
+        .try_fold(output, |here, step| match (here, step) {
+            (_, Json::Str(field)) => here.get(field),
+            (Json::Array(items), step) => {
+                items.get(json_int(step).and_then(|i| usize::try_from(i).ok())?)
+            }
+            _ => None,
+        })
+        .ok_or(format!("{at}: nothing at the read path"))?;
+    let number = || {
+        found
+            .as_str()
+            .and_then(amount)
+            .ok_or(format!("{at}: the output at the read path is not a number"))
+    };
+    match text(read, "form", at)? {
+        "text" => found
+            .as_str()
+            .map(str::to_string)
+            .ok_or(format!("{at}: the output at the read path is not text")),
+        "percent" => Ok(gate::decimal(
+            &number()?.mul(&Q::new(BigInt::from(100), BigInt::from(1))),
+            2,
+        )),
+        "whole-dollars" => Ok(gate::decimal(&number()?, 0)),
+        "none-for-year-of-loan" => {
+            let refused = matches!(found, Json::Array(codes)
+                if codes.iter().any(|c| c.as_str() == Some("REFUSED_YEAR_IS_YEAR_OF_LOAN")));
+            if refused && matches!(output.get("myr_required"), Some(Json::Null)) {
+                Ok("NONE".into())
+            } else {
+                Err(format!(
+                    "{at}: the output does not refuse the year of the loan"
+                ))
+            }
+        }
+        other => Err(format!("{at}: unknown read form {other}")),
+    }
+}
+
+/// Recompute what can be recomputed and compare every key with the value taken
+/// from the recorded engine output. A duplicate record stops the check.
 pub fn check_keys(root: &PyPath) -> Result<KeyReport, String> {
     let keys = load_keys(root)?;
     let calendar = load_calendar(root)?;
     let engine = read_json(root, ENGINE_FILE)?;
     let checks = items(&engine, "checks", ENGINE_FILE)?;
+    let mut ids = HashSet::new();
+    for check in checks {
+        let id = text(check, "id", ENGINE_FILE)?;
+        if !ids.insert(id) {
+            return Err(format!("{ENGINE_FILE}: {id} is recorded twice"));
+        }
+    }
     let mut report = KeyReport {
         computed: 0,
-        from_source: 0,
+        not_recomputed: 0,
         engine_checked: 0,
         problems: Vec::new(),
     };
     for key in &keys {
         match reproduce(key, &calendar)? {
-            None => report.from_source += 1,
+            None => report.not_recomputed += 1,
             Some(value) => {
                 report.computed += 1;
                 if !matches(key.kind, &key.value, &value) {
@@ -346,15 +416,28 @@ pub fn check_keys(root: &PyPath) -> Result<KeyReport, String> {
         let recorded = checks
             .iter()
             .find(|c| c.get("id").and_then(Json::as_str) == Some(key.id.as_str()));
-        match recorded.and_then(|c| c.get("value")).and_then(Json::as_str) {
-            Some(value) if matches(key.kind, &key.value, value) => report.engine_checked += 1,
-            Some(value) => report.problems.push(format!(
+        let Some(check) = recorded else {
+            report
+                .problems
+                .push(format!("{}: no engine output is recorded", key.id));
+            continue;
+        };
+        let at = format!("{ENGINE_FILE} {}", key.id);
+        let value = engine_value(check, &at)?;
+        let stated = text(check, "value", &at)?;
+        if !matches(key.kind, stated, &value) {
+            report.problems.push(format!(
+                "{}: the record states {stated} but its output gives {value}",
+                key.id
+            ));
+        }
+        if matches(key.kind, &key.value, &value) {
+            report.engine_checked += 1;
+        } else {
+            report.problems.push(format!(
                 "{}: the key says {} and the engine gave {value}",
                 key.id, key.value
-            )),
-            None => report
-                .problems
-                .push(format!("{}: no engine output is recorded", key.id)),
+            ));
         }
     }
     Ok(report)
@@ -368,13 +451,15 @@ pub enum Value {
     Unanswered,
 }
 
-/// The authority axis of one answer: every citation the gate can read names an
-/// expected section, or some do and some do not, or none does, or nothing cited
-/// can be read, or nothing was.
+/// The authority axis of one answer: every citation is readable and names a
+/// listed section, or some readable ones do and some do not, or those that can
+/// be read all do beside one that cannot, or none does, or nothing cited can be
+/// read, or nothing was.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Cited {
     Right,
     Mixed,
+    PartlyUnreadable,
     Wrong,
     Unreadable,
     Missing,
@@ -397,12 +482,14 @@ fn cited(key: &Key, written: &[&str]) -> Cited {
         Cited::Missing
     } else if read.is_empty() {
         Cited::Unreadable
-    } else if right == read.len() {
-        Cited::Right
-    } else if right > 0 {
-        Cited::Mixed
-    } else {
+    } else if right == 0 {
         Cited::Wrong
+    } else if right < read.len() {
+        Cited::Mixed
+    } else if read.len() < written.len() {
+        Cited::PartlyUnreadable
+    } else {
+        Cited::Right
     }
 }
 
@@ -486,6 +573,10 @@ fn tally(scored: &[Scored]) -> Vec<(&'static str, usize)> {
         ("unanswered", values(Value::Unanswered)),
         ("authority_right", answered(Cited::Right)),
         ("authority_mixed", answered(Cited::Mixed)),
+        (
+            "authority_partly_unreadable",
+            answered(Cited::PartlyUnreadable),
+        ),
         ("wrong_authority", answered(Cited::Wrong)),
         ("authority_unreadable", answered(Cited::Unreadable)),
         ("authority_missing", answered(Cited::Missing)),
@@ -535,9 +626,9 @@ fn run_keys(root: &PyPath) -> Result<u8, String> {
         return Ok(EXIT_MISMATCH);
     }
     outln!(
-        "bench keys: {} recomputed, {} read from their sources, {} agree with the recorded engine output",
+        "bench keys: {} recomputed, {} source-derived keys not independently recomputed, {} agree with the recorded engine output",
         report.computed,
-        report.from_source,
+        report.not_recomputed,
         report.engine_checked
     );
     Ok(EXIT_OK)

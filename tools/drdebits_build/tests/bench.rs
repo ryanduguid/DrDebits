@@ -56,7 +56,7 @@ fn one(answers: &str, id: &str) -> (Value, Cited) {
 fn every_published_key_reproduces_and_agrees_with_the_engine_record() {
     let report = bench::check_keys(&py(&repo_root())).unwrap();
     assert_eq!(report.problems, Vec::<String>::new());
-    assert_eq!((report.computed, report.from_source), (21, 10));
+    assert_eq!((report.computed, report.not_recomputed), (21, 10));
     assert_eq!(report.engine_checked, 31);
 }
 
@@ -199,12 +199,189 @@ fn a_right_section_beside_a_wrong_one_is_mixed_not_right() {
     assert_eq!(one(answers, "PDS-002"), (Value::Correct, Cited::Mixed));
 }
 
+/// No combination that holds anything but listed, readable sections earns Right.
 #[test]
-fn an_unreadable_citation_beside_a_right_one_stays_right() {
-    let answers = r#"{"answers": {"D7A-001": {"value": "8.77", "authorities": [
-        "Division 7A of ITAA 1936",
-        "s 109N(2) of the Income Tax Assessment Act 1936"]}}}"#;
-    assert_eq!(one(answers, "D7A-001"), (Value::Correct, Cited::Right));
+fn adversarial_citation_combinations_do_not_earn_right() {
+    const RIGHT: &str = "s 109N(2) of the Income Tax Assessment Act 1936";
+    const WRONG: &str = "s 109E of the Income Tax Assessment Act 1936";
+    const OTHER_ACT: &str = "s 109N of the Income Tax Assessment Act 1997";
+    const UNREADABLE: &str = "Division 7A of ITAA 1936";
+    const TWO_IN_ONE: &str = "s 109N and s 109E of the Income Tax Assessment Act 1936";
+    for (cited, mark) in [
+        (&[RIGHT, UNREADABLE][..], Cited::PartlyUnreadable),
+        (&[UNREADABLE, RIGHT], Cited::PartlyUnreadable),
+        (&[RIGHT, TWO_IN_ONE], Cited::PartlyUnreadable),
+        (&[RIGHT, WRONG], Cited::Mixed),
+        (&[RIGHT, OTHER_ACT], Cited::Mixed),
+        (&[RIGHT, WRONG, UNREADABLE], Cited::Mixed),
+        (&[WRONG, UNREADABLE], Cited::Wrong),
+        (&[OTHER_ACT], Cited::Wrong),
+        (&[TWO_IN_ONE], Cited::Unreadable),
+        (&[RIGHT, RIGHT], Cited::Right),
+    ] {
+        let list = cited
+            .iter()
+            .map(|c| format!("\"{c}\""))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let answers = format!(
+            r#"{{"answers": {{"D7A-001": {{"value": "8.77", "authorities": [{list}]}}}}}}"#
+        );
+        assert_eq!(
+            one(&answers, "D7A-001"),
+            (Value::Correct, mark),
+            "{cited:?}"
+        );
+    }
+}
+
+/// Each listed section is enough alone, and so are the 2 together.
+#[test]
+fn either_listed_payday_section_alone_is_right() {
+    const SIX: &str = "s 6(1) of the Superannuation Guarantee (Administration) Act 1992";
+    const EIGHTEEN_C: &str = "s 18C(2) of the Superannuation Guarantee (Administration) Act 1992";
+    for cited in [
+        format!("\"{SIX}\""),
+        format!("\"{EIGHTEEN_C}\""),
+        format!("\"{SIX}\", \"{EIGHTEEN_C}\""),
+    ] {
+        let answers = format!(
+            r#"{{"answers": {{"PDS-001": {{"value": "2026-08-07", "authorities": [{cited}]}}}}}}"#
+        );
+        assert_eq!(one(&answers, "PDS-001"), (Value::Correct, Cited::Right));
+    }
+}
+
+#[test]
+fn the_keys_must_state_how_several_authorities_work() {
+    let tree = copy();
+    edit(
+        tree.path(),
+        "keys.json",
+        "is enough alone",
+        "is required jointly",
+    );
+    let error = bench::load_keys(&py(tree.path())).unwrap_err();
+    assert!(
+        error.contains("authority_rule is missing or changed"),
+        "{error}"
+    );
+}
+
+/// The value comes from the recorded output, so changing the output alone is
+/// caught, and the value beside it can neither hide nor contradict that.
+#[test]
+fn a_changed_output_alone_is_caught() {
+    for (from, to, id) in [
+        (
+            "\"due\": \"2026-08-07\"",
+            "\"due\": \"2026-08-08\"",
+            "PDS-001",
+        ),
+        (
+            "\"benchmark_rate\": \"0.0877\"",
+            "\"benchmark_rate\": \"0.0878\"",
+            "D7A-001",
+        ),
+        (
+            "\"output\": \"9834.92\"",
+            "\"output\": \"9835.92\"",
+            "D7A-005",
+        ),
+        (
+            "\"output\": \"19715.97\"",
+            "\"output\": \"19715.98\"",
+            "D7A-007",
+        ),
+        (
+            "\"maximum_term_years_allowed\": \"7\"",
+            "\"maximum_term_years_allowed\": \"8\"",
+            "D7A-011",
+        ),
+    ] {
+        let tree = copy();
+        edit(tree.path(), "engine-check.json", from, to);
+        let report = bench::check_keys(&py(tree.path())).unwrap();
+        assert_eq!(report.problems.len(), 2, "{id}: {:?}", report.problems);
+        assert!(report.problems[0].contains("its output gives"), "{id}");
+        assert!(report.problems[0].starts_with(id), "{:?}", report.problems);
+    }
+}
+
+#[test]
+fn a_changed_stated_value_alone_conflicts_with_its_output() {
+    let tree = copy();
+    edit(
+        tree.path(),
+        "engine-check.json",
+        "\"value\": \"2026-08-07\"",
+        "\"value\": \"2026-08-08\"",
+    );
+    let report = bench::check_keys(&py(tree.path())).unwrap();
+    assert_eq!(
+        report.problems,
+        ["PDS-001: the record states 2026-08-08 but its output gives 2026-08-07".to_string()]
+    );
+    assert_eq!(report.engine_checked, 31);
+}
+
+#[test]
+fn a_duplicate_engine_record_is_refused() {
+    let tree = copy();
+    edit(
+        tree.path(),
+        "engine-check.json",
+        "\"id\": \"PDS-002\"",
+        "\"id\": \"PDS-001\"",
+    );
+    let error = bench::check_keys(&py(tree.path())).unwrap_err();
+    assert!(error.ends_with("PDS-001 is recorded twice"), "{error}");
+}
+
+#[test]
+fn an_engine_record_that_does_not_refuse_the_loan_year_is_refused() {
+    let tree = copy();
+    edit(
+        tree.path(),
+        "engine-check.json",
+        "\"REFUSED_YEAR_IS_YEAR_OF_LOAN\"",
+        "\"REFUSED_GATE_UNKNOWN\"",
+    );
+    let error = bench::check_keys(&py(tree.path())).unwrap_err();
+    assert!(
+        error.contains("does not refuse the year of the loan"),
+        "{error}"
+    );
+}
+
+#[test]
+fn an_engine_record_with_a_bad_read_is_refused() {
+    for (from, to, expected) in [
+        (
+            "\"form\": \"percent\"",
+            "\"form\": \"guess\"",
+            "unknown read form guess",
+        ),
+        (
+            "\"benchmark_rate\"\n",
+            "\"no_such_field\"\n",
+            "nothing at the read path",
+        ),
+        (
+            "\"form\": \"whole-dollars\"",
+            "\"form\": \"percent\"",
+            "D7A-005",
+        ),
+    ] {
+        let tree = copy();
+        edit(tree.path(), "engine-check.json", from, to);
+        let found = bench::check_keys(&py(tree.path()));
+        let text = match found {
+            Ok(report) => report.problems.join("; "),
+            Err(error) => error,
+        };
+        assert!(text.contains(expected), "{expected}: {text}");
+    }
 }
 
 /// Citing all 4 sections on every question must not buy the headline count.
@@ -243,6 +420,7 @@ fn citing_every_section_on_every_question_earns_no_right_authority() {
         "value correct: 31",
         "authority right: 0",
         "authority mixed: 31",
+        "authority partly unreadable: 0",
         "wrong authority: 0",
         "correct value right authority: 0",
     ] {
@@ -373,6 +551,10 @@ fn the_commands_report_the_counts_and_exit_as_documented() {
     let root = repo_root();
     let keys = run_in(&root, &["bench", "keys"], true);
     assert_eq!(keys.code, 0);
+    assert!(
+        keys.stdout
+            .contains("10 source-derived keys not independently recomputed")
+    );
     assert!(keys.stdout.contains("31 agree with the recorded engine"));
 
     let dir = tempfile::tempdir().unwrap();
@@ -428,6 +610,9 @@ fn the_readme_states_the_conflict_and_counts_each_source() {
     assert!(text.contains("copied from the `payday-super-checker` table"));
     assert_eq!(text.matches("15 August 2026").count(), 2);
     assert!(text.contains("agreement shows the arithmetic only"));
+    assert!(text.contains("10 are source-derived keys not independently recomputed"));
+    assert!(text.contains("either s 6 or s 18C counts as right"));
+    assert!(!text.contains("read from a source"));
     assert!(text.contains("King's Birthday on 28 September 2026"));
     let front = std::fs::read_to_string(repo_root().join("README.md")).unwrap();
     assert!(!front.contains("not a benchmark"));
