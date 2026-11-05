@@ -616,6 +616,9 @@ fn the_readme_states_the_conflict_and_counts_each_source() {
     assert!(text.contains("King's Birthday on 28 September 2026"));
     let front = std::fs::read_to_string(repo_root().join("README.md")).unwrap();
     assert!(!front.contains("not a benchmark"));
+    let changelog = std::fs::read_to_string(repo_root().join("CHANGELOG.md")).unwrap();
+    assert!(changelog.contains("`bench keys` recomputes 21 keys offline"));
+    assert!(!changelog.contains("`bench keys` reproduces"));
     let keys = std::fs::read_to_string(repo_root().join(DIR).join("keys.json")).unwrap();
     let keys = pyjson::loads(&keys).unwrap();
     let Some(Json::Array(keys)) = keys.get("keys") else {
