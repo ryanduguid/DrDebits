@@ -2,7 +2,7 @@
 
 Thirty-one questions on Payday Super due dates and Division 7A, with published keys, derivations and a scorer. No model has been scored. The claim is that the keys are reproducible, not that the benchmark is independent.
 
-**Publisher conflict.** Ryan Duguid publishes this benchmark, and also publishes `payday-super-checker`, `div7a-loan-review` and `aus-accounting-mcp`, which it could score. The keys were checked against 2 of those products. Read any score with that in mind.
+**Publisher conflict.** Ryan Duguid publishes this benchmark, and also publishes `payday-super-checker`, `div7a-loan-review` and `aus-accounting-mcp`, which it could score. The keys were checked against 2 of those products, and `business-days.json` is copied from one of them. Its table's sources were checked on 15 August 2026. The rule check and the engine check therefore share one calendar for all 14 date keys, and an ATO example stands apart from it for PDS-001 to PDS-007 alone. Read any score with that in mind.
 
 ## What each case holds
 
@@ -10,7 +10,7 @@ Thirty-one questions on Payday Super due dates and Division 7A, with published k
 | --- | --- |
 | [questions.json](questions.json) | The instructions and questions. Give a model this file and nothing else. |
 | [keys.json](keys.json) | Each key's value, the section it expects, its source, a derivation and a rule to recompute it. |
-| [business-days.json](business-days.json) | The weekdays from 1 July 2026 to 31 August 2027 that are public holidays for the whole of a State or Territory. |
+| [business-days.json](business-days.json) | The weekdays from 1 July 2026 to 31 August 2027 that are public holidays for the whole of a State or Territory, copied from the `payday-super-checker` table at the recorded commit. That table's sources were checked on 15 August 2026, not for this benchmark. |
 | [engine-check.json](engine-check.json) | Each case's request to an engine, the output and the value read from it. |
 
 Each key comes from one of these, named in the key's `source`:
@@ -48,8 +48,8 @@ cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- 
 
 The scorer marks 2 things separately, because a right figure can rest on the wrong section:
 
-- **Value:** correct, wrong or unanswered. Dates and tokens compare as text. Amounts compare by value, ignoring `$`, commas and a trailing `%`.
-- **Authority:** right when a citation names a section the key expects, at section level, so `s 109N(2)` meets `s 109N`. `wrong_authority` counts answers whose readable citations all miss it. `authority_unreadable` counts answers citing only forms the gate cannot read, such as `Division 7A`. `authority_missing` counts answers with no citation.
+- **Value:** correct, wrong or unanswered, and a blank value is unanswered. Dates and tokens compare as text. Amounts compare by value, ignoring `$`, commas and a trailing `%`.
+- **Authority:** right when every readable citation names a section the key expects, at section level, so `s 109N(2)` meets `s 109N`. `authority_mixed` counts answers with a right section beside a readable section outside the key, so citing every section at once earns no `authority_right`. `wrong_authority` counts answers whose readable citations all miss it. `authority_unreadable` counts answers citing only forms the gate cannot read, such as `Division 7A`. `authority_missing` counts answers with no citation.
 
 `correct_value_wrong_authority` counts the right figure on the wrong section. Add `--json` for each question's marks.
 
@@ -59,7 +59,8 @@ The scorer marks 2 things separately, because a right figure can rest on the wro
 - 31 cases is small, and the questions name most of the facts a practitioner would have to find.
 - Every question has a keyed answer. Nothing tests when a model should refuse, which is the job of the [behaviour tests](../../tests/behaviour-tests.md).
 - Earnings paid before 1 July 2026 are out of scope, because the engine refuses them. So are exceptional circumstances determinations, which it does not model, and holidays that cover only part of a day. A date range across those was avoided.
-- Melbourne Cup Day and Tasmania's Easter Tuesday are avoided too: each has a local variation that the keys would have to decide.
+- Melbourne Cup Day, Tasmania's Easter Tuesday and Western Australia's King's Birthday on 28 September 2026 are avoided too: each has a local variation that the keys would have to decide.
+- Engine agreement is narrow. For D7A-005 to D7A-010 the engine received the key's own principal, rate and term, so agreement shows the arithmetic only. For D7A-008 the engine gives 19715.97 on 100000, and the 80000 was typed into its request.
 - Authority marks are mechanical. A cited section can be right and still be misapplied.
 - `questions.json` and `keys.json` carry the same canary as the behaviour cases. A model that repeats it may have seen these files. Its absence shows nothing.
 - A key is what its source and derivation give at the dates shown. It is not advice on anyone's affairs.

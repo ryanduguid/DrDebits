@@ -9,9 +9,10 @@
 //! every key with the recorded engine output. `bench score` marks a file of
 //! answers on 2 separate axes, because a right figure can rest on the wrong
 //! section: the value, and the authority cited for it. Authorities compare at
-//! section level, so `s 109E(6)` meets a key naming `s 109E`, and a Division,
-//! bare Act name or other form the gate cannot read counts as unreadable, not
-//! as wrong.
+//! section level, so `s 109E(6)` meets a key naming `s 109E`. A right section
+//! beside a readable wrong one is mixed, so citing every section earns nothing,
+//! and a Division, bare Act name or other form the gate cannot read counts as
+//! unreadable, not as wrong.
 //!
 //! A key is what its documented source and the published derivation give. It
 //! is not advice, and a score is not a measure of anything outside these
@@ -208,18 +209,25 @@ pub fn load_keys(root: &PyPath) -> Result<Vec<Key>, String> {
     Ok(keys)
 }
 
-/// The table of non-business weekdays, with the last date it is complete to.
-fn load_calendar(root: &PyPath) -> Result<(HashSet<Date>, Date), String> {
+/// The table of non-business weekdays and the dates it is complete between.
+struct Calendar {
+    closed: HashSet<Date>,
+    from: Date,
+    until: Date,
+}
+
+fn load_calendar(root: &PyPath) -> Result<Calendar, String> {
     let payload = read_json(root, CALENDAR_FILE)?;
     let closed = items(&payload, "non_business_days", CALENDAR_FILE)?
         .iter()
         .map(|d| date(text(d, "date", CALENDAR_FILE)?, CALENDAR_FILE))
         .collect::<Result<_, _>>()?;
-    let until = date(
-        text(&payload, "complete_until", CALENDAR_FILE)?,
-        CALENDAR_FILE,
-    )?;
-    Ok((closed, until))
+    let bound = |field| date(text(&payload, field, CALENDAR_FILE)?, CALENDAR_FILE);
+    Ok(Calendar {
+        closed,
+        from: bound("complete_from")?,
+        until: bound("complete_until")?,
+    })
 }
 
 /// `from` plus `days` business days, `from` itself never counted. A weekend is
@@ -245,15 +253,21 @@ fn myr(principal: &Q, rate: &Q, years: u32) -> Option<Q> {
 }
 
 /// The value a key's rule gives, or `None` for a key read from its source.
-fn reproduce(key: &Key, closed: &HashSet<Date>, until: Date) -> Result<Option<String>, String> {
+fn reproduce(key: &Key, calendar: &Calendar) -> Result<Option<String>, String> {
     let fail = || format!("{}: the rule cannot be worked", key.id);
     Ok(match &key.rule {
         Rule::Source => None,
         Rule::BusinessDays(terms) => {
             let mut latest = None;
             for (from, days) in terms {
-                let due = add_business_days(*from, *days, closed).ok_or_else(fail)?;
-                if due > until {
+                if *from < calendar.from {
+                    return Err(format!(
+                        "{}: {from:?} is before the calendar's first complete day",
+                        key.id
+                    ));
+                }
+                let due = add_business_days(*from, *days, &calendar.closed).ok_or_else(fail)?;
+                if due > calendar.until {
                     return Err(format!(
                         "{}: {due:?} is past the calendar's last complete day",
                         key.id
@@ -307,7 +321,7 @@ pub struct KeyReport {
 /// Recompute what can be recomputed and compare every key with the engine record.
 pub fn check_keys(root: &PyPath) -> Result<KeyReport, String> {
     let keys = load_keys(root)?;
-    let (closed, until) = load_calendar(root)?;
+    let calendar = load_calendar(root)?;
     let engine = read_json(root, ENGINE_FILE)?;
     let checks = items(&engine, "checks", ENGINE_FILE)?;
     let mut report = KeyReport {
@@ -317,7 +331,7 @@ pub fn check_keys(root: &PyPath) -> Result<KeyReport, String> {
         problems: Vec::new(),
     };
     for key in &keys {
-        match reproduce(key, &closed, until)? {
+        match reproduce(key, &calendar)? {
             None => report.from_source += 1,
             Some(value) => {
                 report.computed += 1;
@@ -354,11 +368,13 @@ pub enum Value {
     Unanswered,
 }
 
-/// The authority axis of one answer: a citation the gate can read names an
-/// expected section, or none does, or nothing cited can be read, or nothing was.
+/// The authority axis of one answer: every citation the gate can read names an
+/// expected section, or some do and some do not, or none does, or nothing cited
+/// can be read, or nothing was.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Cited {
     Right,
+    Mixed,
     Wrong,
     Unreadable,
     Missing,
@@ -373,15 +389,18 @@ pub struct Scored {
 
 fn cited(key: &Key, written: &[&str]) -> Cited {
     let read: Vec<Authority> = written.iter().filter_map(|c| Authority::read(c)).collect();
+    let right = read
+        .iter()
+        .filter(|a| key.authorities.iter().any(|k| k.section() == a.section()))
+        .count();
     if written.is_empty() {
         Cited::Missing
     } else if read.is_empty() {
         Cited::Unreadable
-    } else if read
-        .iter()
-        .any(|a| key.authorities.iter().any(|k| k.section() == a.section()))
-    {
+    } else if right == read.len() {
         Cited::Right
+    } else if right > 0 {
+        Cited::Mixed
     } else {
         Cited::Wrong
     }
@@ -393,6 +412,13 @@ pub fn score(keys: &[Key], answers: &Json) -> Result<Vec<Scored>, String> {
     let Some(Json::Object(given)) = answers.get("answers") else {
         return Err(fail("the 'answers' key must hold an object".into()));
     };
+    let extra = match answers {
+        Json::Object(top) => top.iter().find(|(field, _)| field != "answers"),
+        _ => None,
+    };
+    if let Some((field, _)) = extra {
+        return Err(fail(format!("unknown field {field}")));
+    }
     if let Some((id, _)) = given
         .iter()
         .find(|(id, _)| !keys.iter().any(|k| &k.id == id))
@@ -432,7 +458,9 @@ pub fn score(keys: &[Key], answers: &Json) -> Result<Vec<Scored>, String> {
         };
         scored.push(Scored {
             id: key.id.clone(),
-            value: if matches(key.kind, &key.value, value) {
+            value: if value.trim().is_empty() {
+                Value::Unanswered
+            } else if matches(key.kind, &key.value, value) {
                 Value::Correct
             } else {
                 Value::Wrong
@@ -457,6 +485,7 @@ fn tally(scored: &[Scored]) -> Vec<(&'static str, usize)> {
         ("value_wrong", values(Value::Wrong)),
         ("unanswered", values(Value::Unanswered)),
         ("authority_right", answered(Cited::Right)),
+        ("authority_mixed", answered(Cited::Mixed)),
         ("wrong_authority", answered(Cited::Wrong)),
         ("authority_unreadable", answered(Cited::Unreadable)),
         ("authority_missing", answered(Cited::Missing)),
