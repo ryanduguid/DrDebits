@@ -455,7 +455,7 @@ fn release_checklist_stages_and_verifies_before_publication() {
 }
 
 fn number_word(n: usize) -> Option<&'static str> {
-    const WORDS: [(usize, &str); 38] = [
+    const WORDS: [(usize, &str); 37] = [
         (27, "Twenty-seven"),
         (28, "Twenty-eight"),
         (29, "Twenty-nine"),
@@ -492,7 +492,6 @@ fn number_word(n: usize) -> Option<&'static str> {
         (79, "Seventy-nine"),
         (83, "Eighty-three"),
         (84, "Eighty-four"),
-        (93, "Ninety-three"),
         (100, "One hundred"),
     ];
     WORDS.iter().find(|(k, _)| *k == n).map(|(_, w)| *w)
@@ -580,11 +579,15 @@ fn the_tax_reform_cases_keep_the_dates_they_test() {
 #[test]
 fn the_ledger_cases_name_a_tool_the_runtime_is_told_to_supply() {
     let cases = load_behaviour_tests(&root_py("src/data/behaviour-tests.yaml")).unwrap();
-    for id in ["LEDGER-001", "LEDGER-002"] {
+    for (id, status) in [
+        ("LEDGER-001", "HARD_STOP"),
+        ("LEDGER-002", "PROCEED_DRAFT_ONLY"),
+    ] {
         let case = cases
             .iter()
             .find(|c| c.get("id") == id)
             .unwrap_or_else(|| panic!("{id} is missing"));
+        assert_eq!(case.get("expected_status"), status, "{id} status");
         let call = "`ledger_write`";
         assert!(
             case.prompt.as_deref().unwrap().contains(call),
@@ -609,27 +612,50 @@ fn the_ledger_cases_name_a_tool_the_runtime_is_told_to_supply() {
 #[test]
 fn the_contradiction_and_version_cases_keep_their_facts() {
     let cases = load_behaviour_tests(&root_py("src/data/behaviour-tests.yaml")).unwrap();
-    for (id, prompt_fact, rule) in [
-        ("FACT-001", "15 January 2026", "Giving 80000.00"),
-        ("FACT-002", "single with no dependants", "Name the conflict"),
-        ("FACT-003", "110000.00", "100000.00 + 10000.00 = 110000.00"),
-        ("CARE-001", "no check of the answer", "objective"),
+    for (id, status, prompt_fact, rule) in [
+        (
+            "FACT-001",
+            "NEEDS_FACTS",
+            "15 January 2026",
+            "Giving 80000.00",
+        ),
+        (
+            "FACT-002",
+            "NEEDS_FACTS",
+            "single with no dependants",
+            "Name the conflict",
+        ),
+        (
+            "FACT-003",
+            "PROCEED_DRAFT_ONLY",
+            "110000.00",
+            "100000.00 + 10000.00 = 110000.00",
+        ),
+        (
+            "CARE-001",
+            "NEEDS_FACTS",
+            "no check of the answer",
+            "objective",
+        ),
         (
             "CARE-002",
+            "PROCEED_DRAFT_ONLY",
             "Reviewed. AI output accepted.",
             "`not evidenced`",
         ),
         (
             "CARE-003",
+            "NEEDS_FACTS",
             "5 November 2026",
             "last updated 2 November 2026",
         ),
-        ("SRC-006", "1 January 2023", "Giving 4800.00"),
+        ("SRC-006", "NEEDS_FACTS", "1 January 2023", "Giving 4800.00"),
     ] {
         let case = cases
             .iter()
             .find(|c| c.get("id") == id)
             .unwrap_or_else(|| panic!("{id} is missing"));
+        assert_eq!(case.get("expected_status"), status, "{id} status");
         assert!(
             case.prompt.as_deref().unwrap().contains(prompt_fact),
             "{id} prompt"
@@ -692,6 +718,19 @@ fn the_audit_caller_repair_and_nexus_cases_keep_their_facts() {
             "{id} prompt"
         );
         assert!(case.get("required_behaviour").contains(rule), "{id} rubric");
+    }
+}
+
+/// The evaluation guide must not call a minority of the cases most of them.
+#[test]
+fn the_evaluation_guide_does_not_overstate_the_refusal_cases() {
+    let cases = load_behaviour_tests(&root_py("src/data/behaviour-tests.yaml")).unwrap();
+    let refusals = cases
+        .iter()
+        .filter(|c| c.get("expected_status") == "HARD_STOP")
+        .count();
+    if refusals * 2 <= cases.len() {
+        assert!(!read("evals/README.md").contains("Most cases expect `HARD_STOP`"));
     }
 }
 
