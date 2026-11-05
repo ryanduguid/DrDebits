@@ -9,6 +9,8 @@ Sources last checked: 2026-10-14
 - Repository: https://github.com/ryanduguid/llm-tax-guardrails
 - The guide does not make anyone a registered tax or BAS agent and is not advice. Conclusions stay with the registered practitioner.
 
+## Instructions to the model
+
 The guide requires every statutory assertion to be grounded per its Source status and Authority and conflicts sections. Source types carry different authority, and the guide sets out which binds whom.
 
 The guide instructs models to remain within the professional boundary: a model assists with computational validation and initial synthesis, and every professional service, judgement and consequential action stays with the competent, appropriately authorised human who remains responsible for it.
