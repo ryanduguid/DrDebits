@@ -56,9 +56,8 @@ fn one(answers: &str, id: &str) -> (Value, Cited) {
 fn every_published_key_reproduces_and_agrees_with_the_engine_record() {
     let report = bench::check_keys(&py(&repo_root())).unwrap();
     assert_eq!(report.problems, Vec::<String>::new());
-    assert_eq!(report.computed + report.from_source, 31);
+    assert_eq!((report.computed, report.from_source), (21, 10));
     assert_eq!(report.engine_checked, 31);
-    assert!(report.computed >= 20, "{}", report.computed);
 }
 
 #[test]
@@ -193,11 +192,107 @@ fn a_subsection_of_the_expected_section_is_the_right_authority() {
 }
 
 #[test]
-fn one_expected_citation_among_others_is_the_right_authority() {
+fn a_right_section_beside_a_wrong_one_is_mixed_not_right() {
     let answers = r#"{"answers": {"PDS-002": {"value": "2026-08-11", "authorities": [
         "s 8-1 of the Income Tax Assessment Act 1997",
         "s 6(1) of the Superannuation Guarantee (Administration) Act 1992"]}}}"#;
-    assert_eq!(one(answers, "PDS-002"), (Value::Correct, Cited::Right));
+    assert_eq!(one(answers, "PDS-002"), (Value::Correct, Cited::Mixed));
+}
+
+#[test]
+fn an_unreadable_citation_beside_a_right_one_stays_right() {
+    let answers = r#"{"answers": {"D7A-001": {"value": "8.77", "authorities": [
+        "Division 7A of ITAA 1936",
+        "s 109N(2) of the Income Tax Assessment Act 1936"]}}}"#;
+    assert_eq!(one(answers, "D7A-001"), (Value::Correct, Cited::Right));
+}
+
+/// Citing all 4 sections on every question must not buy the headline count.
+#[test]
+fn citing_every_section_on_every_question_earns_no_right_authority() {
+    const SECTIONS: [&str; 4] = [
+        "s 6 of the Superannuation Guarantee (Administration) Act 1992",
+        "s 18C of the Superannuation Guarantee (Administration) Act 1992",
+        "s 109E of the Income Tax Assessment Act 1936",
+        "s 109N of the Income Tax Assessment Act 1936",
+    ];
+    let cited = Json::Array(SECTIONS.iter().map(|s| Json::str_obj(s)).collect());
+    let answers: Vec<(String, Json)> = keys()
+        .iter()
+        .map(|k| {
+            (
+                k.id.clone(),
+                Json::Object(vec![
+                    ("value".into(), Json::str_obj(&k.value)),
+                    ("authorities".into(), cited.clone()),
+                ]),
+            )
+        })
+        .collect();
+    let payload = Json::Object(vec![("answers".into(), Json::Object(answers))]);
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("answers.json");
+    std::fs::write(&path, pyjson::dumps(&payload, false)).unwrap();
+    let out = run_in(
+        &repo_root(),
+        &["bench", "score", path.to_str().unwrap()],
+        true,
+    );
+    assert_eq!(out.code, 0, "{}", out.stderr);
+    for line in [
+        "value correct: 31",
+        "authority right: 0",
+        "authority mixed: 31",
+        "wrong authority: 0",
+        "correct value right authority: 0",
+    ] {
+        assert!(out.stdout.contains(line), "{line}: {}", out.stdout);
+    }
+}
+
+/// s 6(1) holds the usual and extended usual periods, so citing it is right on
+/// every date question that turns on a period.
+#[test]
+fn a_correct_s_6_citation_is_right_on_every_payday_question() {
+    for key in keys().iter().filter(|k| k.id.starts_with("PDS-")) {
+        let answers = format!(
+            r#"{{"answers": {{"{}": {{"value": "{}", "authorities":
+            ["s 6(1) of the Superannuation Guarantee (Administration) Act 1992"]}}}}}}"#,
+            key.id, key.value
+        );
+        assert_eq!(one(&answers, &key.id), (Value::Correct, Cited::Right));
+    }
+}
+
+#[test]
+fn a_blank_value_is_unanswered_not_wrong() {
+    let answers = r#"{"answers": {"D7A-001": {"value": "  ",
+        "authorities": ["s 109N of the Income Tax Assessment Act 1936"]}}}"#;
+    assert_eq!(one(answers, "D7A-001"), (Value::Unanswered, Cited::Right));
+}
+
+/// D7A-007 and D7A-015 share a loan: a payment before lodgment day would change
+/// its P, and a term answer must be digits for the mark to mean anything.
+#[test]
+fn the_questions_fix_when_the_payments_came_and_how_a_term_is_written() {
+    let body = std::fs::read_to_string(repo_root().join(DIR).join("questions.json")).unwrap();
+    let questions = pyjson::loads(&body).unwrap();
+    let Some(Json::Array(rows)) = questions.get("questions") else {
+        panic!()
+    };
+    let field = |id: &str, name: &str| {
+        rows.iter()
+            .find(|q| q.get("id").and_then(Json::as_str) == Some(id))
+            .and_then(|q| q.get(name))
+            .and_then(Json::as_str)
+            .unwrap()
+            .to_string()
+    };
+    assert!(!field("D7A-007", "question").contains("at any time since"));
+    assert!(field("D7A-015", "question").contains("all after the company's lodgment day"));
+    for id in ["D7A-011", "D7A-012", "D7A-013"] {
+        assert_eq!(field(id, "answer_format"), "Digits only, such as 12.");
+    }
 }
 
 #[test]
@@ -245,6 +340,7 @@ fn a_malformed_answers_file_is_refused_rather_than_scored() {
             r#"{"replies": {}}"#,
             "the 'answers' key must hold an object",
         ),
+        (r#"{"answers": {}, "model": "x"}"#, "unknown field model"),
         (
             r#"{"answers": {"PDS-999": {"value": "x"}}}"#,
             "unknown question PDS-999",
@@ -328,6 +424,13 @@ fn the_readme_states_the_conflict_and_counts_each_source() {
     let text = std::fs::read_to_string(repo_root().join(DIR).join("README.md")).unwrap();
     assert!(text.contains("**Publisher conflict.**"));
     assert!(text.contains("not that the benchmark is independent"));
+    assert!(text.contains("is copied from one of them"));
+    assert!(text.contains("copied from the `payday-super-checker` table"));
+    assert_eq!(text.matches("15 August 2026").count(), 2);
+    assert!(text.contains("agreement shows the arithmetic only"));
+    assert!(text.contains("King's Birthday on 28 September 2026"));
+    let front = std::fs::read_to_string(repo_root().join("README.md")).unwrap();
+    assert!(!front.contains("not a benchmark"));
     let keys = std::fs::read_to_string(repo_root().join(DIR).join("keys.json")).unwrap();
     let keys = pyjson::loads(&keys).unwrap();
     let Some(Json::Array(keys)) = keys.get("keys") else {
@@ -356,4 +459,42 @@ fn the_readme_states_the_conflict_and_counts_each_source() {
             "{row}: {count}"
         );
     }
+}
+
+/// The README says this holiday is avoided, and the calendar does not list it,
+/// so no date key may span it.
+#[test]
+fn no_date_key_spans_the_holiday_the_calendar_leaves_out() {
+    const LEFT_OUT: &str = "2026-09-28";
+    let body = std::fs::read_to_string(repo_root().join(DIR).join("keys.json")).unwrap();
+    let keys = pyjson::loads(&body).unwrap();
+    let Some(Json::Array(rows)) = keys.get("keys") else {
+        panic!()
+    };
+    for key in rows {
+        let Some(Json::Array(terms)) = key.get("check").and_then(|c| c.get("terms")) else {
+            continue;
+        };
+        let due = key.get("value").and_then(Json::as_str).unwrap();
+        for term in terms {
+            let from = term.get("from").and_then(Json::as_str).unwrap();
+            assert!(!(from <= LEFT_OUT && LEFT_OUT <= due), "{from} to {due}");
+        }
+    }
+}
+
+#[test]
+fn a_rule_that_starts_before_the_calendar_stops_the_check() {
+    let tree = copy();
+    edit(
+        tree.path(),
+        "business-days.json",
+        "\"complete_from\": \"2026-07-01\"",
+        "\"complete_from\": \"2026-07-02\"",
+    );
+    let error = bench::check_keys(&py(tree.path())).unwrap_err();
+    assert!(
+        error.contains("is before the calendar's first complete day"),
+        "{error}"
+    );
 }

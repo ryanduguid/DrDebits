@@ -8,6 +8,7 @@
       "kind": "text",
       "value": "2026-08-07",
       "authorities": [
+        "s 6 of the Superannuation Guarantee (Administration) Act 1992",
         "s 18C of the Superannuation Guarantee (Administration) Act 1992"
       ],
       "source": {
@@ -61,6 +62,7 @@
       "kind": "text",
       "value": "2026-09-04",
       "authorities": [
+        "s 6 of the Superannuation Guarantee (Administration) Act 1992",
         "s 18C of the Superannuation Guarantee (Administration) Act 1992"
       ],
       "source": {
@@ -114,6 +116,7 @@
       "kind": "text",
       "value": "2026-12-21",
       "authorities": [
+        "s 6 of the Superannuation Guarantee (Administration) Act 1992",
         "s 18C of the Superannuation Guarantee (Administration) Act 1992"
       ],
       "source": {
@@ -140,6 +143,7 @@
       "kind": "text",
       "value": "2026-09-14",
       "authorities": [
+        "s 6 of the Superannuation Guarantee (Administration) Act 1992",
         "s 18C of the Superannuation Guarantee (Administration) Act 1992"
       ],
       "source": {
@@ -166,6 +170,7 @@
       "kind": "text",
       "value": "2026-08-07",
       "authorities": [
+        "s 6 of the Superannuation Guarantee (Administration) Act 1992",
         "s 18C of the Superannuation Guarantee (Administration) Act 1992"
       ],
       "source": {
@@ -326,6 +331,7 @@
       "kind": "text",
       "value": "2027-03-17",
       "authorities": [
+        "s 6 of the Superannuation Guarantee (Administration) Act 1992",
         "s 18C of the Superannuation Guarantee (Administration) Act 1992"
       ],
       "source": {
@@ -351,6 +357,7 @@
       "kind": "text",
       "value": "LATE",
       "authorities": [
+        "s 6 of the Superannuation Guarantee (Administration) Act 1992",
         "s 18C of the Superannuation Guarantee (Administration) Act 1992"
       ],
       "source": {
@@ -556,7 +563,7 @@
         "read_on": "2026-11-06",
         "where": "Table of repayments in 2026-27, second row"
       },
-      "derivation": "The calculator and the ATO page take the amount not repaid as the original loan less principal repaid before lodgment day, so P is 80000.",
+      "derivation": "Under s 109E(3) the amalgamated loan is the amount not repaid before the lodgment day, and the calculator and the ATO page take the same amount, so P is 80000.",
       "check": {
         "rule": "myr",
         "principal": "80000",
@@ -701,7 +708,7 @@
         "read_on": "2026-11-06",
         "where": "s 109E(1)(c) and (2)"
       },
-      "derivation": "The minimum yearly repayment of 19715.97 less the 15000.00 paid.",
+      "derivation": "The payments came after the lodgment day, so P stays 100000 under s 109E(3). The minimum yearly repayment of 19715.97 less the 15000.00 paid.",
       "check": {
         "rule": "shortfall",
         "principal": "100000",

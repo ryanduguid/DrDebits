@@ -177,7 +177,7 @@ Pin the approved release tag, retrieve `SHA256SUMS` at that tag and verify each 
 
 ## Alternatives
 
-DrDebits is an operating guide for Australian practice, not a benchmark.
+DrDebits is an operating guide for Australian practice, with a [31-case benchmark](./benchmarks/payday-div7a/README.md) beside it.
 
 Examples of open tax-related benchmarks in other jurisdictions include:
 

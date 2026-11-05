@@ -133,7 +133,7 @@
     {
       "id": "D7A-007",
       "topic": "Division 7A",
-      "question": "A private company made a complying 7-year loan of 100000 in the 2025-26 income year. Nothing was repaid before its lodgment day or at any time since. What is the minimum yearly repayment for 2026-27, in dollars and cents?",
+      "question": "A private company made a complying 7-year loan of 100000 in the 2025-26 income year. Nothing was repaid before its lodgment day for 2025-26. What is the minimum yearly repayment for 2026-27, in dollars and cents?",
       "answer_format": "Dollars and cents, such as 1234.56."
     },
     {
@@ -158,19 +158,19 @@
       "id": "D7A-011",
       "topic": "Division 7A",
       "question": "What is the maximum term of an unsecured loan by a private company for the purposes of Division 7A?",
-      "answer_format": "A whole number of years."
+      "answer_format": "Digits only, such as 12."
     },
     {
       "id": "D7A-012",
       "topic": "Division 7A",
       "question": "A private company's loan is 100% secured by a registered mortgage over real property. When the loan is first made, the property's market value, less prior liabilities, is 120% of the loan. What is the maximum term?",
-      "answer_format": "A whole number of years."
+      "answer_format": "Digits only, such as 12."
     },
     {
       "id": "D7A-013",
       "topic": "Division 7A",
       "question": "A private company's loan is 100% secured by a registered mortgage over real property. When the loan is first made, the property's market value, less prior liabilities, is 105% of the loan. What is the maximum term?",
-      "answer_format": "A whole number of years."
+      "answer_format": "Digits only, such as 12."
     },
     {
       "id": "D7A-014",
@@ -181,7 +181,7 @@
     {
       "id": "D7A-015",
       "topic": "Division 7A",
-      "question": "The loan in D7A-007 received payments of 15000.00 in 2026-27. Before any limit by distributable surplus, what is the shortfall against the minimum yearly repayment for 2026-27?",
+      "question": "The loan in D7A-007 received payments of 15000.00 in 2026-27, all after the company's lodgment day for 2025-26. Before any limit by distributable surplus, what is the shortfall against the minimum yearly repayment for 2026-27?",
       "answer_format": "Dollars and cents, such as 1234.56."
     },
     {
