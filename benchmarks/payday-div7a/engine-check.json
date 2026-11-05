@@ -23,6 +23,12 @@
     }
    },
    "value": "2026-08-07",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2026-08-07",
     "pathway": "EXTENDED_20BD",
@@ -57,6 +63,12 @@
     }
    },
    "value": "2026-08-11",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2026-08-11",
     "pathway": "USUAL_7BD",
@@ -89,6 +101,12 @@
     }
    },
    "value": "2026-09-04",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2026-09-04",
     "pathway": "EXTENDED_20BD",
@@ -123,6 +141,12 @@
     }
    },
    "value": "2026-09-15",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2026-09-15",
     "pathway": "USUAL_7BD",
@@ -155,6 +179,12 @@
     }
    },
    "value": "2026-12-21",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2026-12-21",
     "pathway": "OUT_OF_CYCLE",
@@ -189,6 +219,12 @@
     }
    },
    "value": "2026-09-14",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2026-09-14",
     "pathway": "OUT_OF_CYCLE",
@@ -242,6 +278,14 @@
     "transition_allocation_confirmed": true
    },
    "value": "2026-08-07",
+   "read": {
+    "path": [
+     1,
+     "deadline",
+     "due"
+    ],
+    "form": "text"
+   },
    "output": [
     {
      "line": {
@@ -374,6 +418,12 @@
     }
    },
    "value": "2026-08-18",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2026-08-18",
     "pathway": "USUAL_7BD",
@@ -406,6 +456,12 @@
     }
    },
    "value": "2026-10-29",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2026-10-29",
     "pathway": "USUAL_7BD",
@@ -438,6 +494,12 @@
     }
    },
    "value": "2027-06-11",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2027-06-11",
     "pathway": "USUAL_7BD",
@@ -470,6 +532,12 @@
     }
    },
    "value": "2027-01-12",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2027-01-12",
     "pathway": "USUAL_7BD",
@@ -502,6 +570,12 @@
     }
    },
    "value": "2027-05-04",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2027-05-04",
     "pathway": "USUAL_7BD",
@@ -534,6 +608,12 @@
     }
    },
    "value": "2027-03-17",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2027-03-17",
     "pathway": "EXTENDED_20BD",
@@ -572,6 +652,13 @@
     "transition_allocation_confirmed": true
    },
    "value": "LATE",
+   "read": {
+    "path": [
+     0,
+     "verdict"
+    ],
+    "form": "text"
+   },
    "output": [
     {
      "line": {
@@ -665,6 +752,12 @@
     }
    },
    "value": "2026-07-10",
+   "read": {
+    "path": [
+     "due"
+    ],
+    "form": "text"
+   },
    "output": {
     "due": "2026-07-10",
     "pathway": "USUAL_7BD",
@@ -683,6 +776,12 @@
     "year_of_income": "2026-27"
    },
    "value": "8.7700",
+   "read": {
+    "path": [
+     "benchmark_rate"
+    ],
+    "form": "percent"
+   },
    "output": {
     "verdict": "KNOWN",
     "year_of_income": "2026-27",
@@ -727,6 +826,12 @@
     "year_of_income": "2025-26"
    },
    "value": "8.3700",
+   "read": {
+    "path": [
+     "benchmark_rate"
+    ],
+    "form": "percent"
+   },
    "output": {
     "verdict": "KNOWN",
     "year_of_income": "2025-26",
@@ -771,6 +876,12 @@
     "year_of_income": "2023-24"
    },
    "value": "8.2700",
+   "read": {
+    "path": [
+     "benchmark_rate"
+    ],
+    "form": "percent"
+   },
    "output": {
     "verdict": "KNOWN",
     "year_of_income": "2023-24",
@@ -815,6 +926,12 @@
     "year_of_income": "2022-23"
    },
    "value": "4.7700",
+   "read": {
+    "path": [
+     "benchmark_rate"
+    ],
+    "form": "percent"
+   },
    "output": {
     "verdict": "KNOWN",
     "year_of_income": "2022-23",
@@ -861,6 +978,10 @@
     "remaining_term": "7"
    },
    "value": "9835",
+   "read": {
+    "path": [],
+    "form": "whole-dollars"
+   },
    "output": "9834.92"
   },
   {
@@ -873,6 +994,10 @@
     "remaining_term": "6"
    },
    "value": "10079",
+   "read": {
+    "path": [],
+    "form": "whole-dollars"
+   },
    "output": "10079.03"
   },
   {
@@ -885,6 +1010,10 @@
     "remaining_term": "7"
    },
    "value": "19715.97",
+   "read": {
+    "path": [],
+    "form": "text"
+   },
    "output": "19715.97"
   },
   {
@@ -897,6 +1026,10 @@
     "remaining_term": "7"
    },
    "value": "15772.78",
+   "read": {
+    "path": [],
+    "form": "text"
+   },
    "output": "15772.78"
   },
   {
@@ -909,6 +1042,10 @@
     "remaining_term": "6"
    },
    "value": "22139.33",
+   "read": {
+    "path": [],
+    "form": "text"
+   },
    "output": "22139.33"
   },
   {
@@ -921,6 +1058,10 @@
     "remaining_term": "25"
    },
    "value": "49957.64",
+   "read": {
+    "path": [],
+    "form": "text"
+   },
    "output": "49957.64"
   },
   {
@@ -941,6 +1082,12 @@
     }
    },
    "value": "7",
+   "read": {
+    "path": [
+     "maximum_term_years_allowed"
+    ],
+    "form": "text"
+   },
    "output": {
     "verdict": "NOT_COMPLYING",
     "loan_id": "L-1",
@@ -1033,6 +1180,12 @@
     }
    },
    "value": "25",
+   "read": {
+    "path": [
+     "maximum_term_years_allowed"
+    ],
+    "form": "text"
+   },
    "output": {
     "verdict": "COMPLYING",
     "loan_id": "L-1",
@@ -1122,6 +1275,12 @@
     }
    },
    "value": "7",
+   "read": {
+    "path": [
+     "maximum_term_years_allowed"
+    ],
+    "form": "text"
+   },
    "output": {
     "verdict": "NOT_COMPLYING",
     "loan_id": "L-1",
@@ -1214,6 +1373,12 @@
     }
    },
    "value": "NOT_COMPLYING",
+   "read": {
+    "path": [
+     "verdict"
+    ],
+    "form": "text"
+   },
    "output": {
     "verdict": "NOT_COMPLYING",
     "loan_id": "L-1",
@@ -1310,6 +1475,12 @@
     }
    },
    "value": "4715.97",
+   "read": {
+    "path": [
+     "shortfall"
+    ],
+    "form": "text"
+   },
    "output": {
     "verdict": "MYR_SHORT",
     "loan_id": "L-1",
@@ -1388,6 +1559,12 @@
     }
    },
    "value": "NONE",
+   "read": {
+    "path": [
+     "reason_codes"
+    ],
+    "form": "none-for-year-of-loan"
+   },
    "output": {
     "verdict": "REFUSED",
     "loan_id": "L-1",

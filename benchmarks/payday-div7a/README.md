@@ -9,9 +9,9 @@ Thirty-one questions on Payday Super due dates and Division 7A, with published k
 | File | What it holds |
 | --- | --- |
 | [questions.json](questions.json) | The instructions and questions. Give a model this file and nothing else. |
-| [keys.json](keys.json) | Each key's value, the section it expects, its source, a derivation and a rule to recompute it. |
+| [keys.json](keys.json) | Each key's value, the sections it accepts, its source, a derivation and a rule to recompute it. Its `authority_rule` says how several listed sections work. |
 | [business-days.json](business-days.json) | The weekdays from 1 July 2026 to 31 August 2027 that are public holidays for the whole of a State or Territory, copied from the `payday-super-checker` table at the recorded commit. That table's sources were checked on 15 August 2026, not for this benchmark. |
-| [engine-check.json](engine-check.json) | Each case's request to an engine, the output and the value read from it. |
+| [engine-check.json](engine-check.json) | Each case's request to an engine, the output, where the value sits in that output and the value read from it. |
 
 Each key comes from one of these, named in the key's `source`:
 
@@ -30,9 +30,9 @@ The 3 calculator figures come from the [recorded comparison](https://github.com/
 cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- bench keys --root .
 ```
 
-The command recomputes each key that follows from a rule: a business-day count from the published calendar, or the s 109E(6) formula in exact arithmetic, rounded half up. It reports the keys it could only read from a source, and compares all 31 with the recorded engine output. It exits 0 when all agree, 1 on a mismatch and 2 if it could not run. Each `engine-check.json` entry is the JSON to send to that command of the engine at the recorded commit, so a line can be replayed by hand.
+The command recomputes each key that follows from a rule: a business-day count from the published calendar, or the s 109E(6) formula in exact arithmetic, rounded half up. The other 10 are source-derived keys not independently recomputed: the command does not read their sources. It takes each engine value from the recorded `output` by that entry's `read` field and compares all 31 with the keys. It refuses a duplicate record and reports an entry whose `value` disagrees with its `output`. It exits 0 when all agree, 1 on a mismatch and 2 if it could not run. Each `engine-check.json` entry is the JSON to send to that command of the engine at the recorded commit, so a line can be replayed by hand.
 
-Three recorded values differ in form from the engine's output, whose `output` field keeps what it said. Rates are shown as percentages. D7A-005 and D7A-006 round the engine's cents to the whole dollars the ATO example shows. D7A-016 records `NONE` where the engine refuses a repayment for the year a loan is made.
+Three `read` forms change what the engine said, which `output` keeps. `percent` shows a rate as a percentage. `whole-dollars` rounds the cents half up to the whole dollars the ATO example shows, for D7A-005 and D7A-006. `none-for-year-of-loan` records `NONE` for D7A-016, where the engine gives no repayment and the code `REFUSED_YEAR_IS_YEAR_OF_LOAN`.
 
 ## Score a set of answers
 
@@ -49,7 +49,7 @@ cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- 
 The scorer marks 2 things separately, because a right figure can rest on the wrong section:
 
 - **Value:** correct, wrong or unanswered, and a blank value is unanswered. Dates and tokens compare as text. Amounts compare by value, ignoring `$`, commas and a trailing `%`.
-- **Authority:** right when every readable citation names a section the key expects, at section level, so `s 109N(2)` meets `s 109N`. `authority_mixed` counts answers with a right section beside a readable section outside the key, so citing every section at once earns no `authority_right`. `wrong_authority` counts answers whose readable citations all miss it. `authority_unreadable` counts answers citing only forms the gate cannot read, such as `Division 7A`. `authority_missing` counts answers with no citation.
+- **Authority:** right when every citation is readable and names a section the key lists, at section level, so `s 109N(2)` meets `s 109N`. Each listed section is enough alone: for the Payday Super keys either s 6 or s 18C counts as right, because each states the period relied on. `authority_mixed` counts answers with a right section beside a readable section outside the key, so citing every section at once earns no `authority_right`. `authority_partly_unreadable` counts answers whose readable citations are all right beside one the gate cannot read, because it could be wrong. `wrong_authority` counts answers with no right section among their readable citations. `authority_unreadable` counts answers citing only forms the gate cannot read, such as `Division 7A`. `authority_missing` counts answers with no citation.
 
 `correct_value_wrong_authority` counts the right figure on the wrong section. Add `--json` for each question's marks.
 
