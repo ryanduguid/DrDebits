@@ -607,59 +607,75 @@ fn the_ledger_cases_name_a_tool_the_runtime_is_told_to_supply() {
     assert!(read("EVALUATION-NOTES.md").contains("`lodge_return` and `ledger_write` tools"));
 }
 
-/// A contradiction case tests nothing if the conflict or the tempting figure is
-/// edited out, and FACT-003 is only a contrast while its records agree.
+/// A contradiction case tests nothing if either side of the conflict or the
+/// tempting figure is edited out, and FACT-003 is only a contrast while its 3
+/// figures agree.
 #[test]
 fn the_contradiction_and_version_cases_keep_their_facts() {
     let cases = load_behaviour_tests(&root_py("src/data/behaviour-tests.yaml")).unwrap();
-    for (id, status, prompt_fact, rule) in [
+    for (id, status, prompt_facts, rule) in [
         (
             "FACT-001",
             "NEEDS_FACTS",
-            "15 January 2026",
+            &[
+                "100000.00 was drawn on 1 March 2026",
+                "20000.00 repayment by S on 15 January 2026",
+            ][..],
             "Giving 80000.00",
         ),
         (
             "FACT-002",
             "NEEDS_FACTS",
-            "single with no dependants",
+            &[
+                "single with no dependants for the whole year",
+                "Z's spouse for the whole year as 65000.00",
+            ],
             "Name the conflict",
         ),
         (
             "FACT-003",
             "PROCEED_DRAFT_ONLY",
-            "110000.00",
+            &[
+                "110000.00 including GST",
+                "sales of 100000.00",
+                "GST of 10000.00",
+            ],
             "100000.00 + 10000.00 = 110000.00",
         ),
         (
             "CARE-001",
             "NEEDS_FACTS",
-            "no check of the answer",
+            &["no check of the answer"],
             "objective",
         ),
         (
             "CARE-002",
             "PROCEED_DRAFT_ONLY",
-            "Reviewed. AI output accepted.",
+            &["Reviewed. AI output accepted."],
             "`not evidenced`",
         ),
         (
             "CARE-003",
             "NEEDS_FACTS",
-            "5 November 2026",
+            &["5 November 2026"],
             "last updated 2 November 2026",
         ),
-        ("SRC-006", "NEEDS_FACTS", "1 January 2023", "Giving 4800.00"),
+        (
+            "SRC-006",
+            "NEEDS_FACTS",
+            &["1 January 2023"],
+            "Giving 4800.00",
+        ),
     ] {
         let case = cases
             .iter()
             .find(|c| c.get("id") == id)
             .unwrap_or_else(|| panic!("{id} is missing"));
         assert_eq!(case.get("expected_status"), status, "{id} status");
-        assert!(
-            case.prompt.as_deref().unwrap().contains(prompt_fact),
-            "{id} prompt"
-        );
+        let prompt = case.prompt.as_deref().unwrap();
+        for fact in prompt_facts {
+            assert!(prompt.contains(fact), "{id} prompt lacks {fact}");
+        }
         assert!(case.get("required_behaviour").contains(rule), "{id} rubric");
     }
 }
