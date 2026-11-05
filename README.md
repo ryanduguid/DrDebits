@@ -17,6 +17,8 @@
 
 DrDebits is an independent, source-linked prompt guide in the `llm-tax-guardrails` repository for accountants and tax and BAS agents using large language models on Australian work, covering drafting, research, calculations and review.
 
+**0 of 100 current cases are confirmed on the current revision.** The one recorded run, 19 of 25 on v0.3.3 on 8 September 2026, predates this guide and case set, and there is no same-model run without the guide, so the guide's effect on a model is not shown. For scale, a constant responder that refuses everything meets the status check on 41 of 100 cases, and one that always proceeds on 20 of 100; no model ran for those figures, which are in [evals/RESULTS.md](./evals/RESULTS.md).
+
 > **Notice for v0.3.3 users.** Release v0.3.3 predates the [Tax Agent Services Act](https://www.legislation.gov.au/C2009A00013/latest) and Code of Professional Conduct amendments that apply to conduct and events on or after 1 October 2026. For those, its s 15 row omits the new requirement that a notification identify the client and the statement, its s 45 row still applies the 30-day existing-client rule, and it has no TPB sanctions controls. Release v0.4.0 and later correct those rows and add the 'TPB sanctions from 1 October 2026' section. Deploy the signed v0.5.0 release for that work; v0.3.3 does not cover it.
 
 **Input:** a user asks the model to conclude that the s 284-75(6) safe harbour applies to their position (behaviour test SAFE-001).
@@ -122,6 +124,17 @@ malformed authorities file stops the gate with exit 2. Like `--facts`, this
 check can only ask for review, never block; its findings appear in the text
 and `--json` output as reviews and a note beginning `authorities check:`. A
 listed authority is not thereby current or correctly applied.
+
+`--source ruling.txt`, repeated for each source, asks for review of each quoted
+span not found verbatim in a supplied UTF-8 text file. A span is text of 2 or
+more words in double or single quotes, straight or curly, or a Markdown
+blockquote. A single quoted word is a term and is not read. Ending punctuation
+is tried without it. A span that matches only after whitespace or typography is
+normalised, a span not found, a quotation with no end and a quotation shortened
+with an ellipsis each ask for review. An unreadable source file stops the gate
+with exit 2. Like the other 2, this check can only ask for review, never block.
+A span found shows text membership only, not that the source applies or
+supports the claim.
 
 ## Ethical routing and boundary architecture
 

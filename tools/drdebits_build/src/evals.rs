@@ -22,10 +22,13 @@ use regex::Regex;
 
 use crate::builder::{self, Sources, render_table};
 use crate::error::Fail;
+use crate::harness;
 use crate::model::{BEHAVIOUR_INPUT_FIELDS, list_repr};
 use crate::py::{self, Date, OsStyle, PyPath};
 use crate::pyjson::{self, Json};
-use crate::templates::{BENCHMARK_CANARY, OBSERVATIONS_SECTION_HEADER, RESULTS_HEADER_TEMPLATE};
+use crate::templates::{
+    BASELINES_HEADER, BENCHMARK_CANARY, OBSERVATIONS_SECTION_HEADER, RESULTS_HEADER_TEMPLATE,
+};
 
 pub const CASES_FILE: &str = "evals/cases.json";
 pub const RESULTS_FILE: &str = "evals/RESULTS.md";
@@ -539,6 +542,17 @@ pub fn build_results_md(root: &PyPath, s: &Sources) -> Result<String, Fail> {
              The recorded total includes that pass; excluding it leaves 18/25. See [the evaluation \
              notes](../EVALUATION-NOTES.md). The original human-recorded result remains unchanged.\n",
         );
+    }
+    out.push('\n');
+    out.push_str(BASELINES_HEADER);
+    for row in harness::baselines(s) {
+        out.push_str(&format!(
+            "| {} | `{}` | {}/{} |\n",
+            row.responder,
+            row.status,
+            row.met,
+            ids.len()
+        ));
     }
     let observations = load_observations(root, s)?;
     if !observations.is_empty() {

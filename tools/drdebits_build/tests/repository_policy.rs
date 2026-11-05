@@ -521,6 +521,34 @@ fn the_readme_and_rerun_instruction_count_the_behaviour_cases_correctly() {
     assert!(notes.contains(&format!("submit all {total} scenarios now in the suite")));
 }
 
+/// The first screen has to say what the evidence is, and it must not drift from
+/// the generated coverage line or the baselines.
+#[test]
+fn the_readme_leads_with_current_coverage_and_the_free_baselines() {
+    let results = read("evals/RESULTS.md");
+    let (_, after) = results
+        .split_once("Current-revision confirmed coverage: ")
+        .unwrap();
+    let (confirmed, after) = after.split_once('/').unwrap();
+    let total = after.split_once(' ').unwrap().0;
+    let root = drdebits::py::PyPath::new(repo_root().to_str().unwrap());
+    let sources = drdebits::builder::load_sources(&root).unwrap();
+    let rows = drdebits::harness::baselines(&sources);
+    let readme = read("README.md");
+    let (lead, _) = readme.split_once("**Input:**").unwrap();
+    assert!(
+        lead.contains(&format!(
+            "**{confirmed} of {total} current cases are confirmed on the current revision.**"
+        )),
+        "{lead}"
+    );
+    assert!(lead.contains(&format!(
+        "refuses everything meets the status check on {} of {total} cases, and one that always proceeds on {} of {total}",
+        rows[0].met, rows[1].met
+    )));
+    assert!(lead.contains("no same-model run without the guide"));
+}
+
 /// The output-side TFN cases need a value to leak, so it must not be a real
 /// one: it has to fail the check digit, and the first 3 cases must carry it.
 #[test]
