@@ -1,0 +1,1446 @@
+{
+ "commit": "2384216acea5b77484f2ac1aaee4c97a08cd2593",
+ "checks": [
+  {
+   "id": "PDS-001",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2026-07-09",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": true,
+     "out_of_cycle": false,
+     "next_standard_qe_day": null,
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2026-08-07",
+   "output": {
+    "due": "2026-08-07",
+    "pathway": "EXTENDED_20BD",
+    "notes": [
+     "first eligible contribution to this fund: extended usual period, 20 business days (s 18C(2) item 1)"
+    ],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-002",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2026-07-30",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": false,
+     "out_of_cycle": false,
+     "next_standard_qe_day": null,
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2026-08-11",
+   "output": {
+    "due": "2026-08-11",
+    "pathway": "USUAL_7BD",
+    "notes": [],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-003",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2026-08-07",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": true,
+     "out_of_cycle": false,
+     "next_standard_qe_day": null,
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2026-09-04",
+   "output": {
+    "due": "2026-09-04",
+    "pathway": "EXTENDED_20BD",
+    "notes": [
+     "first eligible contribution to this fund: extended usual period, 20 business days (s 18C(2) item 1)"
+    ],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-004",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2026-09-04",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": false,
+     "out_of_cycle": false,
+     "next_standard_qe_day": null,
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2026-09-15",
+   "output": {
+    "due": "2026-09-15",
+    "pathway": "USUAL_7BD",
+    "notes": [],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-005",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2026-12-07",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": false,
+     "out_of_cycle": true,
+     "next_standard_qe_day": "2026-12-10",
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2026-12-21",
+   "output": {
+    "due": "2026-12-21",
+    "pathway": "OUT_OF_CYCLE",
+    "notes": [
+     "out-of-cycle earnings: deadline is the usual period of the next schedule-consistent day on which the employer actually made a subsequent non-out-of-cycle QE payment, 2026-12-10 (s 18C(2) item 2; F2026L00784 s 5)"
+    ],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-006",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2026-08-29",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": false,
+     "out_of_cycle": true,
+     "next_standard_qe_day": "2026-09-03",
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2026-09-14",
+   "output": {
+    "due": "2026-09-14",
+    "pathway": "OUT_OF_CYCLE",
+    "notes": [
+     "out-of-cycle earnings: deadline is the usual period of the next schedule-consistent day on which the employer actually made a subsequent non-out-of-cycle QE payment, 2026-09-03 (s 18C(2) item 2; F2026L00784 s 5)"
+    ],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-007",
+   "engine": "payday-super-check",
+   "command": "assess",
+   "request": {
+    "lines": [
+     {
+      "employee_id": "E1",
+      "qe_day": "2026-07-09",
+      "sg_amount": "120.00",
+      "remitted": "2026-07-15",
+      "remitted_amount": "120.00",
+      "received": "2026-07-15",
+      "first_to_fund": true,
+      "out_of_cycle": false,
+      "next_standard_qe_day": null,
+      "db_interest": false,
+      "row": 2,
+      "matched_amount": "120.00",
+      "join_caveats": []
+     },
+     {
+      "employee_id": "E1",
+      "qe_day": "2026-07-23",
+      "sg_amount": "120.00",
+      "remitted": "2026-08-06",
+      "remitted_amount": "120.00",
+      "received": "2026-08-06",
+      "first_to_fund": false,
+      "out_of_cycle": false,
+      "next_standard_qe_day": null,
+      "db_interest": false,
+      "row": 3,
+      "matched_amount": "120.00",
+      "join_caveats": []
+     }
+    ],
+    "as_at": "2026-08-20",
+    "transition_allocation_confirmed": true
+   },
+   "value": "2026-08-07",
+   "output": [
+    {
+     "line": {
+      "employee_id": "E1",
+      "qe_day": "2026-07-09",
+      "sg_amount": "120.00",
+      "remitted": "2026-07-15",
+      "remitted_amount": "120.00",
+      "received": "2026-07-15",
+      "first_to_fund": true,
+      "out_of_cycle": false,
+      "next_standard_qe_day": null,
+      "db_interest": false,
+      "row": 2,
+      "duplicate_note": "",
+      "matched_amount": "120.00",
+      "join_caveats": []
+     },
+     "deadline": {
+      "due": "2026-08-07",
+      "pathway": "EXTENDED_20BD",
+      "notes": [
+       "first eligible contribution to this fund: extended usual period, 20 business days (s 18C(2) item 1)"
+      ],
+      "caveats": [],
+      "own_due": null,
+      "item2_due": null,
+      "possible_item4_due": null
+     },
+     "verdict": "ON_TIME",
+     "days_late": null,
+     "lateness_basis": "",
+     "base_shortfall": null,
+     "final_shortfall": null,
+     "offset_s18d": false,
+     "nec": null,
+     "sgc_low": null,
+     "sgc_high": null,
+     "uplift": null,
+     "notes": [
+      "first eligible contribution to this fund: extended usual period, 20 business days (s 18C(2) item 1)",
+      "operator confirmed the LCR 2026/1 transition allocation: any pre-1 July amount is unused excess and any 1-28 July amount remains after the employee's June-quarter shortfall"
+     ],
+     "caveats": [],
+     "horizon_verdicts": null,
+     "receipt_established": true,
+     "figures": {
+      "shortfall": null,
+      "nec": null,
+      "up_low": null,
+      "up_high": null,
+      "low": null,
+      "high": null
+     }
+    },
+    {
+     "line": {
+      "employee_id": "E1",
+      "qe_day": "2026-07-23",
+      "sg_amount": "120.00",
+      "remitted": "2026-08-06",
+      "remitted_amount": "120.00",
+      "received": "2026-08-06",
+      "first_to_fund": false,
+      "out_of_cycle": false,
+      "next_standard_qe_day": null,
+      "db_interest": false,
+      "row": 3,
+      "duplicate_note": "",
+      "matched_amount": "120.00",
+      "join_caveats": []
+     },
+     "deadline": {
+      "due": "2026-08-07",
+      "pathway": "ITEM4_ALIGNED",
+      "notes": [
+       "deadline aligned to an evidenced earlier eligible contribution's latest due day 2026-08-07 (s 18C(2) item 4)"
+      ],
+      "caveats": [],
+      "own_due": "2026-08-04",
+      "item2_due": null,
+      "possible_item4_due": null
+     },
+     "verdict": "ON_TIME",
+     "days_late": null,
+     "lateness_basis": "",
+     "base_shortfall": null,
+     "final_shortfall": null,
+     "offset_s18d": false,
+     "nec": null,
+     "sgc_low": null,
+     "sgc_high": null,
+     "uplift": null,
+     "notes": [
+      "deadline aligned to an evidenced earlier eligible contribution's latest due day 2026-08-07 (s 18C(2) item 4)"
+     ],
+     "caveats": [],
+     "horizon_verdicts": null,
+     "receipt_established": true,
+     "figures": {
+      "shortfall": null,
+      "nec": null,
+      "up_low": null,
+      "up_high": null,
+      "low": null,
+      "high": null
+     }
+    }
+   ]
+  },
+  {
+   "id": "PDS-008",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2026-08-07",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": false,
+     "out_of_cycle": false,
+     "next_standard_qe_day": null,
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2026-08-18",
+   "output": {
+    "due": "2026-08-18",
+    "pathway": "USUAL_7BD",
+    "notes": [],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-009",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2026-10-20",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": false,
+     "out_of_cycle": false,
+     "next_standard_qe_day": null,
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2026-10-29",
+   "output": {
+    "due": "2026-10-29",
+    "pathway": "USUAL_7BD",
+    "notes": [],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-010",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2027-06-01",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": false,
+     "out_of_cycle": false,
+     "next_standard_qe_day": null,
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2027-06-11",
+   "output": {
+    "due": "2027-06-11",
+    "pathway": "USUAL_7BD",
+    "notes": [],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-011",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2026-12-31",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": false,
+     "out_of_cycle": false,
+     "next_standard_qe_day": null,
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2027-01-12",
+   "output": {
+    "due": "2027-01-12",
+    "pathway": "USUAL_7BD",
+    "notes": [],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-012",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2027-04-21",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": false,
+     "out_of_cycle": false,
+     "next_standard_qe_day": null,
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2027-05-04",
+   "output": {
+    "due": "2027-05-04",
+    "pathway": "USUAL_7BD",
+    "notes": [],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-013",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2027-02-15",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": true,
+     "out_of_cycle": false,
+     "next_standard_qe_day": null,
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2027-03-17",
+   "output": {
+    "due": "2027-03-17",
+    "pathway": "EXTENDED_20BD",
+    "notes": [
+     "first eligible contribution to this fund: extended usual period, 20 business days (s 18C(2) item 1)"
+    ],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "PDS-014",
+   "engine": "payday-super-check",
+   "command": "assess",
+   "request": {
+    "lines": [
+     {
+      "employee_id": "E1",
+      "qe_day": "2026-08-06",
+      "sg_amount": "120.00",
+      "remitted": "2026-08-14",
+      "remitted_amount": "120.00",
+      "received": "2026-08-18",
+      "first_to_fund": false,
+      "out_of_cycle": false,
+      "next_standard_qe_day": null,
+      "db_interest": false,
+      "row": 2,
+      "matched_amount": "120.00",
+      "join_caveats": []
+     }
+    ],
+    "as_at": "2026-08-20",
+    "transition_allocation_confirmed": true
+   },
+   "value": "LATE",
+   "output": [
+    {
+     "line": {
+      "employee_id": "E1",
+      "qe_day": "2026-08-06",
+      "sg_amount": "120.00",
+      "remitted": "2026-08-14",
+      "remitted_amount": "120.00",
+      "received": "2026-08-18",
+      "first_to_fund": false,
+      "out_of_cycle": false,
+      "next_standard_qe_day": null,
+      "db_interest": false,
+      "row": 2,
+      "duplicate_note": "",
+      "matched_amount": "120.00",
+      "join_caveats": []
+     },
+     "deadline": {
+      "due": "2026-08-17",
+      "pathway": "USUAL_7BD",
+      "notes": [],
+      "caveats": [],
+      "own_due": null,
+      "item2_due": null,
+      "possible_item4_due": null
+     },
+     "verdict": "LATE",
+     "days_late": 1,
+     "lateness_basis": "fund receipt",
+     "base_shortfall": "120.00",
+     "final_shortfall": "0.00",
+     "offset_s18d": true,
+     "nec": "0.03757808219178082191780821918",
+     "sgc_low": "0.03757808219178082191780821918",
+     "sgc_high": "0.06012493150684931506849315069",
+     "uplift": {
+      "clean_history": {
+       "vds_within_30d": "0E-29",
+       "vds_31_60d": "0.001878904109589041095890410959",
+       "vds_61_120d": "0.003757808219178082191780821918",
+       "vds_after_120d": "0.009394520547945205479452054795",
+       "no_vds": "0.01503123287671232876712328767"
+      },
+      "prior_history": {
+       "vds_within_30d": "0.007515616438356164383561643836",
+       "vds_31_60d": "0.009394520547945205479452054795",
+       "vds_61_120d": "0.01127342465753424657534246575",
+       "vds_after_120d": "0.01691013698630136986301369863",
+       "no_vds": "0.02254684931506849315068493151"
+      }
+     },
+     "notes": [
+      "contribution received 2026-08-18 and no SG charge assessment had issued for this payday by then: the final shortfall is nil under s 18D, leaving notional earnings and uplift"
+     ],
+     "caveats": [
+      "this assumes the contribution is not the first to this fund. If it is a new starter or a fund switch, set first_contribution_to_fund=yes and the line becomes on time (due 2026-09-03)"
+     ],
+     "horizon_verdicts": null,
+     "receipt_established": true,
+     "figures": {
+      "shortfall": "0.00",
+      "nec": "0.04",
+      "up_low": "0.00",
+      "up_high": "0.02",
+      "low": "0.04",
+      "high": "0.06"
+     }
+    }
+   ]
+  },
+  {
+   "id": "PDS-015",
+   "engine": "payday-super-check",
+   "command": "compute-due",
+   "request": {
+    "line": {
+     "employee_id": "E1",
+     "qe_day": "2026-07-01",
+     "sg_amount": "120.00",
+     "remitted": null,
+     "remitted_amount": null,
+     "received": null,
+     "first_to_fund": false,
+     "out_of_cycle": false,
+     "next_standard_qe_day": null,
+     "db_interest": false,
+     "row": 2,
+     "matched_amount": null,
+     "join_caveats": []
+    }
+   },
+   "value": "2026-07-10",
+   "output": {
+    "due": "2026-07-10",
+    "pathway": "USUAL_7BD",
+    "notes": [],
+    "caveats": [],
+    "own_due": null,
+    "item2_due": null,
+    "possible_item4_due": null
+   }
+  },
+  {
+   "id": "D7A-001",
+   "engine": "div7a-loan-review",
+   "command": "benchmark-rate",
+   "request": {
+    "year_of_income": "2026-27"
+   },
+   "value": "8.7700",
+   "output": {
+    "verdict": "KNOWN",
+    "year_of_income": "2026-27",
+    "benchmark_rate": "0.0877",
+    "provenance": {
+     "origin": "frozen table",
+     "rba_table": "F5",
+     "rba_series": "FILRHLBVS",
+     "rba_month": "2026-05",
+     "source": "RBA statistical table F5 Indicator Lending Rates, series FILRHLBVS (Housing loans; Banks; Variable; Standard; Owner-occupier), figure for May 2026; cross-checked against the published Division 7A benchmark rate table. Automated comparison 23 September 2026: xl/worksheets/sheet1.xml!D820, series identifier D11.",
+     "verify_at": "https://duguid.com.au/rates/div7a-benchmark-rate/",
+     "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+     "retrieved_on": "2026-09-20",
+     "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0",
+     "entry_seen": "2026-08-28",
+     "table_reviewed_until": "2026-27",
+     "table_reviewed_on": "2026-08-28"
+    },
+    "reason": null,
+    "statutory_trace": [
+     "ITAA 1936 s 109N(2): benchmark interest rate is the RBA Indicator Lending Rates - Bank variable housing loans rate last published before the start of the year of income (2026-07-01).",
+     "Rate taken from RBA table F5 series FILRHLBVS, 2026-05 figure, as reviewed on 2026-08-28 (frozen table)."
+    ],
+    "manifest": {
+     "rate_table_uris": [
+      {
+       "uri": "data/benchmark_rates.csv",
+       "sha256": "73d5014cd77bca935de528a540c2b90e69869aaab0dad8e6d104681e646d970a",
+       "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+       "retrieved_on": "2026-09-20",
+       "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "D7A-002",
+   "engine": "div7a-loan-review",
+   "command": "benchmark-rate",
+   "request": {
+    "year_of_income": "2025-26"
+   },
+   "value": "8.3700",
+   "output": {
+    "verdict": "KNOWN",
+    "year_of_income": "2025-26",
+    "benchmark_rate": "0.0837",
+    "provenance": {
+     "origin": "frozen table",
+     "rba_table": "F5",
+     "rba_series": "FILRHLBVS",
+     "rba_month": "2025-05",
+     "source": "RBA statistical table F5 Indicator Lending Rates, series FILRHLBVS (Housing loans; Banks; Variable; Standard; Owner-occupier), figure for May 2025 (8.37 per cent). June 2025 was 8.27 per cent and is not the benchmark rate: it was published after the year of income began. Automated comparison 23 September 2026: xl/worksheets/sheet1.xml!D808, series identifier D11.",
+     "verify_at": "https://duguid.com.au/rates/div7a-benchmark-rate/",
+     "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+     "retrieved_on": "2026-09-20",
+     "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0",
+     "entry_seen": "2026-08-28",
+     "table_reviewed_until": "2026-27",
+     "table_reviewed_on": "2026-08-28"
+    },
+    "reason": null,
+    "statutory_trace": [
+     "ITAA 1936 s 109N(2): benchmark interest rate is the RBA Indicator Lending Rates - Bank variable housing loans rate last published before the start of the year of income (2025-07-01).",
+     "Rate taken from RBA table F5 series FILRHLBVS, 2025-05 figure, as reviewed on 2026-08-28 (frozen table)."
+    ],
+    "manifest": {
+     "rate_table_uris": [
+      {
+       "uri": "data/benchmark_rates.csv",
+       "sha256": "73d5014cd77bca935de528a540c2b90e69869aaab0dad8e6d104681e646d970a",
+       "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+       "retrieved_on": "2026-09-20",
+       "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "D7A-003",
+   "engine": "div7a-loan-review",
+   "command": "benchmark-rate",
+   "request": {
+    "year_of_income": "2023-24"
+   },
+   "value": "8.2700",
+   "output": {
+    "verdict": "KNOWN",
+    "year_of_income": "2023-24",
+    "benchmark_rate": "0.0827",
+    "provenance": {
+     "origin": "frozen table",
+     "rba_table": "F5",
+     "rba_series": "FILRHLBVS",
+     "rba_month": "2023-05",
+     "source": "RBA statistical table F5 Indicator Lending Rates, series FILRHLBVS (Housing loans; Banks; Variable; Standard; Owner-occupier), figure for May 2023; cross-checked against the published Division 7A benchmark rate table. Automated comparison 23 September 2026: xl/worksheets/sheet1.xml!D784, series identifier D11.",
+     "verify_at": "https://duguid.com.au/rates/div7a-benchmark-rate/",
+     "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+     "retrieved_on": "2026-09-20",
+     "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0",
+     "entry_seen": "2026-08-28",
+     "table_reviewed_until": "2026-27",
+     "table_reviewed_on": "2026-08-28"
+    },
+    "reason": null,
+    "statutory_trace": [
+     "ITAA 1936 s 109N(2): benchmark interest rate is the RBA Indicator Lending Rates - Bank variable housing loans rate last published before the start of the year of income (2023-07-01).",
+     "Rate taken from RBA table F5 series FILRHLBVS, 2023-05 figure, as reviewed on 2026-08-28 (frozen table)."
+    ],
+    "manifest": {
+     "rate_table_uris": [
+      {
+       "uri": "data/benchmark_rates.csv",
+       "sha256": "73d5014cd77bca935de528a540c2b90e69869aaab0dad8e6d104681e646d970a",
+       "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+       "retrieved_on": "2026-09-20",
+       "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "D7A-004",
+   "engine": "div7a-loan-review",
+   "command": "benchmark-rate",
+   "request": {
+    "year_of_income": "2022-23"
+   },
+   "value": "4.7700",
+   "output": {
+    "verdict": "KNOWN",
+    "year_of_income": "2022-23",
+    "benchmark_rate": "0.0477",
+    "provenance": {
+     "origin": "frozen table",
+     "rba_table": "F5",
+     "rba_series": "FILRHLBVS",
+     "rba_month": "2022-05",
+     "source": "RBA statistical table F5 Indicator Lending Rates, series FILRHLBVS (Housing loans; Banks; Variable; Standard; Owner-occupier), figure for May 2022; cross-checked against the published Division 7A benchmark rate table. Automated comparison 23 September 2026: xl/worksheets/sheet1.xml!D772, series identifier D11.",
+     "verify_at": "https://duguid.com.au/rates/div7a-benchmark-rate/",
+     "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+     "retrieved_on": "2026-09-20",
+     "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0",
+     "entry_seen": "2026-08-28",
+     "table_reviewed_until": "2026-27",
+     "table_reviewed_on": "2026-08-28"
+    },
+    "reason": null,
+    "statutory_trace": [
+     "ITAA 1936 s 109N(2): benchmark interest rate is the RBA Indicator Lending Rates - Bank variable housing loans rate last published before the start of the year of income (2022-07-01).",
+     "Rate taken from RBA table F5 series FILRHLBVS, 2022-05 figure, as reviewed on 2026-08-28 (frozen table)."
+    ],
+    "manifest": {
+     "rate_table_uris": [
+      {
+       "uri": "data/benchmark_rates.csv",
+       "sha256": "73d5014cd77bca935de528a540c2b90e69869aaab0dad8e6d104681e646d970a",
+       "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+       "retrieved_on": "2026-09-20",
+       "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "D7A-005",
+   "engine": "div7a-loan-review",
+   "command": "minimum-yearly-repayment-amount",
+   "request": {
+    "principal": "55000",
+    "rate": "0.0595",
+    "remaining_term": "7"
+   },
+   "value": "9835",
+   "output": "9834.92"
+  },
+  {
+   "id": "D7A-006",
+   "engine": "div7a-loan-review",
+   "command": "minimum-yearly-repayment-amount",
+   "request": {
+    "principal": "50430",
+    "rate": "0.0545",
+    "remaining_term": "6"
+   },
+   "value": "10079",
+   "output": "10079.03"
+  },
+  {
+   "id": "D7A-007",
+   "engine": "div7a-loan-review",
+   "command": "minimum-yearly-repayment-amount",
+   "request": {
+    "principal": "100000",
+    "rate": "0.0877",
+    "remaining_term": "7"
+   },
+   "value": "19715.97",
+   "output": "19715.97"
+  },
+  {
+   "id": "D7A-008",
+   "engine": "div7a-loan-review",
+   "command": "minimum-yearly-repayment-amount",
+   "request": {
+    "principal": "80000",
+    "rate": "0.0877",
+    "remaining_term": "7"
+   },
+   "value": "15772.78",
+   "output": "15772.78"
+  },
+  {
+   "id": "D7A-009",
+   "engine": "div7a-loan-review",
+   "command": "minimum-yearly-repayment-amount",
+   "request": {
+    "principal": "100000",
+    "rate": "0.0877",
+    "remaining_term": "6"
+   },
+   "value": "22139.33",
+   "output": "22139.33"
+  },
+  {
+   "id": "D7A-010",
+   "engine": "div7a-loan-review",
+   "command": "minimum-yearly-repayment-amount",
+   "request": {
+    "principal": "500000",
+    "rate": "0.0877",
+    "remaining_term": "25"
+   },
+   "value": "49957.64",
+   "output": "49957.64"
+  },
+  {
+   "id": "D7A-011",
+   "engine": "div7a-loan-review",
+   "command": "complying-loan-gate",
+   "request": {
+    "facts": {
+     "written_agreement": true,
+     "terms_in_place_before_lodgment_day": true,
+     "maximum_term_years": "8",
+     "secured_by_registered_mortgage_over_real_property": false,
+     "security_coverage_at_first_made": null,
+     "interest_rate_for_years_after_year_loan_made": "0.0877",
+     "year_of_income_being_tested": null,
+     "year_loan_made": "2025-26",
+     "loan_id": "L-1"
+    }
+   },
+   "value": "7",
+   "output": {
+    "verdict": "NOT_COMPLYING",
+    "loan_id": "L-1",
+    "benchmark_year_used": "2025-26",
+    "benchmark_rate": "0.0837",
+    "benchmark_provenance": {
+     "origin": "frozen table",
+     "rba_table": "F5",
+     "rba_series": "FILRHLBVS",
+     "rba_month": "2025-05",
+     "source": "RBA statistical table F5 Indicator Lending Rates, series FILRHLBVS (Housing loans; Banks; Variable; Standard; Owner-occupier), figure for May 2025 (8.37 per cent). June 2025 was 8.27 per cent and is not the benchmark rate: it was published after the year of income began. Automated comparison 23 September 2026: xl/worksheets/sheet1.xml!D808, series identifier D11.",
+     "verify_at": "https://duguid.com.au/rates/div7a-benchmark-rate/",
+     "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+     "retrieved_on": "2026-09-20",
+     "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0",
+     "entry_seen": "2026-08-28",
+     "table_reviewed_until": "2026-27",
+     "table_reviewed_on": "2026-08-28"
+    },
+    "manifest": {
+     "rate_table_uris": [
+      {
+       "uri": "data/benchmark_rates.csv",
+       "sha256": "73d5014cd77bca935de528a540c2b90e69869aaab0dad8e6d104681e646d970a",
+       "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+       "retrieved_on": "2026-09-20",
+       "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0"
+      }
+     ]
+    },
+    "maximum_term_years_allowed": "7",
+    "limbs": [
+     {
+      "cite": "s 109N(1)(a)",
+      "requirement": "the agreement that the loan was made under is in writing",
+      "state": "PASS",
+      "finding": "Operator asserts a written agreement."
+     },
+     {
+      "cite": "s 109N(1) chapeau, with s 109D(6)",
+      "requirement": "the criteria were met before the lodgment day for the year of income",
+      "state": "PASS",
+      "finding": "Operator asserts the terms were in place before the lodgment day."
+     },
+     {
+      "cite": "s 109N(1)(b)",
+      "requirement": "the rate of interest payable for years of income after the year the loan was made equals or exceeds the benchmark interest rate",
+      "state": "PASS",
+      "finding": "Supplied rate 0.0877 is at or above the 2025-26 benchmark 0.0837."
+     },
+     {
+      "cite": "s 109N(1)(c)",
+      "requirement": "the term of the loan does not exceed the maximum term under s 109N(3)",
+      "state": "FAIL",
+      "finding": "Term 8 years exceeds 7 (s 109N(3)(b): 7 years for a loan that is not secured)."
+     }
+    ],
+    "reasons": [
+     "s 109N(1)(c): Term 8 years exceeds 7 (s 109N(3)(b): 7 years for a loan that is not secured)."
+    ],
+    "reason_codes": [
+     "GATE_TERM_FAIL"
+    ],
+    "caveats": [
+     "Interest-floor interpretation unresolved: ATO guidance requires the benchmark interest rate for each year of the loan. This model compares the supplied rate with one selected year's benchmark and defaults to year_loan_made. COMPLYING does not establish that the agreement meets the annual interest requirement. Review the agreement and relevant years before relying on this result. See docs/primary-source-review-2026-08-31.md.",
+     "COMPLYING here means the four model comparisons passed on the facts supplied, subject to the interest-floor limitation. It is not a finding that no dividend arises: Subdivision D holds other exclusions, s 109T to s 109X reach interposed entities, and s 109XA reaches unpaid present entitlements. None of those is modelled."
+    ],
+    "statutory_trace": [
+     "ITAA 1936 s 109N(1): a loan is not taken under s 109D to be a dividend if, before the lodgment day for the year of income, the agreement is in writing, the interest rate meets the benchmark, and the term is within the s 109N(3) maximum.",
+     "Benchmark interest rate read for 2025-26 (s 109N(2)): 0.0837.",
+     "s 109D(6): lodgment day is the earlier of the due date for the company's return and the day it was lodged; asserted by the operator, not computed here."
+    ]
+   }
+  },
+  {
+   "id": "D7A-012",
+   "engine": "div7a-loan-review",
+   "command": "complying-loan-gate",
+   "request": {
+    "facts": {
+     "written_agreement": true,
+     "terms_in_place_before_lodgment_day": true,
+     "maximum_term_years": "25",
+     "secured_by_registered_mortgage_over_real_property": true,
+     "security_coverage_at_first_made": "1.20",
+     "interest_rate_for_years_after_year_loan_made": "0.0877",
+     "year_of_income_being_tested": null,
+     "year_loan_made": "2025-26",
+     "loan_id": "L-1"
+    }
+   },
+   "value": "25",
+   "output": {
+    "verdict": "COMPLYING",
+    "loan_id": "L-1",
+    "benchmark_year_used": "2025-26",
+    "benchmark_rate": "0.0837",
+    "benchmark_provenance": {
+     "origin": "frozen table",
+     "rba_table": "F5",
+     "rba_series": "FILRHLBVS",
+     "rba_month": "2025-05",
+     "source": "RBA statistical table F5 Indicator Lending Rates, series FILRHLBVS (Housing loans; Banks; Variable; Standard; Owner-occupier), figure for May 2025 (8.37 per cent). June 2025 was 8.27 per cent and is not the benchmark rate: it was published after the year of income began. Automated comparison 23 September 2026: xl/worksheets/sheet1.xml!D808, series identifier D11.",
+     "verify_at": "https://duguid.com.au/rates/div7a-benchmark-rate/",
+     "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+     "retrieved_on": "2026-09-20",
+     "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0",
+     "entry_seen": "2026-08-28",
+     "table_reviewed_until": "2026-27",
+     "table_reviewed_on": "2026-08-28"
+    },
+    "manifest": {
+     "rate_table_uris": [
+      {
+       "uri": "data/benchmark_rates.csv",
+       "sha256": "73d5014cd77bca935de528a540c2b90e69869aaab0dad8e6d104681e646d970a",
+       "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+       "retrieved_on": "2026-09-20",
+       "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0"
+      }
+     ]
+    },
+    "maximum_term_years_allowed": "25",
+    "limbs": [
+     {
+      "cite": "s 109N(1)(a)",
+      "requirement": "the agreement that the loan was made under is in writing",
+      "state": "PASS",
+      "finding": "Operator asserts a written agreement."
+     },
+     {
+      "cite": "s 109N(1) chapeau, with s 109D(6)",
+      "requirement": "the criteria were met before the lodgment day for the year of income",
+      "state": "PASS",
+      "finding": "Operator asserts the terms were in place before the lodgment day."
+     },
+     {
+      "cite": "s 109N(1)(b)",
+      "requirement": "the rate of interest payable for years of income after the year the loan was made equals or exceeds the benchmark interest rate",
+      "state": "PASS",
+      "finding": "Supplied rate 0.0877 is at or above the 2025-26 benchmark 0.0837."
+     },
+     {
+      "cite": "s 109N(1)(c)",
+      "requirement": "the term of the loan does not exceed the maximum term under s 109N(3)",
+      "state": "PASS",
+      "finding": "Term 25 years is within 25 (s 109N(3)(a): 25 years; registered mortgage over real property and coverage 1.20 is at least 1.10)."
+     }
+    ],
+    "reasons": [],
+    "reason_codes": [],
+    "caveats": [
+     "Interest-floor interpretation unresolved: ATO guidance requires the benchmark interest rate for each year of the loan. This model compares the supplied rate with one selected year's benchmark and defaults to year_loan_made. COMPLYING does not establish that the agreement meets the annual interest requirement. Review the agreement and relevant years before relying on this result. See docs/primary-source-review-2026-08-31.md.",
+     "s 109N(3A) to (3D) reduce the maximum term where the loan refinances an earlier loan. Refinancing is not modelled; if this loan refinanced another, the 25 years may be shorter.",
+     "COMPLYING here means the four model comparisons passed on the facts supplied, subject to the interest-floor limitation. It is not a finding that no dividend arises: Subdivision D holds other exclusions, s 109T to s 109X reach interposed entities, and s 109XA reaches unpaid present entitlements. None of those is modelled."
+    ],
+    "statutory_trace": [
+     "ITAA 1936 s 109N(1): a loan is not taken under s 109D to be a dividend if, before the lodgment day for the year of income, the agreement is in writing, the interest rate meets the benchmark, and the term is within the s 109N(3) maximum.",
+     "Benchmark interest rate read for 2025-26 (s 109N(2)): 0.0837.",
+     "s 109D(6): lodgment day is the earlier of the due date for the company's return and the day it was lodged; asserted by the operator, not computed here."
+    ]
+   }
+  },
+  {
+   "id": "D7A-013",
+   "engine": "div7a-loan-review",
+   "command": "complying-loan-gate",
+   "request": {
+    "facts": {
+     "written_agreement": true,
+     "terms_in_place_before_lodgment_day": true,
+     "maximum_term_years": "8",
+     "secured_by_registered_mortgage_over_real_property": true,
+     "security_coverage_at_first_made": "1.05",
+     "interest_rate_for_years_after_year_loan_made": "0.0877",
+     "year_of_income_being_tested": null,
+     "year_loan_made": "2025-26",
+     "loan_id": "L-1"
+    }
+   },
+   "value": "7",
+   "output": {
+    "verdict": "NOT_COMPLYING",
+    "loan_id": "L-1",
+    "benchmark_year_used": "2025-26",
+    "benchmark_rate": "0.0837",
+    "benchmark_provenance": {
+     "origin": "frozen table",
+     "rba_table": "F5",
+     "rba_series": "FILRHLBVS",
+     "rba_month": "2025-05",
+     "source": "RBA statistical table F5 Indicator Lending Rates, series FILRHLBVS (Housing loans; Banks; Variable; Standard; Owner-occupier), figure for May 2025 (8.37 per cent). June 2025 was 8.27 per cent and is not the benchmark rate: it was published after the year of income began. Automated comparison 23 September 2026: xl/worksheets/sheet1.xml!D808, series identifier D11.",
+     "verify_at": "https://duguid.com.au/rates/div7a-benchmark-rate/",
+     "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+     "retrieved_on": "2026-09-20",
+     "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0",
+     "entry_seen": "2026-08-28",
+     "table_reviewed_until": "2026-27",
+     "table_reviewed_on": "2026-08-28"
+    },
+    "manifest": {
+     "rate_table_uris": [
+      {
+       "uri": "data/benchmark_rates.csv",
+       "sha256": "73d5014cd77bca935de528a540c2b90e69869aaab0dad8e6d104681e646d970a",
+       "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+       "retrieved_on": "2026-09-20",
+       "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0"
+      }
+     ]
+    },
+    "maximum_term_years_allowed": "7",
+    "limbs": [
+     {
+      "cite": "s 109N(1)(a)",
+      "requirement": "the agreement that the loan was made under is in writing",
+      "state": "PASS",
+      "finding": "Operator asserts a written agreement."
+     },
+     {
+      "cite": "s 109N(1) chapeau, with s 109D(6)",
+      "requirement": "the criteria were met before the lodgment day for the year of income",
+      "state": "PASS",
+      "finding": "Operator asserts the terms were in place before the lodgment day."
+     },
+     {
+      "cite": "s 109N(1)(b)",
+      "requirement": "the rate of interest payable for years of income after the year the loan was made equals or exceeds the benchmark interest rate",
+      "state": "PASS",
+      "finding": "Supplied rate 0.0877 is at or above the 2025-26 benchmark 0.0837."
+     },
+     {
+      "cite": "s 109N(1)(c)",
+      "requirement": "the term of the loan does not exceed the maximum term under s 109N(3)",
+      "state": "FAIL",
+      "finding": "Term 8 years exceeds 7 (s 109N(3)(b): 7 years; coverage 1.05 is below the 1.10 that s 109N(3)(a)(ii) requires, so the 25-year limb is not available)."
+     }
+    ],
+    "reasons": [
+     "s 109N(1)(c): Term 8 years exceeds 7 (s 109N(3)(b): 7 years; coverage 1.05 is below the 1.10 that s 109N(3)(a)(ii) requires, so the 25-year limb is not available)."
+    ],
+    "reason_codes": [
+     "GATE_TERM_FAIL"
+    ],
+    "caveats": [
+     "Interest-floor interpretation unresolved: ATO guidance requires the benchmark interest rate for each year of the loan. This model compares the supplied rate with one selected year's benchmark and defaults to year_loan_made. COMPLYING does not establish that the agreement meets the annual interest requirement. Review the agreement and relevant years before relying on this result. See docs/primary-source-review-2026-08-31.md.",
+     "COMPLYING here means the four model comparisons passed on the facts supplied, subject to the interest-floor limitation. It is not a finding that no dividend arises: Subdivision D holds other exclusions, s 109T to s 109X reach interposed entities, and s 109XA reaches unpaid present entitlements. None of those is modelled."
+    ],
+    "statutory_trace": [
+     "ITAA 1936 s 109N(1): a loan is not taken under s 109D to be a dividend if, before the lodgment day for the year of income, the agreement is in writing, the interest rate meets the benchmark, and the term is within the s 109N(3) maximum.",
+     "Benchmark interest rate read for 2025-26 (s 109N(2)): 0.0837.",
+     "s 109D(6): lodgment day is the earlier of the due date for the company's return and the day it was lodged; asserted by the operator, not computed here."
+    ]
+   }
+  },
+  {
+   "id": "D7A-014",
+   "engine": "div7a-loan-review",
+   "command": "complying-loan-gate",
+   "request": {
+    "facts": {
+     "written_agreement": true,
+     "terms_in_place_before_lodgment_day": true,
+     "maximum_term_years": "7",
+     "secured_by_registered_mortgage_over_real_property": false,
+     "security_coverage_at_first_made": null,
+     "interest_rate_for_years_after_year_loan_made": "0.0800",
+     "year_of_income_being_tested": "2026-27",
+     "year_loan_made": "2025-26",
+     "loan_id": "L-1"
+    }
+   },
+   "value": "NOT_COMPLYING",
+   "output": {
+    "verdict": "NOT_COMPLYING",
+    "loan_id": "L-1",
+    "benchmark_year_used": "2026-27",
+    "benchmark_rate": "0.0877",
+    "benchmark_provenance": {
+     "origin": "frozen table",
+     "rba_table": "F5",
+     "rba_series": "FILRHLBVS",
+     "rba_month": "2026-05",
+     "source": "RBA statistical table F5 Indicator Lending Rates, series FILRHLBVS (Housing loans; Banks; Variable; Standard; Owner-occupier), figure for May 2026; cross-checked against the published Division 7A benchmark rate table. Automated comparison 23 September 2026: xl/worksheets/sheet1.xml!D820, series identifier D11.",
+     "verify_at": "https://duguid.com.au/rates/div7a-benchmark-rate/",
+     "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+     "retrieved_on": "2026-09-20",
+     "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0",
+     "entry_seen": "2026-08-28",
+     "table_reviewed_until": "2026-27",
+     "table_reviewed_on": "2026-08-28"
+    },
+    "manifest": {
+     "rate_table_uris": [
+      {
+       "uri": "data/benchmark_rates.csv",
+       "sha256": "73d5014cd77bca935de528a540c2b90e69869aaab0dad8e6d104681e646d970a",
+       "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+       "retrieved_on": "2026-09-20",
+       "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0"
+      }
+     ]
+    },
+    "maximum_term_years_allowed": "7",
+    "limbs": [
+     {
+      "cite": "s 109N(1)(a)",
+      "requirement": "the agreement that the loan was made under is in writing",
+      "state": "PASS",
+      "finding": "Operator asserts a written agreement."
+     },
+     {
+      "cite": "s 109N(1) chapeau, with s 109D(6)",
+      "requirement": "the criteria were met before the lodgment day for the year of income",
+      "state": "PASS",
+      "finding": "Operator asserts the terms were in place before the lodgment day."
+     },
+     {
+      "cite": "s 109N(1)(b)",
+      "requirement": "the rate of interest payable for years of income after the year the loan was made equals or exceeds the benchmark interest rate",
+      "state": "FAIL",
+      "finding": "Supplied rate 0.0800 is below the 2026-27 benchmark 0.0877."
+     },
+     {
+      "cite": "s 109N(1)(c)",
+      "requirement": "the term of the loan does not exceed the maximum term under s 109N(3)",
+      "state": "PASS",
+      "finding": "Term 7 years is within 7 (s 109N(3)(b): 7 years for a loan that is not secured)."
+     }
+    ],
+    "reasons": [
+     "s 109N(1)(b): Supplied rate 0.0800 is below the 2026-27 benchmark 0.0877."
+    ],
+    "reason_codes": [
+     "GATE_INTEREST_FAIL"
+    ],
+    "caveats": [
+     "Interest-floor interpretation unresolved: ATO guidance requires the benchmark interest rate for each year of the loan. This model compares the supplied rate with one selected year's benchmark and defaults to year_loan_made. COMPLYING does not establish that the agreement meets the annual interest requirement. Review the agreement and relevant years before relying on this result. See docs/primary-source-review-2026-08-31.md.",
+     "This s 109N(1)(b) model uses the operator's nominated benchmark year 2026-27, rather than its default year_loan_made (2025-26). The annual-interest interpretation remains unresolved. See evaluation/div7a_myr/README.md.",
+     "COMPLYING here means the four model comparisons passed on the facts supplied, subject to the interest-floor limitation. It is not a finding that no dividend arises: Subdivision D holds other exclusions, s 109T to s 109X reach interposed entities, and s 109XA reaches unpaid present entitlements. None of those is modelled."
+    ],
+    "statutory_trace": [
+     "ITAA 1936 s 109N(1): a loan is not taken under s 109D to be a dividend if, before the lodgment day for the year of income, the agreement is in writing, the interest rate meets the benchmark, and the term is within the s 109N(3) maximum.",
+     "Benchmark interest rate read for 2026-27 (s 109N(2)): 0.0877.",
+     "s 109D(6): lodgment day is the earlier of the due date for the company's return and the day it was lodged; asserted by the operator, not computed here."
+    ]
+   }
+  },
+  {
+   "id": "D7A-015",
+   "engine": "div7a-loan-review",
+   "command": "minimum-yearly-repayment",
+   "request": {
+    "facts": {
+     "year_of_income": "2026-27",
+     "amalgamated_loan_unpaid_at_end_of_previous_year": "100000.00",
+     "remaining_term_years": "7",
+     "payments_applied_during_the_year": "15000.00",
+     "gate_result": {
+      "verdict": "COMPLYING",
+      "benchmark_year_used": "2025-26",
+      "reasons": [],
+      "caveats": []
+     },
+     "year_loan_made": "2025-26",
+     "loan_id": "L-1"
+    }
+   },
+   "value": "4715.97",
+   "output": {
+    "verdict": "MYR_SHORT",
+    "loan_id": "L-1",
+    "year_of_income": "2026-27",
+    "gate_verdict": "COMPLYING",
+    "benchmark_rate": "0.0877",
+    "benchmark_provenance": {
+     "origin": "frozen table",
+     "rba_table": "F5",
+     "rba_series": "FILRHLBVS",
+     "rba_month": "2026-05",
+     "source": "RBA statistical table F5 Indicator Lending Rates, series FILRHLBVS (Housing loans; Banks; Variable; Standard; Owner-occupier), figure for May 2026; cross-checked against the published Division 7A benchmark rate table. Automated comparison 23 September 2026: xl/worksheets/sheet1.xml!D820, series identifier D11.",
+     "verify_at": "https://duguid.com.au/rates/div7a-benchmark-rate/",
+     "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+     "retrieved_on": "2026-09-20",
+     "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0",
+     "entry_seen": "2026-08-28",
+     "table_reviewed_until": "2026-27",
+     "table_reviewed_on": "2026-08-28"
+    },
+    "manifest": {
+     "rate_table_uris": [
+      {
+       "uri": "data/benchmark_rates.csv",
+       "sha256": "73d5014cd77bca935de528a540c2b90e69869aaab0dad8e6d104681e646d970a",
+       "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+       "retrieved_on": "2026-09-20",
+       "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0"
+      }
+     ]
+    },
+    "amalgamated_loan_unpaid_at_end_of_previous_year": "100000.00",
+    "remaining_term_years_used": "7",
+    "myr_required": "19715.97",
+    "payments_applied": "15000.00",
+    "shortfall": "4715.97",
+    "experimental_deemed_dividend_exposure": "4715.97",
+    "rounding": "ROUND_HALF_UP",
+    "reasons": [],
+    "reason_codes": [],
+    "caveats": [
+     "s 109R: this engine did not decide whether the payments applied are genuine repayments. A payment made where the borrower intended to draw a similar or larger loan is left out of the reckoning by s 109R(2), and that turns on what a reasonable person would conclude. The figure used is the operator's assertion.",
+     "Any shortfall shown is an experimental review aid, not an ATO assessment and not a s 109E(1) determination. s 109E(2) makes the dividend the shortfall subject to s 109Y, which caps Division 7A dividends at the company's distributable surplus, and s 109E(1)(d) removes the dividend where s 109Q applies. Neither is modelled here, and neither is s 109RB."
+    ],
+    "statutory_trace": [
+     "ITAA 1936 s 109E(1): a private company is taken to pay a dividend at the end of the current year where an amalgamated loan made in an earlier year is not repaid and payments fall short of the minimum yearly repayment.",
+     "s 109E(5): the minimum yearly repayment is worked out using the formula in s 109E(6).",
+     "s 109E(6) formula: MYR = (amount of the loan not repaid by the end of the previous year of income x current year's benchmark interest rate) / (1 - (1 / (1 + current year's benchmark interest rate)) ^ remaining term).",
+     "Amount of the loan not repaid by the end of the previous year of income = 100000.00.",
+     "Current year's benchmark interest rate (2026-27, s 109N(2)) = 0.0877, from RBA table F5 series FILRHLBVS, 2026-05 figure.",
+     "Remaining term (s 109E(6), rounded up to a whole number) = 7.",
+     "MYR = (100000.00 x 0.0877) / (1 - (1 / (1 + 0.0877)) ^ 7) = 19715.97 (quantised to cents, ROUND_HALF_UP; the Act prescribes no rounding).",
+     "Payments applied during the year (operator assertion, s 109R not applied) = 15000.00.",
+     "Shortfall (s 109E(1)(c)) = max(0, 19715.97 - 15000.00) = 4715.97."
+    ]
+   }
+  },
+  {
+   "id": "D7A-016",
+   "engine": "div7a-loan-review",
+   "command": "minimum-yearly-repayment",
+   "request": {
+    "facts": {
+     "year_of_income": "2026-27",
+     "amalgamated_loan_unpaid_at_end_of_previous_year": "100000.00",
+     "remaining_term_years": "7",
+     "payments_applied_during_the_year": "15000.00",
+     "gate_result": {
+      "verdict": "COMPLYING",
+      "benchmark_year_used": "2026-27",
+      "reasons": [],
+      "caveats": []
+     },
+     "year_loan_made": "2026-27",
+     "loan_id": "L-1"
+    }
+   },
+   "value": "NONE",
+   "output": {
+    "verdict": "REFUSED",
+    "loan_id": "L-1",
+    "year_of_income": "2026-27",
+    "gate_verdict": "COMPLYING",
+    "benchmark_rate": "0.0877",
+    "benchmark_provenance": {
+     "origin": "frozen table",
+     "rba_table": "F5",
+     "rba_series": "FILRHLBVS",
+     "rba_month": "2026-05",
+     "source": "RBA statistical table F5 Indicator Lending Rates, series FILRHLBVS (Housing loans; Banks; Variable; Standard; Owner-occupier), figure for May 2026; cross-checked against the published Division 7A benchmark rate table. Automated comparison 23 September 2026: xl/worksheets/sheet1.xml!D820, series identifier D11.",
+     "verify_at": "https://duguid.com.au/rates/div7a-benchmark-rate/",
+     "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+     "retrieved_on": "2026-09-20",
+     "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0",
+     "entry_seen": "2026-08-28",
+     "table_reviewed_until": "2026-27",
+     "table_reviewed_on": "2026-08-28"
+    },
+    "manifest": {
+     "rate_table_uris": [
+      {
+       "uri": "data/benchmark_rates.csv",
+       "sha256": "73d5014cd77bca935de528a540c2b90e69869aaab0dad8e6d104681e646d970a",
+       "primary_url": "https://www.rba.gov.au/statistics/tables/xls/f05hist.xlsx",
+       "retrieved_on": "2026-09-20",
+       "snapshot_sha256": "40da2e5b7b74ca5d96a32688a6aea133c7e722c32701f13d25a32fef77e077b0"
+      }
+     ]
+    },
+    "amalgamated_loan_unpaid_at_end_of_previous_year": "100000.00",
+    "remaining_term_years_used": "7",
+    "myr_required": null,
+    "payments_applied": "15000.00",
+    "shortfall": null,
+    "experimental_deemed_dividend_exposure": null,
+    "rounding": "ROUND_HALF_UP",
+    "reasons": [
+     "The year of income requested (2026-27) is the year the loan was made. s 109E(1)(a) applies only where the amalgamated loan was made in an earlier year of income, and s 109P puts an amalgamated loan outside s 109D in the year it is made. There is no minimum yearly repayment for the year of the loan."
+    ],
+    "reason_codes": [
+     "REFUSED_YEAR_IS_YEAR_OF_LOAN"
+    ],
+    "caveats": [
+     "s 109R: this engine did not decide whether the payments applied are genuine repayments. A payment made where the borrower intended to draw a similar or larger loan is left out of the reckoning by s 109R(2), and that turns on what a reasonable person would conclude. The figure used is the operator's assertion.",
+     "Any shortfall shown is an experimental review aid, not an ATO assessment and not a s 109E(1) determination. s 109E(2) makes the dividend the shortfall subject to s 109Y, which caps Division 7A dividends at the company's distributable surplus, and s 109E(1)(d) removes the dividend where s 109Q applies. Neither is modelled here, and neither is s 109RB."
+    ],
+    "statutory_trace": [
+     "ITAA 1936 s 109E(1): a private company is taken to pay a dividend at the end of the current year where an amalgamated loan made in an earlier year is not repaid and payments fall short of the minimum yearly repayment.",
+     "s 109E(5): the minimum yearly repayment is worked out using the formula in s 109E(6)."
+    ]
+   }
+  }
+ ]
+}

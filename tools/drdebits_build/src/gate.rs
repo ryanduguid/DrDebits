@@ -145,39 +145,42 @@ static NUMBERED: LazyLock<regex::Regex> =
 
 /// An exact rational: `n / d` with `d > 0`.
 #[derive(Clone, Debug)]
-struct Q {
+pub(crate) struct Q {
     n: BigInt,
     d: BigInt,
 }
 
 impl Q {
-    fn new(n: BigInt, d: BigInt) -> Q {
+    pub(crate) fn new(n: BigInt, d: BigInt) -> Q {
         if d.is_negative() {
             Q { n: -n, d: -d }
         } else {
             Q { n, d }
         }
     }
-    fn add(&self, o: &Q, sign: i32) -> Q {
+    pub(crate) fn add(&self, o: &Q, sign: i32) -> Q {
         Q::new(
             &self.n * &o.d + BigInt::from(sign) * &o.n * &self.d,
             &self.d * &o.d,
         )
     }
-    fn mul(&self, o: &Q) -> Q {
+    pub(crate) fn mul(&self, o: &Q) -> Q {
         Q::new(&self.n * &o.n, &self.d * &o.d)
     }
-    fn div(&self, o: &Q) -> Option<Q> {
+    pub(crate) fn div(&self, o: &Q) -> Option<Q> {
         (!o.n.is_zero()).then(|| Q::new(&self.n * &o.d, &self.d * &o.n))
     }
     fn neg(&self) -> Q {
         Q::new(-&self.n, self.d.clone())
     }
+    pub(crate) fn equals(&self, o: &Q) -> bool {
+        &self.n * &o.d == &o.n * &self.d
+    }
 }
 
 /// A number as written: `$1,100.50`, `10%`, `−3`. Returns its value and the
 /// count of decimal places it shows (a percentage counts in percent).
-fn number(text: &str) -> Option<(Q, u32, bool)> {
+pub(crate) fn number(text: &str) -> Option<(Q, u32, bool)> {
     let negative = text.starts_with(['-', '−']);
     let body = text.trim_start_matches(['-', '−']).trim_start_matches('$');
     let percent = body.ends_with('%');
@@ -361,7 +364,7 @@ fn close(a: &Q, b: &Q, places: u32, percent: bool) -> bool {
     difference * scale < &a.d * &b.d
 }
 
-fn decimal(q: &Q, places: u32) -> String {
+pub(crate) fn decimal(q: &Q, places: u32) -> String {
     // Half away from zero, for display only: floor(|n| * 10^places / d + 1/2).
     let scaled: BigInt = q.n.abs() * BigInt::from(10).pow(places);
     let magnitude: BigInt = (scaled * 2 + &q.d) / (&q.d * 2);
@@ -983,17 +986,29 @@ static AUTHORITY: LazyLock<regex::Regex> = LazyLock::new(|| {
 
 /// One cited or listed authority, in the form it compares by: `s <section>
 /// of the <Act>` or `<series> <id>`, with single spaces.
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Authority(String);
 
 impl Authority {
-    fn read(text: &str) -> Option<Authority> {
+    pub(crate) fn read(text: &str) -> Option<Authority> {
         let c = AUTHORITY.captures(text)?;
         let words = |i: usize| c[i].split_whitespace().collect::<Vec<_>>().join(" ");
         Some(Authority(match c.get(1) {
             Some(_) => format!("{} {}", words(1), &c[2]),
             None => format!("s {} of the {}", &c[3], words(4)),
         }))
+    }
+
+    /// The citation without subsections, so `s 109E(6)` meets `s 109E`. A
+    /// ruling id has no section and stays whole.
+    pub(crate) fn section(&self) -> String {
+        match self.0.split_once(" of the ") {
+            Some((section, act)) => {
+                let bare = section.split('(').next().unwrap_or(section);
+                format!("{bare} of the {act}")
+            }
+            None => self.0.clone(),
+        }
     }
 }
 

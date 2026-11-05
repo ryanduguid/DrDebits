@@ -159,6 +159,7 @@ DrDebits keeps its guide, tests, references and governance records in these file
 |---|---|
 | [drdebits.md](./drdebits.md) | The guide: core operating controls. Load this as persistent context. |
 | [tests/behaviour-tests.md](./tests/behaviour-tests.md) | Adverse-case tests an implementation is expected to pass |
+| [benchmarks/payday-div7a/](./benchmarks/payday-div7a/README.md) | 31 Payday Super and Division 7A questions with published keys, a key check and a scorer that counts wrong authority separately. No model has been scored. The publisher also publishes products it could score. Not in the bundle. |
 | [evals/RESULTS.md](./evals/RESULTS.md) | Recorded manual evaluation runs: model, date and a pass or fail per behaviour test, with any proposed observations in their own section. Not in the bundle. |
 | [reference/tpb-catalogue.md](./reference/tpb-catalogue.md) | The live TPB Guidance Statement catalogue, GS01 to GS55. Complete for the checked live Guidance Statement category, which is what the catalogue's own header says it covers, not every product the TPB has published |
 | [reference/apes-110-map.md](./reference/apes-110-map.md) | Primary APES 110 reference map |

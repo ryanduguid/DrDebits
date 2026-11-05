@@ -705,6 +705,8 @@ fn the_benchmark_canary_is_in_every_form_of_the_cases() {
         "src/data/behaviour-tests.yaml",
         "evals/cases.json",
         "tests/behaviour-tests.md",
+        "benchmarks/payday-div7a/questions.json",
+        "benchmarks/payday-div7a/keys.json",
     ] {
         assert!(read(file).contains(canary), "{file}");
     }

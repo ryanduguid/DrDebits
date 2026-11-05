@@ -34,6 +34,7 @@ macro_rules! errln {
     }};
 }
 
+pub mod bench;
 pub mod builder;
 pub mod bundle;
 pub mod compare;
@@ -168,6 +169,8 @@ enum Command {
     Quote(quotecheck::Args),
     /// Check a high-impact draft against the output contract and reperform its arithmetic.
     Gate(gate::Args),
+    /// Reproduce the benchmark's keys, or mark a file of answers.
+    Bench(bench::Args),
 }
 
 /// The root a command works in: `--root`, or the DrDebits tree above the current directory.
@@ -312,6 +315,7 @@ fn dispatch(cli: Cli) -> u8 {
         Command::ReadSource(args) => harness::read_source_main(args),
         Command::Quote(args) => quotecheck::main(args),
         Command::Gate(args) => gate::main(cli.root.as_deref(), args),
+        Command::Bench(args) => bench::main(cli.root.as_deref(), args),
     }
 }
 
