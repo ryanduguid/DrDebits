@@ -9,7 +9,7 @@ mod common;
 use common::*;
 use drdebits::gate::{
     self, EXIT_BLOCK, EXIT_COULD_NOT_RUN, EXIT_PASS, EXIT_REVIEW, calculations, check,
-    check_authorities, check_facts, load_authorities, load_facts,
+    check_authorities, check_facts, check_quotes, load_authorities, load_facts,
 };
 use drdebits::model::Conclusion;
 
@@ -1308,4 +1308,166 @@ fn the_command_reads_an_authorities_file() {
         );
         assert!(out.stdout.is_empty(), "{authorities}: {}", out.stdout);
     }
+}
+
+const SOURCE: &str =
+    "An approved auditor must obtain sufficient appropriate evidence to support the opinion.";
+
+/// The gate's findings with the quotes check run on `text` against `SOURCE`.
+fn with_quotes(text: &str) -> gate::Report {
+    let mut report = gate::Report::default();
+    check_quotes(text, &[SOURCE.to_string()], &mut report);
+    report
+}
+
+#[test]
+fn a_verbatim_quotation_passes_and_says_it_is_text_membership_only() {
+    for draft in [
+        "The ruling says \"sufficient appropriate evidence\" is needed.",
+        "The ruling says \u{201c}sufficient appropriate evidence\u{201d} is needed.",
+        "The ruling says \u{2018}sufficient appropriate evidence\u{2019} is needed.",
+        "The ruling says 'sufficient appropriate evidence' is needed.",
+        "As stated:\n\n> sufficient appropriate evidence\n\nSo it is needed.",
+        "As stated:\n\n> An approved auditor must obtain\n> sufficient appropriate evidence\n\nDone.",
+    ] {
+        let report = with_quotes(draft);
+        assert_eq!(report.reviews, Vec::<String>::new(), "{draft}");
+        assert!(report.notes[0].starts_with("quotes check: 1 quoted span(s) found verbatim"));
+        assert!(report.notes[0].contains("not support for the claim"));
+    }
+}
+
+#[test]
+fn a_fabricated_quotation_asks_for_review_and_never_blocks() {
+    let report = with_quotes("The ruling says \"evidence may be waived\" here.");
+    assert_eq!(
+        report.reviews,
+        [
+            "quotes check: 'evidence may be waived' is not in any supplied source; a person must check it"
+        ]
+    );
+    assert!(report.blocks.is_empty());
+    assert_eq!(report.verdict(), ("REVIEW", EXIT_REVIEW));
+}
+
+#[test]
+fn a_span_that_matches_only_after_normalising_is_not_verbatim() {
+    let report = with_quotes("It says \"sufficient  appropriate\nevidence\" here.");
+    assert_eq!(report.reviews.len(), 1, "{:?}", report.reviews);
+    assert!(report.reviews[0].contains("only after normalising"));
+}
+
+#[test]
+fn punctuation_ending_a_span_is_tried_without_it() {
+    let report = with_quotes("It says \"sufficient appropriate evidence,\" and more.");
+    assert_eq!(report.reviews, Vec::<String>::new());
+    assert!(report.notes[0].starts_with("quotes check: 1 quoted span(s)"));
+}
+
+#[test]
+fn an_ellipsis_is_looked_for_whole_and_asks_for_review() {
+    let report = with_quotes("It says \"approved auditor ... the opinion\" here.");
+    assert_eq!(report.reviews.len(), 1);
+}
+
+#[test]
+fn a_single_quoted_word_and_an_apostrophe_are_not_quotations() {
+    let report = with_quotes("The 'auditor' reviewed the client's file and the trustees' records.");
+    assert_eq!(report.reviews, Vec::<String>::new());
+    assert!(report.notes[0].starts_with("quotes check: 0 quoted span(s)"));
+}
+
+#[test]
+fn an_apostrophe_inside_a_curly_quotation_does_not_end_it() {
+    let mut report = gate::Report::default();
+    check_quotes(
+        "It says \u{2018}the auditor\u{2019}s own opinion\u{2019} here.",
+        &["Part of the auditor\u{2019}s own opinion.".to_string()],
+        &mut report,
+    );
+    assert_eq!(report.reviews, Vec::<String>::new());
+    assert!(report.notes[0].starts_with("quotes check: 1 quoted span(s)"));
+    // Ending at that apostrophe would leave `the auditor`, which is in the source.
+    let mut report = gate::Report::default();
+    check_quotes(
+        "It says \u{2018}the auditor\u{2019}s waived opinion\u{2019} here.",
+        &["Part of the auditor\u{2019}s own opinion.".to_string()],
+        &mut report,
+    );
+    assert_eq!(report.reviews.len(), 1, "{:?}", report.reviews);
+}
+
+#[test]
+fn a_stray_mark_before_whitespace_does_not_hide_the_quotation_after_it() {
+    let report = with_quotes("A \" stray \"evidence may be waived\" here.");
+    assert_eq!(report.reviews.len(), 1, "{:?}", report.reviews);
+    assert!(report.reviews[0].contains("'evidence may be waived'"));
+    assert_eq!(report.verdict(), ("REVIEW", EXIT_REVIEW));
+}
+
+#[test]
+fn a_mark_straight_after_a_word_still_opens_a_quotation() {
+    for draft in [
+        "The ruling said\"fabricated legal basis\" here.",
+        "The ruling said\u{201c}fabricated legal basis\u{201d} here.",
+        "The ruling said\u{2018}fabricated legal basis\u{2019} here.",
+    ] {
+        let report = with_quotes(draft);
+        assert_eq!(report.reviews.len(), 1, "{draft}: {:?}", report.reviews);
+        assert!(report.reviews[0].contains("'fabricated legal basis'"));
+        assert_eq!(report.verdict(), ("REVIEW", EXIT_REVIEW), "{draft}");
+    }
+}
+
+#[test]
+fn a_quotation_with_no_end_asks_for_review() {
+    let report = with_quotes("It says \"sufficient appropriate evidence is needed.");
+    assert_eq!(report.reviews.len(), 1, "{:?}", report.reviews);
+    assert!(report.reviews[0].contains("could not find the end of the quotation"));
+}
+
+#[test]
+fn a_second_source_can_hold_the_span() {
+    let mut report = gate::Report::default();
+    check_quotes(
+        "It says \"second source wording\" here.",
+        &[
+            SOURCE.to_string(),
+            "Some second source wording.".to_string(),
+        ],
+        &mut report,
+    );
+    assert_eq!(report.reviews, Vec::<String>::new());
+    assert!(report.notes[0].starts_with("quotes check: 1 quoted span(s)"));
+}
+
+#[test]
+fn the_source_option_reports_through_the_command_and_stops_on_a_bad_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = repo_root();
+    let root = root.to_str().unwrap();
+    let draft = format!("{DRAFT}\n- As stated, \"evidence may be waived\" here.\n");
+    std::fs::write(dir.path().join("draft.md"), draft).unwrap();
+    std::fs::write(dir.path().join("source.txt"), SOURCE).unwrap();
+    let run = |extra: &[&str]| {
+        let mut args = vec!["--root", root, "gate", "draft.md"];
+        args.extend_from_slice(extra);
+        run_in(dir.path(), &args, false)
+    };
+    let without = run(&[]);
+    assert_eq!(without.code, i32::from(EXIT_PASS), "{}", without.stdout);
+    let with = run(&["--source", "source.txt"]);
+    assert_eq!(with.code, i32::from(EXIT_REVIEW), "{}", with.stdout);
+    assert!(
+        with.stdout.contains("not in any supplied source"),
+        "{}",
+        with.stdout
+    );
+    let missing = run(&["--source", "no-such-file.txt"]);
+    assert_eq!(missing.code, i32::from(EXIT_COULD_NOT_RUN));
+    assert!(
+        missing.stderr.starts_with("gate: source file:"),
+        "{}",
+        missing.stderr
+    );
 }

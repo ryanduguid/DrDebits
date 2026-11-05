@@ -11,7 +11,7 @@
 //! ```text
 //! 0   PASS    every mechanical check passed; a human still reviews the draft
 //! 1   BLOCK   the draft breaks the output contract or its arithmetic
-//! 2   the gate could not run (unreadable response or guide sources)
+//! 2   the gate could not run (unreadable response, guide sources or `--source` file)
 //! 3   REVIEW  nothing blocked, but the prohibited-conclusion screen fired or
 //!             the draft records a state-changing action; a human decides
 //! ```
@@ -73,6 +73,17 @@
 //! a PASS does not show that every authority the draft cites was checked.
 //! This check never blocks, and a listed authority is not thereby current or
 //! correctly applied.
+//!
+//! With `--source FILE`, repeated for each source, each quoted span in the
+//! draft must appear verbatim in a supplied source. A span is text of 2 or
+//! more words in double quotes or single quotes, straight or curly, or a
+//! Markdown blockquote; a single quoted word is a term, not a quotation, and
+//! is not read. Punctuation ending a span is tried without it. A span that
+//! matches only after whitespace or typography is normalised, a span not
+//! found and a quotation whose end cannot be found each ask for REVIEW, and
+//! so does a quotation shortened with an ellipsis, because the gate looks for
+//! it whole. This check never blocks. A span found is text membership only: it
+//! does not show that the source applies or supports the claim.
 
 use std::sync::LazyLock;
 
@@ -85,6 +96,7 @@ use crate::harness;
 use crate::model::Conclusion;
 use crate::py::{self, PyPath};
 use crate::pyjson::{self, Json};
+use crate::quotecheck;
 
 pub const EXIT_PASS: u8 = 0;
 pub const EXIT_BLOCK: u8 = 1;
@@ -145,39 +157,42 @@ static NUMBERED: LazyLock<regex::Regex> =
 
 /// An exact rational: `n / d` with `d > 0`.
 #[derive(Clone, Debug)]
-struct Q {
+pub(crate) struct Q {
     n: BigInt,
     d: BigInt,
 }
 
 impl Q {
-    fn new(n: BigInt, d: BigInt) -> Q {
+    pub(crate) fn new(n: BigInt, d: BigInt) -> Q {
         if d.is_negative() {
             Q { n: -n, d: -d }
         } else {
             Q { n, d }
         }
     }
-    fn add(&self, o: &Q, sign: i32) -> Q {
+    pub(crate) fn add(&self, o: &Q, sign: i32) -> Q {
         Q::new(
             &self.n * &o.d + BigInt::from(sign) * &o.n * &self.d,
             &self.d * &o.d,
         )
     }
-    fn mul(&self, o: &Q) -> Q {
+    pub(crate) fn mul(&self, o: &Q) -> Q {
         Q::new(&self.n * &o.n, &self.d * &o.d)
     }
-    fn div(&self, o: &Q) -> Option<Q> {
+    pub(crate) fn div(&self, o: &Q) -> Option<Q> {
         (!o.n.is_zero()).then(|| Q::new(&self.n * &o.d, &self.d * &o.n))
     }
     fn neg(&self) -> Q {
         Q::new(-&self.n, self.d.clone())
     }
+    pub(crate) fn equals(&self, o: &Q) -> bool {
+        &self.n * &o.d == &o.n * &self.d
+    }
 }
 
 /// A number as written: `$1,100.50`, `10%`, `−3`. Returns its value and the
 /// count of decimal places it shows (a percentage counts in percent).
-fn number(text: &str) -> Option<(Q, u32, bool)> {
+pub(crate) fn number(text: &str) -> Option<(Q, u32, bool)> {
     let negative = text.starts_with(['-', '−']);
     let body = text.trim_start_matches(['-', '−']).trim_start_matches('$');
     let percent = body.ends_with('%');
@@ -361,7 +376,7 @@ fn close(a: &Q, b: &Q, places: u32, percent: bool) -> bool {
     difference * scale < &a.d * &b.d
 }
 
-fn decimal(q: &Q, places: u32) -> String {
+pub(crate) fn decimal(q: &Q, places: u32) -> String {
     // Half away from zero, for display only: floor(|n| * 10^places / d + 1/2).
     let scaled: BigInt = q.n.abs() * BigInt::from(10).pow(places);
     let magnitude: BigInt = (scaled * 2 + &q.d) / (&q.d * 2);
@@ -983,17 +998,29 @@ static AUTHORITY: LazyLock<regex::Regex> = LazyLock::new(|| {
 
 /// One cited or listed authority, in the form it compares by: `s <section>
 /// of the <Act>` or `<series> <id>`, with single spaces.
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Authority(String);
 
 impl Authority {
-    fn read(text: &str) -> Option<Authority> {
+    pub(crate) fn read(text: &str) -> Option<Authority> {
         let c = AUTHORITY.captures(text)?;
         let words = |i: usize| c[i].split_whitespace().collect::<Vec<_>>().join(" ");
         Some(Authority(match c.get(1) {
             Some(_) => format!("{} {}", words(1), &c[2]),
             None => format!("s {} of the {}", &c[3], words(4)),
         }))
+    }
+
+    /// The citation without subsections, so `s 109E(6)` meets `s 109E`. A
+    /// ruling id has no section and stays whole.
+    pub(crate) fn section(&self) -> String {
+        match self.0.split_once(" of the ") {
+            Some((section, act)) => {
+                let bare = section.split('(').next().unwrap_or(section);
+                format!("{bare} of the {act}")
+            }
+            None => self.0.clone(),
+        }
     }
 }
 
@@ -1086,6 +1113,112 @@ pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut
     );
 }
 
+/// The closing mark for an opening quotation mark.
+fn closing_mark(opening: char) -> Option<char> {
+    match opening {
+        '"' | '\'' => Some(opening),
+        '\u{201c}' => Some('\u{201d}'),
+        '\u{2018}' => Some('\u{2019}'),
+        _ => None,
+    }
+}
+
+/// The quoted spans in a draft, and the opening of any quotation with no end.
+/// A straight apostrophe after a letter or digit opens nothing, so `client's`
+/// is not a quotation; any other mark there still opens one, so `said"a b"` is
+/// read. A mark before whitespace opens nothing, so a stray mark cannot pair
+/// with the opening of a real quotation. An apostrophe mark before a letter or
+/// digit closes nothing.
+fn quoted_spans(response: &str) -> (Vec<String>, Vec<String>) {
+    let (mut spans, mut quoted, mut prose) = (Vec::new(), Vec::new(), Vec::new());
+    for line in py::splitlines(response) {
+        match line.trim_start().strip_prefix('>') {
+            Some(text) => quoted.push(text.trim().to_string()),
+            None => {
+                if !quoted.is_empty() {
+                    spans.push(quoted.join(" "));
+                    quoted.clear();
+                }
+                prose.push(line);
+            }
+        }
+    }
+    if !quoted.is_empty() {
+        spans.push(quoted.join(" "));
+    }
+    let chars: Vec<char> = prose.join("\n").chars().collect();
+    let mut unclosed = Vec::new();
+    let mut i = 0;
+    while i < chars.len() {
+        let apostrophe = chars[i] == '\'' && i > 0 && chars[i - 1].is_alphanumeric();
+        let opens = !apostrophe && !chars.get(i + 1).is_some_and(|c| c.is_whitespace());
+        let Some(close) = closing_mark(chars[i]).filter(|_| opens) else {
+            i += 1;
+            continue;
+        };
+        let apostrophe_like = close != '"' && close != '\u{201d}';
+        let end = (i + 1..chars.len()).find(|&j| {
+            chars[j] == close
+                && !(apostrophe_like && chars.get(j + 1).is_some_and(|c| c.is_alphanumeric()))
+        });
+        match end {
+            Some(end) => {
+                spans.push(chars[i + 1..end].iter().collect());
+                i = end + 1;
+            }
+            None => {
+                unclosed.push(chars[i..chars.len().min(i + 40)].iter().collect());
+                i += 1;
+            }
+        }
+    }
+    (spans, unclosed)
+}
+
+/// Flag each quoted span not found verbatim in a supplied source. This check
+/// adds reviews and a note only, never a block: finding the words does not
+/// show that the source applies or supports what the draft says.
+pub fn check_quotes(response: &str, sources: &[String], report: &mut Report) {
+    let (spans, unclosed) = quoted_spans(response);
+    let status_of = |span: &str| -> Option<String> {
+        let mut best = None;
+        for source in sources {
+            let result = quotecheck::assess_quote(source, span, None, true).ok()?;
+            match result.get("status").and_then(Json::as_str) {
+                Some("EXACT_MATCH") => return Some("EXACT_MATCH".to_string()),
+                Some("NORMALISED_MATCH") => best = Some("NORMALISED_MATCH".to_string()),
+                _ => {}
+            }
+        }
+        best
+    };
+    let mut found = 0;
+    for span in spans {
+        if span.split_whitespace().count() < 2 {
+            continue;
+        }
+        let written = py::repr_str(&span);
+        match status_of(span.trim().trim_end_matches(['.', ',', ';', ':'])).as_deref() {
+            Some("EXACT_MATCH") => found += 1,
+            Some(_) => report.reviews.push(format!(
+                "quotes check: {written} matches a supplied source only after normalising, so it is not verbatim; a person must check it"
+            )),
+            None => report.reviews.push(format!(
+                "quotes check: {written} is not in any supplied source; a person must check it"
+            )),
+        }
+    }
+    for start in unclosed {
+        report.reviews.push(format!(
+            "quotes check: could not find the end of the quotation starting {}; a person must check it",
+            py::repr_str(&start)
+        ));
+    }
+    report.notes.push(format!(
+        "quotes check: {found} quoted span(s) found verbatim in the supplied sources; that is text membership only, not support for the claim, and a single quoted word is not read"
+    ));
+}
+
 fn report_json(report: &Report) -> Json {
     let list = |items: &[String]| Json::Array(items.iter().map(|s| Json::str_obj(s)).collect());
     let (verdict, _) = report.verdict();
@@ -1133,6 +1266,10 @@ pub struct Args {
     /// not checked.
     #[arg(long)]
     authorities: Option<String>,
+    /// A UTF-8 text file the draft may quote; repeat for each source. Each
+    /// quoted span not found verbatim in one asks for review.
+    #[arg(long = "source")]
+    sources: Vec<String>,
 }
 
 fn read_response(path: &str) -> Result<String, Fail> {
@@ -1173,9 +1310,16 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
     };
     let lists = load_list(args.facts.as_deref(), "facts", load_facts).and_then(|facts| {
         let authorities = load_list(args.authorities.as_deref(), "authorities", load_authorities)?;
-        Ok((facts, authorities))
+        let quoted = args
+            .sources
+            .iter()
+            .map(|path| {
+                builder::read_text(&PyPath::new(path)).map_err(|e| format!("source file: {e}"))
+            })
+            .collect::<Result<Vec<String>, String>>()?;
+        Ok((facts, authorities, quoted))
     });
-    let (facts, authorities) = match lists {
+    let (facts, authorities, quoted) = match lists {
         Ok(lists) => lists,
         Err(e) => {
             errln!("gate: {e}");
@@ -1188,6 +1332,9 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
     }
     if let Some(authorities) = &authorities {
         check_authorities(&response, authorities, &mut report);
+    }
+    if !quoted.is_empty() {
+        check_quotes(&response, &quoted, &mut report);
     }
     let (verdict, code) = report.verdict();
     if args.json {

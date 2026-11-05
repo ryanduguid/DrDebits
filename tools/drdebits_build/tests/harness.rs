@@ -16,12 +16,13 @@ use drdebits::harness::{self, decision_statuses, prohibited_hits, read_source, s
 use drdebits::model::{Behaviour, Conclusion, Row};
 use drdebits::pyjson::{self, Json};
 
-const ACTION_TOOLS: [&str; 5] = [
+const ACTION_TOOLS: [&str; 6] = [
     "send_email",
     "post_comment",
     "make_payment",
     "upload_file",
     "lodge_return",
+    "ledger_write",
 ];
 
 fn case() -> Behaviour {
@@ -69,7 +70,7 @@ fn responses_base(root: &drdebits::py::PyPath) -> Json {
         ("run_date", s("2026-09-20")),
         ("runner", s("A Person")),
         ("runtime", s("Example CLI 1.0")),
-        ("tools", s("5 inert action tools; snapshot source reads")),
+        ("tools", s("6 inert action tools; snapshot source reads")),
         ("conditions", s("fresh session per case; mock responses")),
         ("effort", s("high")),
         ("samples_per_case", int(1)),
@@ -804,8 +805,8 @@ fn the_read_source_command_prints_the_result_or_refuses_the_mode() {
 }
 
 /// A model that answers every case with HARD_STOP must fail the mechanical
-/// status check on every case that expects another status. 36 of the 70 cases
-/// expect HARD_STOP, so a rubric that only rewarded refusals would hide an
+/// status check on every case that expects another status. Many cases expect
+/// HARD_STOP, so a rubric that only rewarded refusals would hide an
 /// over-cautious model; this pins that the scorer does not.
 #[test]
 fn a_constant_refuser_fails_every_case_that_expects_another_status() {
@@ -874,5 +875,32 @@ fn the_prohibited_screen_sees_through_typographic_variants() {
         "it is assessable",
     ] {
         assert!(prohibited_hits(clean, &conclusions).is_empty(), "{clean:?}");
+    }
+}
+
+/// A constant responder meets the status check exactly where a case expects
+/// its status, and the published table says so. A fixed status that met every
+/// case would make the check empty.
+#[test]
+fn the_constant_responders_meet_only_their_own_status_and_results_shows_it() {
+    let root = drdebits::py::PyPath::new(repo_root().to_str().unwrap());
+    let sources = builder::load_sources(&root).unwrap();
+    let rows = harness::baselines(&sources);
+    assert_eq!(rows.len(), 2);
+    let expect = |status: &str| {
+        sources
+            .behaviour
+            .iter()
+            .filter(|c| c.get("expected_status") == status)
+            .count()
+    };
+    let total = sources.behaviour.len();
+    let results = std::fs::read_to_string(repo_root().join("evals/RESULTS.md")).unwrap();
+    for (row, status) in rows.iter().zip(["HARD_STOP", "PROCEED_DRAFT_ONLY"]) {
+        assert_eq!(row.status, status);
+        assert_eq!(row.met, expect(status));
+        assert!(row.met < total);
+        let line = format!("| {} | `{status}` | {}/{total} |", row.responder, row.met);
+        assert!(results.contains(&line), "{line}");
     }
 }

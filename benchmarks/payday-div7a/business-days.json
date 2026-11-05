@@ -1,0 +1,185 @@
+{
+  "note": "Weekdays that are public holidays for the whole of a State or Territory, so not business days under s 6(1) of the Superannuation Guarantee (Administration) Act 1992. Taken from the payday-super-checker table, whose official sources were checked on 15 August 2026. Part-day holidays, such as Christmas Eve evening, and holidays in only part of a State are not listed. Weekends are closed by the rule, not by this table.",
+  "source_commit": "2384216acea5b77484f2ac1aaee4c97a08cd2593",
+  "complete_from": "2026-07-01",
+  "complete_until": "2027-08-31",
+  "non_business_days": [
+    {
+      "date": "2026-08-03",
+      "name": "Picnic Day",
+      "jurisdictions": [
+        "NT"
+      ]
+    },
+    {
+      "date": "2026-09-25",
+      "name": "Friday before the AFL Grand Final",
+      "jurisdictions": [
+        "VIC"
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "name": "King's Birthday; Labour Day",
+      "jurisdictions": [
+        "ACT",
+        "NSW",
+        "QLD",
+        "SA"
+      ]
+    },
+    {
+      "date": "2026-12-25",
+      "name": "Christmas Day",
+      "jurisdictions": [
+        "ACT",
+        "NSW",
+        "NT",
+        "QLD",
+        "SA",
+        "TAS",
+        "VIC",
+        "WA"
+      ]
+    },
+    {
+      "date": "2026-12-28",
+      "name": "Boxing Day; Boxing Day (observed); Proclamation Day (observed)",
+      "jurisdictions": [
+        "ACT",
+        "NSW",
+        "NT",
+        "QLD",
+        "SA",
+        "TAS",
+        "VIC",
+        "WA"
+      ]
+    },
+    {
+      "date": "2027-01-01",
+      "name": "New Year's Day",
+      "jurisdictions": [
+        "ACT",
+        "NSW",
+        "NT",
+        "QLD",
+        "SA",
+        "TAS",
+        "VIC",
+        "WA"
+      ]
+    },
+    {
+      "date": "2027-01-26",
+      "name": "Australia Day",
+      "jurisdictions": [
+        "ACT",
+        "NSW",
+        "NT",
+        "QLD",
+        "SA",
+        "TAS",
+        "VIC",
+        "WA"
+      ]
+    },
+    {
+      "date": "2027-03-01",
+      "name": "Labour Day",
+      "jurisdictions": [
+        "WA"
+      ]
+    },
+    {
+      "date": "2027-03-08",
+      "name": "Adelaide Cup Day; Canberra Day; Eight Hours Day; Labour Day",
+      "jurisdictions": [
+        "ACT",
+        "SA",
+        "TAS",
+        "VIC"
+      ]
+    },
+    {
+      "date": "2027-03-26",
+      "name": "Good Friday",
+      "jurisdictions": [
+        "ACT",
+        "NSW",
+        "NT",
+        "QLD",
+        "SA",
+        "TAS",
+        "VIC",
+        "WA"
+      ]
+    },
+    {
+      "date": "2027-03-29",
+      "name": "Easter Monday",
+      "jurisdictions": [
+        "ACT",
+        "NSW",
+        "NT",
+        "QLD",
+        "SA",
+        "TAS",
+        "VIC",
+        "WA"
+      ]
+    },
+    {
+      "date": "2027-04-26",
+      "name": "ANZAC Day; ANZAC Day (observed)",
+      "jurisdictions": [
+        "ACT",
+        "NSW",
+        "NT",
+        "QLD",
+        "WA"
+      ]
+    },
+    {
+      "date": "2027-05-03",
+      "name": "Labour Day; May Day",
+      "jurisdictions": [
+        "NT",
+        "QLD"
+      ]
+    },
+    {
+      "date": "2027-05-31",
+      "name": "Reconciliation Day",
+      "jurisdictions": [
+        "ACT"
+      ]
+    },
+    {
+      "date": "2027-06-07",
+      "name": "Western Australia Day",
+      "jurisdictions": [
+        "WA"
+      ]
+    },
+    {
+      "date": "2027-06-14",
+      "name": "King's Birthday",
+      "jurisdictions": [
+        "ACT",
+        "NSW",
+        "NT",
+        "SA",
+        "TAS",
+        "VIC"
+      ]
+    },
+    {
+      "date": "2027-08-02",
+      "name": "Picnic Day",
+      "jurisdictions": [
+        "NT"
+      ]
+    }
+  ]
+}
