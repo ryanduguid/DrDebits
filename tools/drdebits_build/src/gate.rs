@@ -11,7 +11,7 @@
 //! ```text
 //! 0   PASS    every mechanical check passed; a human still reviews the draft
 //! 1   BLOCK   the draft breaks the output contract or its arithmetic
-//! 2   the gate could not run (unreadable response or guide sources)
+//! 2   the gate could not run (unreadable response, guide sources or `--source` file)
 //! 3   REVIEW  nothing blocked, but the prohibited-conclusion screen fired or
 //!             the draft records a state-changing action; a human decides
 //! ```
@@ -1125,7 +1125,9 @@ fn closing_mark(opening: char) -> Option<char> {
 
 /// The quoted spans in a draft, and the opening of any quotation with no end.
 /// A mark after a letter or digit opens nothing, so `client's` is not a
-/// quotation, and an apostrophe mark before one closes nothing.
+/// quotation, nor does a mark before whitespace, so a stray mark cannot pair
+/// with the opening of a real quotation. An apostrophe mark before a letter or
+/// digit closes nothing.
 fn quoted_spans(response: &str) -> (Vec<String>, Vec<String>) {
     let (mut spans, mut quoted, mut prose) = (Vec::new(), Vec::new(), Vec::new());
     for line in py::splitlines(response) {
@@ -1147,7 +1149,8 @@ fn quoted_spans(response: &str) -> (Vec<String>, Vec<String>) {
     let mut unclosed = Vec::new();
     let mut i = 0;
     while i < chars.len() {
-        let opens = i == 0 || !chars[i - 1].is_alphanumeric();
+        let opens = (i == 0 || !chars[i - 1].is_alphanumeric())
+            && !chars.get(i + 1).is_some_and(|c| c.is_whitespace());
         let Some(close) = closing_mark(chars[i]).filter(|_| opens) else {
             i += 1;
             continue;

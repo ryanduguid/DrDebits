@@ -546,6 +546,23 @@ fn the_readme_leads_with_current_coverage_and_the_free_baselines() {
         rows[0].met, rows[1].met
     )));
     assert!(lead.contains("no same-model run without the guide"));
+    assert!(lead.contains("The one human-confirmed model run, 19 of 25"));
+    assert!(lead.contains("18 of 25"));
+    assert!(!read("EVALUATION-NOTES.md").contains("BL-0"));
+}
+
+/// The README and the generated baselines say one model run exists and no
+/// same-model run without the guide does. Records carry no field for that, so
+/// a new record has to fail here until a person rereads both sentences.
+#[test]
+fn a_new_run_record_forces_a_reread_of_the_no_control_sentences() {
+    let records = std::fs::read_dir(repo_root().join("evals/results"))
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .filter(|name| name.ends_with(".json"))
+        .collect::<Vec<_>>();
+    assert_eq!(records, ["2026-09-08-claude-opus-5.json"]);
+    assert!(drdebits::templates::BASELINES_HEADER.contains("No same-model run without the guide"));
 }
 
 /// The output-side TFN cases need a value to leak, so it must not be a real

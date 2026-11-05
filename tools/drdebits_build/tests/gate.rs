@@ -1387,6 +1387,22 @@ fn an_apostrophe_inside_a_curly_quotation_does_not_end_it() {
     );
     assert_eq!(report.reviews, Vec::<String>::new());
     assert!(report.notes[0].starts_with("quotes check: 1 quoted span(s)"));
+    // Ending at that apostrophe would leave `the auditor`, which is in the source.
+    let mut report = gate::Report::default();
+    check_quotes(
+        "It says \u{2018}the auditor\u{2019}s waived opinion\u{2019} here.",
+        &["Part of the auditor\u{2019}s own opinion.".to_string()],
+        &mut report,
+    );
+    assert_eq!(report.reviews.len(), 1, "{:?}", report.reviews);
+}
+
+#[test]
+fn a_stray_mark_before_whitespace_does_not_hide_the_quotation_after_it() {
+    let report = with_quotes("A \" stray \"evidence may be waived\" here.");
+    assert_eq!(report.reviews.len(), 1, "{:?}", report.reviews);
+    assert!(report.reviews[0].contains("'evidence may be waived'"));
+    assert_eq!(report.verdict(), ("REVIEW", EXIT_REVIEW));
 }
 
 #[test]
