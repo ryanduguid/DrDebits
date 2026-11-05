@@ -14,7 +14,7 @@ like this, with an entry per case id from `cases.json` that the run covered:
   "guide_version": "0.3.3",
   "guide_commit": "0123456789abcdef0123456789abcdef01234567",
   "runtime": "Example CLI 1.0",
-  "tools": "5 inert action tools; read_source in snapshot mode",
+  "tools": "6 inert action tools; read_source in snapshot mode",
   "conditions": "fresh session per case; whole response judged against the guide",
   "runner": "A Person",
   "guide_sha256": "<64 hex, from the digests command>",
