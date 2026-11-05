@@ -5,8 +5,19 @@ type: dataset
 authors:
   - family-names: "Duguid"
     given-names: "Ryan"
+    website: "https://duguid.com.au/"
 version: 0.5.0
 date-released: "2026-10-31"
 repository-code: "https://github.com/ryanduguid/llm-tax-guardrails"
 license-url: "https://github.com/ryanduguid/llm-tax-guardrails/blob/v0.5.0/LICENSE"
 abstract: "Australian tax-practice and accounting-ethics guardrails for LLM-assisted work: source-linked operating controls derived from the TPB framework, APES 110, APES 220 and the sector's AML/CTF obligations."
+keywords:
+  - accounting-ethics
+  - ai-governance
+  - ai-guardrails
+  - apes-110
+  - australian-tax
+  - bas
+  - llm
+  - tax-agents
+  - tpb
