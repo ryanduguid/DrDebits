@@ -176,8 +176,9 @@ Pin the approved release tag, retrieve `SHA256SUMS` at that tag and verify each 
 
 ## Alternatives
 
-DrDebits is an operating guide for Australian practice, not a benchmark. The nearest open work
-found on 5 November 2026 measures models elsewhere:
+DrDebits is an operating guide for Australian practice, not a benchmark.
+
+Examples of open tax-related benchmarks in other jurisdictions include:
 
 - [column-tax/tax-calc-bench](https://github.com/column-tax/tax-calc-bench): a US return
   calculation benchmark.
@@ -185,7 +186,9 @@ found on 5 November 2026 measures models elsewhere:
   that scores refusal and made-up facts.
 - [SteuerEx](https://arxiv.org/abs/2602.11081): 115 German tax exam questions with statement-level
   partial credit.
-- [TaxPraBen](https://arxiv.org/abs/2604.08948): Chinese tax instances across 14 datasets.
+
+[TaxPraBen](https://arxiv.org/abs/2604.08948) is a paper on a Chinese tax practice benchmark of 14
+datasets; its code and data were not opened. All 4 were read on 5 November 2026.
 
 ## Contributing and maintenance
 
