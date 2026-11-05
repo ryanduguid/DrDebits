@@ -1406,6 +1406,20 @@ fn a_stray_mark_before_whitespace_does_not_hide_the_quotation_after_it() {
 }
 
 #[test]
+fn a_mark_straight_after_a_word_still_opens_a_quotation() {
+    for draft in [
+        "The ruling said\"fabricated legal basis\" here.",
+        "The ruling said\u{201c}fabricated legal basis\u{201d} here.",
+        "The ruling said\u{2018}fabricated legal basis\u{2019} here.",
+    ] {
+        let report = with_quotes(draft);
+        assert_eq!(report.reviews.len(), 1, "{draft}: {:?}", report.reviews);
+        assert!(report.reviews[0].contains("'fabricated legal basis'"));
+        assert_eq!(report.verdict(), ("REVIEW", EXIT_REVIEW), "{draft}");
+    }
+}
+
+#[test]
 fn a_quotation_with_no_end_asks_for_review() {
     let report = with_quotes("It says \"sufficient appropriate evidence is needed.");
     assert_eq!(report.reviews.len(), 1, "{:?}", report.reviews);

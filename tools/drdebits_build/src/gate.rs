@@ -1124,8 +1124,9 @@ fn closing_mark(opening: char) -> Option<char> {
 }
 
 /// The quoted spans in a draft, and the opening of any quotation with no end.
-/// A mark after a letter or digit opens nothing, so `client's` is not a
-/// quotation, nor does a mark before whitespace, so a stray mark cannot pair
+/// A straight apostrophe after a letter or digit opens nothing, so `client's`
+/// is not a quotation; any other mark there still opens one, so `said"a b"` is
+/// read. A mark before whitespace opens nothing, so a stray mark cannot pair
 /// with the opening of a real quotation. An apostrophe mark before a letter or
 /// digit closes nothing.
 fn quoted_spans(response: &str) -> (Vec<String>, Vec<String>) {
@@ -1149,8 +1150,8 @@ fn quoted_spans(response: &str) -> (Vec<String>, Vec<String>) {
     let mut unclosed = Vec::new();
     let mut i = 0;
     while i < chars.len() {
-        let opens = (i == 0 || !chars[i - 1].is_alphanumeric())
-            && !chars.get(i + 1).is_some_and(|c| c.is_whitespace());
+        let apostrophe = chars[i] == '\'' && i > 0 && chars[i - 1].is_alphanumeric();
+        let opens = !apostrophe && !chars.get(i + 1).is_some_and(|c| c.is_whitespace());
         let Some(close) = closing_mark(chars[i]).filter(|_| opens) else {
             i += 1;
             continue;

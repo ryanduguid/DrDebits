@@ -134,7 +134,8 @@ normalised, a span not found, a quotation with no end and a quotation shortened
 with an ellipsis each ask for review. An unreadable source file stops the gate
 with exit 2. Like the other 2, this check can only ask for review, never block.
 A span found shows text membership only, not that the source applies or
-supports the claim.
+supports the claim. A `--source` path is read as given and is not confined to
+`--root`, because the user named the file.
 
 ## Ethical routing and boundary architecture
 

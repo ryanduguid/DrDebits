@@ -551,6 +551,11 @@ fn the_readme_leads_with_current_coverage_and_the_free_baselines() {
     assert!(!read("EVALUATION-NOTES.md").contains("BL-0"));
 }
 
+#[test]
+fn the_readme_says_a_source_path_is_not_confined_to_the_root() {
+    assert!(read("README.md").contains("not confined to\n`--root`"));
+}
+
 /// The README and the generated baselines say one model run exists and no
 /// same-model run without the guide does. Records carry no field for that, so
 /// a new record has to fail here until a person rereads both sentences.
