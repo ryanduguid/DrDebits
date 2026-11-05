@@ -262,7 +262,7 @@ fn myr(principal: &Q, rate: &Q, years: u32) -> Option<Q> {
     principal.mul(rate).div(&one.add(&one.div(&factor)?, -1))
 }
 
-/// The value a key's rule gives, or `None` for a key read from its source.
+/// The value a key's rule gives, or `None` for a key not recomputed here.
 fn reproduce(key: &Key, calendar: &Calendar) -> Result<Option<String>, String> {
     let fail = || format!("{}: the rule cannot be worked", key.id);
     Ok(match &key.rule {
