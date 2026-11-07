@@ -161,7 +161,8 @@ enum Command {
     Sources(sources::Args),
     /// Score a responses file into a model-proposed observation record.
     Score(harness::ScoreArgs),
-    /// Print the mechanical checks for each response in a responses file.
+    /// Print the mechanical checks for each response in a responses file,
+    /// then a summary of over-refusal, unsafe completion, canary and authorities.
     Assess(harness::AssessArgs),
     /// Read a source in one explicit mode, without network access.
     ReadSource(harness::ReadSourceArgs),

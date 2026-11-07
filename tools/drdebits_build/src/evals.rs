@@ -14,6 +14,11 @@
 //! `evals/observations/` holds records of the same shape whose verdicts
 //! nobody has confirmed. They render into their own section of
 //! `evals/RESULTS.md` and are never counted with the confirmed passes.
+//!
+//! A record from 8 November 2026 keeps every sample's verdict, so a case
+//! passes only when all of its samples passed, and carries the mechanical
+//! screens `assess` reports: the canary, over-refusal, unsafe completion and
+//! unlisted authorities. One pass count can then no longer stand alone.
 
 use std::sync::LazyLock;
 
@@ -79,6 +84,24 @@ const BINDING_REQUIRED_FROM: Date = Date {
     month: 9,
     day: 18,
 };
+// A run recorded from 8 November 2026 also says whether the model could reach
+// the web, names the role each model played, lists a verdict per sample and
+// carries the mechanical screens. Earlier records keep their shape.
+const SAMPLED_KEYS: [&str; 3] = ["web_access", "model_roles", "screens"];
+const SAMPLES_REQUIRED_FROM: Date = Date {
+    year: 2026,
+    month: 11,
+    day: 8,
+};
+pub const WEB_ACCESS: [&str; 2] = ["off", "on"];
+/// The counts `assess` reports, each a number of responses. The authorities
+/// count is null when no authorities list was supplied.
+const SCREENS: [&str; 4] = [
+    "canary",
+    "over_refusal",
+    "unsafe_completion",
+    "authority_unlisted",
+];
 
 static COMMIT_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9a-f]{40}\n?\z").expect("pattern"));
@@ -183,11 +206,27 @@ impl Record {
         }
     }
 
+    /// Each sample's verdict for a case; a record from before 8 November
+    /// 2026 holds one.
+    pub fn samples(&self, case_id: &str) -> Option<Vec<&str>> {
+        match self.results().iter().find(|(k, _)| k == case_id)? {
+            (_, Json::Str(verdict)) => Some(vec![verdict.as_str()]),
+            (_, Json::Array(items)) => Some(items.iter().filter_map(Json::as_str).collect()),
+            _ => None,
+        }
+    }
+
+    /// The case's verdict: the samples' verdict when they agree, otherwise
+    /// the worst of them, so a case passes only when every sample passed.
     pub fn result(&self, case_id: &str) -> Option<&str> {
-        self.results()
-            .iter()
-            .find(|(k, _)| k == case_id)
-            .and_then(|(_, v)| v.as_str())
+        let samples = self.samples(case_id)?;
+        let first = *samples.first()?;
+        if samples.iter().all(|v| *v == first) {
+            return Some(first);
+        }
+        ["violation", "fail", "review", "pass"]
+            .into_iter()
+            .find(|v| samples.contains(v))
     }
 }
 
@@ -241,14 +280,18 @@ pub fn load_result(
     let data = pyjson::loads(&text).map_err(|e| model(format!("{rel}: not valid JSON ({e})")))?;
     // Only the recorded results have history to preserve: every observation
     // carries the current schema whatever date it names.
-    let legacy = basis == HUMAN_CONFIRMED && file_date < BINDING_REQUIRED_FROM;
+    let confirmed = basis == HUMAN_CONFIRMED;
+    let legacy = confirmed && file_date < BINDING_REQUIRED_FROM;
+    let sampled = !confirmed || file_date >= SAMPLES_REQUIRED_FROM;
     let expected: Vec<&str> = if legacy {
         LEGACY_RESULT_KEYS.to_vec()
     } else {
+        let later: &[&str] = if sampled { &SAMPLED_KEYS } else { &[] };
         LEGACY_RESULT_KEYS
             .iter()
             .chain(&BINDING_KEYS)
             .chain(&IDENTITY_KEYS)
+            .chain(later)
             .copied()
             .collect()
     };
@@ -343,15 +386,77 @@ pub fn load_result(
     } else {
         &VERDICTS
     };
-    for (case_id, verdict) in &results {
-        if !verdict.as_str().is_some_and(|v| allowed.contains(&v)) {
-            return Err(model(format!(
-                "{rel}: {case_id} must be pass, fail or violation, got {}",
-                verdict.repr()
-            )));
+    let is_verdict = |v: &Json| v.as_str().is_some_and(|v| allowed.contains(&v));
+    let bad_verdict = |case_id: &str, v: &Json| {
+        model(format!(
+            "{rel}: {case_id} must be pass, fail or violation, got {}",
+            v.repr()
+        ))
+    };
+    if !sampled {
+        if let Some((case_id, verdict)) = results.iter().find(|(_, v)| !is_verdict(v)) {
+            return Err(bad_verdict(case_id, verdict));
+        }
+        return Ok(data);
+    }
+    let per_case = data
+        .get("samples_per_case")
+        .and_then(json_int)
+        .expect("checked above");
+    for (case_id, verdicts) in &results {
+        let listed = match verdicts {
+            Json::Array(items) if BigInt::from(items.len()) == *per_case => items,
+            _ => {
+                return Err(model(format!(
+                    "{rel}: {case_id} must be a list with one verdict per sample, {per_case} in all, got {}",
+                    verdicts.repr()
+                )));
+            }
+        };
+        if let Some(verdict) = listed.iter().find(|v| !is_verdict(v)) {
+            return Err(bad_verdict(case_id, verdict));
         }
     }
+    let web = field(rel, &data, "web_access")?;
+    if !WEB_ACCESS.contains(&web.as_str()) {
+        return Err(model(format!(
+            "{rel}: web_access must be 'off' or 'on', got {}",
+            py::repr_str(&web)
+        )));
+    }
+    field(rel, &data, "model_roles")?;
+    let responses = BigInt::from(results.len()) * per_case;
+    check_screens(rel, data.get("screens"), &responses)?;
     Ok(data)
+}
+
+/// Every screen named once, each a count of responses no greater than the
+/// record holds; only the authorities count may be null, for no list.
+fn check_screens(rel: &str, screens: Option<&Json>, responses: &BigInt) -> Result<(), Fail> {
+    let fail = || {
+        Fail::Model(format!(
+            "{rel}: screens must give {} as counts of responses from 0 to {responses}; authority_unlisted is \
+             null when no authorities list was supplied",
+            SCREENS.join(", ")
+        ))
+    };
+    let Some(Json::Object(pairs)) = screens else {
+        return Err(fail());
+    };
+    let mut have: Vec<&str> = pairs.iter().map(|(k, _)| k.as_str()).collect();
+    let mut want = SCREENS.to_vec();
+    have.sort();
+    want.sort();
+    if have != want {
+        return Err(fail());
+    }
+    for (key, value) in pairs {
+        let counted = json_int(value).is_some_and(|n| *n >= BigInt::from(0) && n <= responses);
+        if !counted && !(key == "authority_unlisted" && *value == Json::Null) {
+            return Err(fail());
+        }
+    }
+    Ok(())
 }
 
 /// The column heading: model, guide version, the commit when recorded, and date.
@@ -428,6 +533,38 @@ fn legacy_breach(run: &Record, case_id: &str) -> bool {
         && run.result(case_id) == Some("pass")
 }
 
+/// A run's verdicts on the current cases, counted per case and per sample.
+struct Samples {
+    cases: usize,
+    per_case: usize,
+    samples: usize,
+    sample_passes: usize,
+    /// Cases on which every sample passed: all-of-k.
+    all_pass: usize,
+    /// Cases on which every sample got the same verdict.
+    agree: usize,
+}
+
+impl Samples {
+    fn of(run: &Record, ids: &[&str]) -> Samples {
+        let cases: Vec<Vec<&str>> = ids.iter().filter_map(|id| run.samples(id)).collect();
+        Samples {
+            cases: cases.len(),
+            per_case: cases.first().map_or(1, Vec::len),
+            samples: cases.iter().map(Vec::len).sum(),
+            sample_passes: cases.iter().flatten().filter(|v| **v == "pass").count(),
+            all_pass: cases
+                .iter()
+                .filter(|c| c.iter().all(|v| *v == "pass"))
+                .count(),
+            agree: cases
+                .iter()
+                .filter(|c| c.iter().all(|v| *v == c[0]))
+                .count(),
+        }
+    }
+}
+
 /// One row per case, one column per run, and a per-column total.
 fn run_table(s: &Sources, runs: &[Record], total_label: &str) -> String {
     let mut headers = vec!["ID".to_string(), "Expected status".to_string()];
@@ -437,7 +574,17 @@ fn run_table(s: &Sources, runs: &[Record], total_label: &str) -> String {
         let id = c.get("id");
         let mut row = vec![id.to_string(), c.get("expected_status").to_string()];
         for r in runs {
-            let mut cell = r.result(id).unwrap_or(NOT_RUN).to_string();
+            let mut cell = match r.samples(id) {
+                None => NOT_RUN.to_string(),
+                Some(samples) if samples.len() == 1 => samples[0].to_string(),
+                Some(samples) => OBSERVATION_VERDICTS
+                    .iter()
+                    .map(|v| (samples.iter().filter(|s| *s == v).count(), v))
+                    .filter(|(n, _)| *n > 0)
+                    .map(|(n, v)| format!("{n} {v}"))
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            };
             if legacy_breach(r, id) {
                 cell.push('*');
             }
@@ -448,16 +595,14 @@ fn run_table(s: &Sources, runs: &[Record], total_label: &str) -> String {
     let ids: Vec<&str> = s.behaviour.iter().map(|c| c.get("id")).collect();
     let mut total = vec![total_label.to_string(), "of cases run".to_string()];
     for r in runs {
-        let in_suite: Vec<&(String, Json)> = r
-            .results()
-            .iter()
-            .filter(|(k, _)| ids.contains(&k.as_str()))
-            .collect();
-        let passes = in_suite
-            .iter()
-            .filter(|(_, v)| v.as_str() == Some("pass"))
-            .count();
-        let mut cell = format!("{passes}/{}", in_suite.len());
+        let tally = Samples::of(r, &ids);
+        let mut cell = format!("{}/{}", tally.all_pass, tally.cases);
+        if tally.per_case > 1 {
+            cell.push_str(&format!(
+                " all-of-{}; pass@1 {}/{} samples",
+                tally.per_case, tally.sample_passes, tally.samples
+            ));
+        }
         if ids.iter().any(|k| legacy_breach(r, k)) {
             cell.push_str(" (1 legacy pass annotated*)");
         }
@@ -466,6 +611,38 @@ fn run_table(s: &Sources, runs: &[Record], total_label: &str) -> String {
     rows.push(total);
     let aligns = vec!["---"; headers.len()];
     render_table(&headers, &aligns, &rows)
+}
+
+/// What a record from 8 November 2026 adds to its coverage line: web access,
+/// model roles, consistency across samples and the mechanical screens.
+fn sampled_summary(run: &Record, ids: &[&str]) -> String {
+    let tally = Samples::of(run, ids);
+    let screen = |key: &str| {
+        run.get("screens")
+            .and_then(|s| s.get(key))
+            .and_then(json_int)
+    };
+    let n = |key: &str| screen(key).map_or_else(|| "not checked".into(), BigInt::to_string);
+    format!(
+        " Web access: {}. Model roles: {}. Samples per case: {}; all-of-{} {}/{} cases, pass@1 {}/{} samples, \
+         one verdict on every sample of {}/{} cases. Responses screened: {}; canary {}, over-refusal {}, \
+         unsafe completion {}, authority off the supplied list {}.",
+        run.str("web_access"),
+        run.str("model_roles"),
+        tally.per_case,
+        tally.per_case,
+        tally.all_pass,
+        tally.cases,
+        tally.sample_passes,
+        tally.samples,
+        tally.agree,
+        tally.cases,
+        tally.samples,
+        n("canary"),
+        n("over_refusal"),
+        n("unsafe_completion"),
+        n("authority_unlisted"),
+    )
 }
 
 /// Render the confirmed results table, then any proposed observations,
@@ -512,22 +689,25 @@ pub fn build_results_md(root: &PyPath, s: &Sources) -> Result<String, Fail> {
     ));
     for run in &current {
         let count = |verdict: &str| {
-            run.results()
-                .iter()
-                .filter(|(k, v)| ids.contains(&k.as_str()) && v.as_str() == Some(verdict))
+            ids.iter()
+                .filter(|id| run.result(id) == Some(verdict))
                 .count()
         };
         let (pass, fail, violation) = (count("pass"), count("fail"), count("violation"));
         let assessed = pass + fail + violation;
         out.push_str(&format!(
             "- {}: {assessed}/{} assessed; {pass} pass, {fail} fail, {violation} violation, {} not assessed. \
-             Tools: {}. Conditions: {}.\n",
+             Tools: {}. Conditions: {}.",
             run_label(run),
             ids.len(),
             ids.len() - assessed,
             run.str("tools"),
             run.str("conditions")
         ));
+        if run.get("screens").is_some() {
+            out.push_str(&sampled_summary(run, &ids));
+        }
+        out.push('\n');
     }
     if !current.is_empty() {
         out.push('\n');

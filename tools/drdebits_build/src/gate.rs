@@ -1062,11 +1062,13 @@ pub fn load_authorities(text: &str) -> Result<Vec<Authority>, String> {
         .collect()
 }
 
-/// Flag each section of a named Act or ruling id the draft cites that is not
-/// in the authorities list, and each section-like or ruling-like text the
-/// gate cannot read. This check adds reviews and a note only, never a block:
-/// it cannot show that a listed authority is current or correctly applied.
-pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut Report) {
+/// The sections of a named Act and ruling ids a draft cites that the
+/// authorities list omits, then the section-like or ruling-like text the
+/// gate cannot read whole, each in the order first cited.
+pub(crate) fn unlisted_citations(
+    response: &str,
+    authorities: &[Authority],
+) -> (Vec<String>, Vec<String>) {
     let mut unlisted: Vec<String> = Vec::new();
     let mut unread: Vec<String> = Vec::new();
     // One text, so a citation wrapped across lines (`TR` then `2019/7`) is
@@ -1095,6 +1097,15 @@ pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut
             list.push(written);
         }
     }
+    (unlisted, unread)
+}
+
+/// Flag each section of a named Act or ruling id the draft cites that is not
+/// in the authorities list, and each section-like or ruling-like text the
+/// gate cannot read. This check adds reviews and a note only, never a block:
+/// it cannot show that a listed authority is current or correctly applied.
+pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut Report) {
+    let (unlisted, unread) = unlisted_citations(response, authorities);
     if !unlisted.is_empty() {
         report.reviews.push(format!(
             "authorities check: {} not in the authorities file; a person must check each against its source",
@@ -1284,7 +1295,7 @@ fn read_response(path: &str) -> Result<String, Fail> {
 }
 
 /// Read and parse the `--facts` or `--authorities` file, when one is given.
-fn load_list<T>(
+pub(crate) fn load_list<T>(
     path: Option<&str>,
     what: &str,
     parse: fn(&str) -> Result<T, String>,
