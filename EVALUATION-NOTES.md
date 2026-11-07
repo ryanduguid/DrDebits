@@ -709,9 +709,11 @@ The JSON report lists every case in either run as unchanged, changed, fixed,
 regressed, baseline only or candidate only. Missing cases are not failures.
 The pass delta uses only shared cases. Fixed/regressed labels and the pass
 delta require identical recorded case digests and conditions, including
-runtime, tools, effort and sample count, with human-confirmed verdicts in both
-runs. Otherwise the report shows the raw verdict changes and explains the
-comparison limits. A `review` observation remains unconfirmed.
+runtime, tools, effort, sample count, web access and model roles, with
+human-confirmed verdicts in both runs. Otherwise the report shows the raw
+verdict changes and explains the comparison limits. A `review` observation
+remains unconfirmed. A case with several samples compares by its case verdict:
+`pass` only when every sample passed, otherwise its worst sample's verdict.
 
 Changes to the guide, model, dates and other metadata are reported separately.
 An equal digest identifies the recorded input bytes; it does not prove what a
