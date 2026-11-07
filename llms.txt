@@ -6,7 +6,7 @@ Version: `0.5.0`
 Release status: published; signed tag `v0.5.0`
 Sources last checked: 2026-10-14
 
-- Repository: https://github.com/ryanduguid/llm-tax-guardrails
+- Repository: https://github.com/ryanduguid/DrDebits
 - The guide does not make anyone a registered tax or BAS agent and is not advice. Conclusions stay with the registered practitioner.
 
 ## Instructions to the model
@@ -17,19 +17,19 @@ The guide instructs models to remain within the professional boundary: a model a
 
 ## Docs
 
-- [DrDebits guide](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/drdebits.md): the normative guide, covering deployment and authority, source status, the data gate and intake, the mandatory workflow and stops, the TPB, APES 110 and AML/CTF control sets, and the output and workpaper contract.
-- [README](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/README.md): what the guide covers and how to install and load the approved bundle in Claude Code.
-- [Behaviour tests](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/tests/behaviour-tests.md)
-- [Disclaimer](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/DISCLAIMER.md)
+- [DrDebits guide](https://github.com/ryanduguid/DrDebits/blob/main/drdebits.md): the normative guide, covering deployment and authority, source status, the data gate and intake, the mandatory workflow and stops, the TPB, APES 110 and AML/CTF control sets, and the output and workpaper contract.
+- [README](https://github.com/ryanduguid/DrDebits/blob/main/README.md): what the guide covers and how to install and load the approved bundle in Claude Code.
+- [Behaviour tests](https://github.com/ryanduguid/DrDebits/blob/main/tests/behaviour-tests.md)
+- [Disclaimer](https://github.com/ryanduguid/DrDebits/blob/main/DISCLAIMER.md)
 
 ## Reuse
 
-- [Reusing this code](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/AGENTS.md#reusing-this-code): Ryan Duguid's work under the Ryan Duguid Public Attribution Licence, Version 1.0 (LicenseRef-Duguid-Public-Attribution-1.0), which is FSL-1.1-ALv2 plus a public attribution condition; keep its notices and licence; where the Public Attribution Condition applies, a copy or port made available outside the user's organisation must credit Ryan Duguid publicly.
+- [Reusing this code](https://github.com/ryanduguid/DrDebits/blob/main/AGENTS.md#reusing-this-code): Ryan Duguid's work under the Ryan Duguid Public Attribution Licence, Version 1.0 (LicenseRef-Duguid-Public-Attribution-1.0), which is FSL-1.1-ALv2 plus a public attribution condition; keep its notices and licence; where the Public Attribution Condition applies, a copy or port made available outside the user's organisation must credit Ryan Duguid publicly.
 
 ## Optional
 
-- [Live TPB Guidance Statement catalogue](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/reference/tpb-catalogue.md)
-- [APES 110 reference map](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/reference/apes-110-map.md)
-- [AI tool and vendor assurance checklist](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/reference/ai-vendor-assurance.md)
-- [Evaluation notes](https://github.com/ryanduguid/llm-tax-guardrails/blob/main/EVALUATION-NOTES.md)
+- [Live TPB Guidance Statement catalogue](https://github.com/ryanduguid/DrDebits/blob/main/reference/tpb-catalogue.md)
+- [APES 110 reference map](https://github.com/ryanduguid/DrDebits/blob/main/reference/apes-110-map.md)
+- [AI tool and vendor assurance checklist](https://github.com/ryanduguid/DrDebits/blob/main/reference/ai-vendor-assurance.md)
+- [Evaluation notes](https://github.com/ryanduguid/DrDebits/blob/main/EVALUATION-NOTES.md)
 - [Author's site](https://duguid.com.au/): Ryan Duguid's website.

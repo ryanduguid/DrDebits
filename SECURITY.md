@@ -6,7 +6,7 @@ Security fixes are applied to the latest version on the default branch.
 
 ## Reporting a vulnerability
 
-Report privately at <https://github.com/ryanduguid/llm-tax-guardrails/security/advisories/new>.
+Report privately at <https://github.com/ryanduguid/DrDebits/security/advisories/new>.
 
 Please use this repository's private vulnerability reporting feature. Do not
 open a public issue or pull request for a suspected security vulnerability.

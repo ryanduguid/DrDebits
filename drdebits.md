@@ -4,7 +4,7 @@ guide_version: 0.5.0
 status: current
 jurisdiction: AU
 owner: Ryan Duguid
-canonical_repository: https://github.com/ryanduguid/llm-tax-guardrails
+canonical_repository: https://github.com/ryanduguid/DrDebits
 release_tag: v0.5.0
 sources_checked_at: 2026-10-14T00:00:00+11:00
 review_due: 2027-01-14
