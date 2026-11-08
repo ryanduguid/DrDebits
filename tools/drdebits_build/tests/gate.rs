@@ -1197,6 +1197,53 @@ fn a_part_named_without_its_section_is_reported() {
 }
 
 #[test]
+fn a_composite_ending_in_text_the_gate_does_not_read_is_reported() {
+    // `paragraph 3 of Schedule 1` is no citation the gate reads, so the part
+    // that opens the composite cannot be passed over.
+    let listed = format!(r#"{{"authorities": ["s 1 {SAMPLE_ACT}"]}}"#);
+    let draft = DRAFT.replace(
+        "- GST Act s 9-70.",
+        "- subparagraph (a) of paragraph 3 of Schedule 1 to the Sample Consumption Tax Act 2099.",
+    );
+    let report = with_authorities(&draft, &listed);
+    assert_eq!(
+        authorities_reviews(&report),
+        [unread("subparagraph (a)")],
+        "{:?}",
+        report.reviews
+    );
+}
+
+#[test]
+fn sibling_parts_after_the_act_are_reported() {
+    // Only (1) is listed; (2) and (3) are cited too.
+    let listed = format!(r#"{{"authorities": ["s 1 {SAMPLE_ACT}", "s 9-5(1) {SAMPLE_ACT}"]}}"#);
+    let written = format!("subsection 9-5(1) {SAMPLE_ACT}, (2) and (3)");
+    let draft = DRAFT.replace("- GST Act s 9-70.", &format!("- {written}."));
+    let report = with_authorities(&draft, &listed);
+    assert_eq!(
+        authorities_reviews(&report),
+        [unread(&written)],
+        "{:?}",
+        report.reviews
+    );
+}
+
+#[test]
+fn ruling_paragraph_ranges_and_source_labels_are_not_read() {
+    let draft = cited().replace(
+        "- None identified.",
+        "- See paragraphs 45-50 of TR 2006/10 [S1] and source S3.",
+    );
+    let report = with_authorities(&draft, AUTHORITIES);
+    assert!(
+        authorities_reviews(&report).is_empty(),
+        "{:?}",
+        report.reviews
+    );
+}
+
+#[test]
 fn each_word_for_a_section_or_part_of_one_is_read() {
     // Each is read whole and checked, so each unlisted one asks for review.
     for text in [
@@ -1255,7 +1302,7 @@ fn authority_like_text_the_gate_cannot_read_is_reported() {
         ("paragraph 8-1(1)(a) ITAA 1997", "paragraph 8-1(1)(a)"),
         (
             "subsections 8-1(1) and (2) of the Income Tax Assessment Act 1997",
-            "subsections 8-1(1)",
+            "subsections 8-1(1) and (2)",
         ),
         (
             "ss 8-1(1) of the Income Tax Assessment Act 1997",

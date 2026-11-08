@@ -61,9 +61,10 @@
 //! With `--authorities FILE`, each authority the draft cites in one of 2
 //! forms must be in the file's closed list: a section of an Act named in
 //! full, `s 8-1 of the Income Tax Assessment Act 1997` (`section`, `sec`,
-//! `s.` or `§` may replace `s`), or one subsection, paragraph or subparagraph
-//! of it with its bracketed part (`subsection 8-1(1)`, `subs`, `sub-s`,
-//! `subsec`, `paragraph 8-1(1)(a)`, `para`, `subparagraph`, `subpara`), and a
+//! `s.` or `§` may replace `s`, and `s8-1` needs no space), or one
+//! subsection, paragraph or subparagraph of it with its bracketed part
+//! (`subsection 8-1(1)`, `subs`, `sub-s`, `subsec`, `sub-sec`,
+//! `paragraph 8-1(1)(a)`, `para`, `subparagraph`, `subpara`), and a
 //! ruling id in one of the series `SERIES` lists, such as `TR 2006/10`,
 //! `LCR 2026/D1` or `TPB(GS) 55/2026`. A composite citation such as
 //! `paragraph (a) of subsection 9-5(1) of the ...` is read as the numbered
@@ -75,8 +76,12 @@
 //! `TR 2010/3W` is not `TR 2010/3`. A citation not in the
 //! list asks for REVIEW, and so does section-like or ruling-like text the gate
 //! cannot read whole, such as `s 8-1 ITAA 1997`, `ss 30-35 and 30-40`,
-//! `subsections 8-1(1) and (2)`, a part named without its section, such as
-//! `subsection (2)`, or `TR 2024`. A
+//! `subsections 8-1(1) and (2)`, sibling parts after the Act such as
+//! `, (2) and (3)`, a part named without its section, such as
+//! `subsection (2)`, or `TR 2024`. A part named without its section asks for
+//! REVIEW even in discussion after a full citation, as in
+//! `subsection (1) allows`: the gate cannot tell which section it belongs to.
+//! A
 //! possessive such as `the client's 2 trusts` is not a section. Divisions,
 //! Parts, Schedules, cases, bare Act names and other series are not read, so
 //! a PASS does not show that every authority the draft cites was checked.
@@ -988,9 +993,15 @@ const SERIES: &str = r"TR|TD|LCR|GSTR|GSTD|MT|CR|PR|SGR|PCG|PS\s+LA|TPB\(GS\)";
 const ACT: &str = r"[A-Z][\w'’-]*(?:\s+(?:[A-Z][\w'’-]*|and|of|for|the|to|on|in|an|a|\([^()]*\)))*\s+Act\s+\d{4}\b";
 /// A word for a section or a subsection, in full or abbreviated, singular or
 /// plural: `§`, `s`, `ss`, `sec`, `section`, `subs`, `sub-s`, `subsec`,
-/// `subsection`. Each is spelt out with its `sub` prefix: `\b` finds no word
-/// start before `section` in `subsection`, so `\bsection` alone skips it.
+/// `sub-sec`, `subsection`. Each is spelt out with its `sub` prefix: `\b`
+/// finds no word start before `section` in `subsection`, so `\bsection` alone
+/// skips it.
 const SECTION_WORD: &str = r"(?:§§?|\b(?i:(?:sub-?)?(?:ss?|secs?|sections?)))";
+/// A numbered section or subsection reference, before any bracketed part.
+/// `s` and `ss` need a full stop or a space before a number that is not
+/// hyphenated, so `s8-1` is taken but a source label such as `S3` or `[S1]`
+/// is not.
+const SECTION_NUMBER: &str = r"(?:\b(?i:ss?)(?:\.\s*|\s+)\d[\w-]*|\b(?i:ss?)\d\w*-[\w-]*|(?:§§?|\b(?i:sub-?ss?|(?:sub-?)?secs?|(?:sub-?)?sections?))\.?\s*\d[\w-]*)";
 /// A word for a paragraph or subparagraph: `para`, `paragraph`, `subpara`,
 /// `subparagraph`, singular or plural.
 const PARAGRAPH_WORD: &str = r"\b(?i:(?:sub-?)?para(?:graph)?s?)";
@@ -1001,28 +1012,32 @@ const AFTER_WORD: &str = r"\.?\s*";
 const PART: &str = r"\([0-9A-Za-z]+\)";
 /// Anything in a draft that looks like a ruling id or a reference to a
 /// section, subsection, paragraph or subparagraph, taken whole with any
-/// `of the <Act>` that follows, so a citation the gate cannot read is reported
-/// rather than skipped. A paragraph needs a hyphenated number, a bracketed
-/// part or a named Act, so `paragraph 45` of a ruling or document is not
-/// taken. A part named without its section, such as `subsection (2)`, is
-/// taken alone; `check_authorities` passes over it when it opens a composite
-/// citation that ends in a numbered one.
+/// `of the <Act>` and any sibling parts that follow, such as `, (2) and (3)`,
+/// so a citation the gate cannot read is reported rather than skipped. A
+/// paragraph needs a bracketed part, a named Act or a hyphenated number
+/// (`range`), which `check_authorities` reads only before `of the`, so
+/// `paragraph 45` or `paragraphs 45-50 of TR 2006/10` of a ruling is not
+/// taken. A part named without its section (`bare`), such as
+/// `subsection (2)`, is taken alone; `check_authorities` passes over it when
+/// it opens a composite citation that ends in a numbered one.
 static AUTHORITY_TEXT: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"\b(?:{SERIES})\s*\d[\w/]*|(?:{SECTION_WORD}{AFTER_WORD}\d[\w-]*(?:{PART})*|{PARAGRAPH_WORD}{AFTER_WORD}(?:\d\w*-[\w-]*(?:{PART})*|\d[\w-]*(?:{PART})+|\d[\w-]*\s+of\s+the\s+{ACT}))(?:\s+of\s+the\s+{ACT})?|(?:{SECTION_WORD}|{PARAGRAPH_WORD}){AFTER_WORD}(?:{PART})+"
+        r"\b(?:{SERIES})\s*\d[\w/]*|(?:{SECTION_NUMBER}(?:{PART})*|{PARAGRAPH_WORD}{AFTER_WORD}(?:\d[\w-]*(?:{PART})+|\d[\w-]*\s+of\s+the\s+{ACT}|(?P<range>\d\w*-[\w-]*)))(?:\s+of\s+the\s+{ACT})?(?:\s*(?:,|and|or)\s*(?:{PART})+)*|(?P<bare>(?:{SECTION_WORD}|{PARAGRAPH_WORD}){AFTER_WORD}(?:{PART})+)"
     ))
     .expect("pattern")
 });
-/// A composite citation from its start: parts named without their section,
-/// each `of` the next, ending in a numbered provision, as in
-/// `paragraph (a) of subsection 9-5(1)` or `subsection (1) of section 8-1`.
-/// The numbered provision is read on its own.
-static COMPOSITE: LazyLock<regex::Regex> = LazyLock::new(|| {
+/// The opening of a composite citation: parts named without their section,
+/// each `of` the next, as in `paragraph (a) of ` before `subsection 9-5(1)`.
+static COMPOSITE_OPENING: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"^(?:(?:{SECTION_WORD}|{PARAGRAPH_WORD}){AFTER_WORD}(?:{PART})+\s+of\s+(?:the\s+)?)+(?:{SECTION_WORD}|{PARAGRAPH_WORD}){AFTER_WORD}\d"
+        r"^(?:(?:{SECTION_WORD}|{PARAGRAPH_WORD}){AFTER_WORD}(?:{PART})+\s+of\s+(?:the\s+)?)+"
     ))
     .expect("pattern")
 });
+/// `of the` after a hyphenated paragraph number, which marks it as a
+/// provision of an Act rather than a range of a ruling's paragraphs.
+static OF_THE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^\s+of\s+the\b").expect("pattern"));
 /// A readable citation: a ruling id, whose first part has 2 or 4 digits (a
 /// year before 1999 has 2), with an optional draft `D` before its number and
 /// a suffix such as `W` or `A1`, or one section of a named Act, or one
@@ -1117,6 +1132,37 @@ pub fn load_authorities(text: &str) -> Result<Vec<Authority>, String> {
         .collect()
 }
 
+/// Whether a match of `AUTHORITY_TEXT` is a citation to check: not a
+/// possessive such as `client's 2 trusts` (a quotation opening on `'s 8-1` is
+/// still read), nor a hyphenated paragraph number without `of the` after it,
+/// such as `paragraphs 45-50 of TR 2006/10`.
+fn is_citation(text: &str, c: &regex::Captures) -> bool {
+    let start = c.get(0).expect("whole match").start();
+    let mut before = text[..start].chars().rev();
+    let possessive = matches!(before.next(), Some('\'' | '’'))
+        && before.next().is_some_and(char::is_alphanumeric);
+    let ruling_range = c
+        .name("range")
+        .is_some_and(|r| !OF_THE.is_match(&text[r.end()..]));
+    !possessive && !ruling_range
+}
+
+/// Whether the part named without its section at `start` opens a composite
+/// citation, such as `paragraph (a) of subsection 9-5(1)`, that ends in a
+/// numbered citation the scanner reads next. Anything else after the opening,
+/// such as `paragraph 3 of Schedule 1`, leaves the part to be reported.
+fn opens_composite(text: &str, start: usize) -> bool {
+    let Some(opening) = COMPOSITE_OPENING.find(&text[start..]) else {
+        return false;
+    };
+    let next = start + opening.end();
+    AUTHORITY_TEXT.captures_at(text, next).is_some_and(|c| {
+        c.get(0).is_some_and(|m| m.start() == next)
+            && c.name("bare").is_none()
+            && is_citation(text, &c)
+    })
+}
+
 /// Flag each section of a named Act or ruling id the draft cites that is not
 /// in the authorities list, and each section-like or ruling-like text the
 /// gate cannot read. A citation is listed when the list holds it or a
@@ -1133,18 +1179,11 @@ pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut
         .map(normalise)
         .collect::<Vec<_>>()
         .join("\n");
-    for m in AUTHORITY_TEXT.find_iter(&text) {
-        // `client's 2 trusts`: a possessive, not a section. A quotation
-        // opening on `'s 8-1` is still read.
-        let mut before = text[..m.start()].chars().rev();
-        if matches!(before.next(), Some('\'' | '’'))
-            && before.next().is_some_and(char::is_alphanumeric)
+    for c in AUTHORITY_TEXT.captures_iter(&text) {
+        let m = c.get(0).expect("whole match");
+        if !is_citation(&text, &c)
+            || (c.name("bare").is_some() && opens_composite(&text, m.start()))
         {
-            continue;
-        }
-        // `paragraph (a) of subsection 9-5(1)`: the numbered provision that
-        // ends it is the next match, and is read.
-        if COMPOSITE.is_match(&text[m.start()..]) {
             continue;
         }
         let written = m.as_str().split_whitespace().collect::<Vec<_>>().join(" ");
