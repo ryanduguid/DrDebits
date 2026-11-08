@@ -920,7 +920,7 @@ fn only_adds_its_own_findings(prefix: &str, with_check: impl Fn(&str) -> gate::R
 }
 
 const AUTHORITIES: &str = r#"{"authorities": ["s 9-70 of the A New Tax System (Goods and Services Tax) Act 1999", "TR 2006/10"]}"#;
-const AUTHORITIES_CAVEAT: &str = "authorities check: it reads only a section of a named Act, or a subsection or paragraph of one, and a ruling id, so a pass does not show that every authority the draft cites was checked; a listed authority is not thereby current or correctly applied";
+const AUTHORITIES_CAVEAT: &str = "authorities check: it reads only a section of a named Act, or a subsection, paragraph or subparagraph of one, and a ruling id, so a pass does not show that every authority the draft cites was checked; a listed authority is not thereby current or correctly applied";
 
 /// `DRAFT` with its authority cited in full, and a ruling.
 fn cited() -> String {
@@ -954,7 +954,7 @@ fn unlisted(written: &str) -> String {
 
 fn unread(written: &str) -> String {
     format!(
-        "authorities check: could not read {written} as a section of a named Act or a ruling id; a person must check each"
+        "authorities check: could not read {written} as a section, subsection, paragraph or subparagraph of a named Act or a ruling id; a person must check each"
     )
 }
 
@@ -1128,6 +1128,75 @@ fn a_listed_subsection_lists_what_it_contains_only() {
 }
 
 #[test]
+fn an_abbreviation_with_a_full_stop_or_no_space_is_read() {
+    for text in [
+        "s. 8-1(1)",
+        "sec 8-1(1)",
+        "sec. 8-1(1)",
+        "subsec 8-1(1)",
+        "sub-s. 8-1(1)",
+        "subs. 8-1(1)",
+        "para. 8-1(1)(a)",
+        "s8-1(1)",
+        "§ 8-1(1)",
+    ] {
+        let written = format!("{text} {SAMPLE_ACT}");
+        let draft = cited().replace("- None identified.", &format!("- {written}."));
+        let report = with_authorities(&draft, AUTHORITIES);
+        assert_eq!(
+            authorities_reviews(&report),
+            [unlisted(&written)],
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+    let listed = format!(r#"{{"authorities": ["s 1 {SAMPLE_ACT}", "s 8-1 {SAMPLE_ACT}"]}}"#);
+    assert_listed("s. 8-1(1)", &listed, true);
+    assert_listed("§ 8-1(1)", &listed, true);
+}
+
+#[test]
+fn a_part_named_without_its_section_is_reported() {
+    let listed = format!(
+        r#"{{"authorities": ["s 1 {SAMPLE_ACT}", "s 8-1 {SAMPLE_ACT}", "s 9-5(1) {SAMPLE_ACT}"]}}"#
+    );
+    for (text, unread_text) in [
+        (
+            format!("subsection 9-5(1) {SAMPLE_ACT} and subsection (2)"),
+            "subsection (2)",
+        ),
+        (
+            format!("s 1 {SAMPLE_ACT}; see also paragraph (b) of subsection (2)"),
+            "paragraph (b), subsection (2)",
+        ),
+    ] {
+        let draft = DRAFT.replace("- GST Act s 9-70.", &format!("- {text}."));
+        let report = with_authorities(&draft, &listed);
+        assert_eq!(
+            authorities_reviews(&report),
+            [unread(unread_text)],
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+    // A composite ending in a numbered provision is read as that provision.
+    for text in [
+        format!("subsection (1) of section 8-1 {SAMPLE_ACT}"),
+        format!("paragraph (a) of subsection 9-5(1) {SAMPLE_ACT}"),
+        format!("subparagraph (i) of paragraph (a) of subsection 9-5(1) {SAMPLE_ACT}"),
+    ] {
+        let draft = DRAFT.replace("- GST Act s 9-70.", &format!("- {text}."));
+        let report = with_authorities(&draft, &listed);
+        assert_eq!(
+            report.verdict(),
+            ("PASS", EXIT_PASS),
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+}
+
+#[test]
 fn each_word_for_a_section_or_part_of_one_is_read() {
     // Each is read whole and checked, so each unlisted one asks for review.
     for text in [
@@ -1199,6 +1268,16 @@ fn authority_like_text_the_gate_cannot_read_is_reported() {
         (
             "paragraph 8-1 of the Income Tax Assessment Act 1997",
             "paragraph 8-1 of the Income Tax Assessment Act 1997",
+        ),
+        ("paragraph 8-1 of the ITAA 1997", "paragraph 8-1"),
+        // A plural before a named Act.
+        (
+            "subsections 8-1(1) of the Income Tax Assessment Act 1997",
+            "subsections 8-1(1) of the Income Tax Assessment Act 1997",
+        ),
+        (
+            "paragraphs 8-1(1)(a) of the Income Tax Assessment Act 1997",
+            "paragraphs 8-1(1)(a) of the Income Tax Assessment Act 1997",
         ),
         // A ruling id without its number, run together or with a lowercase
         // suffix.
