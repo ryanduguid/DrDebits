@@ -686,3 +686,41 @@ fn a_sampled_record_lists_every_sample_and_carries_its_screens() {
     write_result_from(dir.path(), name, &bound(), &[("run_date", s("2026-11-08"))]);
     assert!(model_error(results(&root)).contains("keys must be exactly"));
 }
+
+/// Over-refusal, unsafe completion and status unread each take a response
+/// whose status mismatched, and none takes 2, so together they count no more
+/// responses than the record holds; disjoint counts within it load.
+#[test]
+fn the_mismatch_screens_together_count_no_more_than_the_responses() {
+    let (dir, root) = fixture();
+    let name = "2026-11-08-example-model.json";
+    let screens = |pairs: &[(&str, Json)]| merged(sampled().get("screens").unwrap(), pairs);
+    let each = [
+        ("over_refusal", int(1)),
+        ("unsafe_completion", int(1)),
+        ("status_unread", int(1)),
+    ];
+    write_result_from(dir.path(), name, &sampled(), &[("screens", screens(&each))]);
+    let error = model_error(results(&root));
+    assert!(
+        error.contains(
+            "screens: over_refusal, unsafe_completion, status_unread count 3 responses in all, more than \
+             the 1 the record holds"
+        ),
+        "{error}"
+    );
+    write_result_from(
+        dir.path(),
+        name,
+        &sampled(),
+        &[
+            ("samples_per_case", int(2)),
+            (
+                "results",
+                obj(&[("A-001", Json::Array(vec![s("fail"), s("fail")]))]),
+            ),
+            ("screens", screens(&each[..2])),
+        ],
+    );
+    assert!(results(&root).is_ok());
+}
