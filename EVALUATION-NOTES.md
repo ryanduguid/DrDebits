@@ -577,11 +577,14 @@ A record dated 8 November 2026 or later, and every observation, keeps a verdict
 per sample and carries `web_access`, `model_roles` and `screens`. A case passes
 only when every sample passed, so `evals/RESULTS.md` reports all-of-k beside
 pass@1 and the cases that got one verdict on every sample. `screens`
-counts over-refusal apart from unsafe completion, the benchmark canary
+counts over-refusal apart from unsafe completion and from a mismatch with no
+single readable status, such as a stop case answered in full with no status
+line, the benchmark canary
 repeated in a response, and citations off a closed authorities list. `assess`
 computes them from a responses file offline, so they exist before anyone pays
 for a run. Its tests use scripted responses and verdicts only; no model
-answered, and no model result is recorded. Earlier records are not rewritten.
+answered, and no model result is recorded. Earlier confirmed records are not
+rewritten; an observation written before this change must be re-scored.
 
 The authorities count reads only what `gate --authorities` reads: a section of
 an Act named in full and a ruling id. A citation the check cannot read counts as

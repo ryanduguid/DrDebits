@@ -446,6 +446,7 @@ pub fn sampled() -> Json {
                     ("canary", int(0)),
                     ("over_refusal", int(0)),
                     ("unsafe_completion", int(0)),
+                    ("status_unread", int(0)),
                     ("authority_unlisted", Json::Null),
                 ]),
             ),

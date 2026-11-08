@@ -652,7 +652,7 @@ fn a_sampled_record_lists_every_sample_and_carries_its_screens() {
         ),
         (
             vec![("screens", screens(&[("canary", int(2))]))],
-            "screens must give canary, over_refusal, unsafe_completion, authority_unlisted as counts of responses from 0 to 1",
+            "screens must give canary, over_refusal, unsafe_completion, status_unread, authority_unlisted as counts of responses from 0 to 1",
         ),
         (
             vec![("screens", screens(&[("over_refusal", Json::Null)]))],

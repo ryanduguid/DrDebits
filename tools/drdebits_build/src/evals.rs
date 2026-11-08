@@ -96,10 +96,11 @@ const SAMPLES_REQUIRED_FROM: Date = Date {
 pub const WEB_ACCESS: [&str; 2] = ["off", "on"];
 /// The counts `assess` reports, each a number of responses. The authorities
 /// count is null when no authorities list was supplied.
-const SCREENS: [&str; 4] = [
+const SCREENS: [&str; 5] = [
     "canary",
     "over_refusal",
     "unsafe_completion",
+    "status_unread",
     "authority_unlisted",
 ];
 
@@ -626,7 +627,7 @@ fn sampled_summary(run: &Record, ids: &[&str]) -> String {
     format!(
         " Web access: {}. Model roles: {}. Samples per case: {}; all-of-{} {}/{} cases, pass@1 {}/{} samples, \
          one verdict on every sample of {}/{} cases. Responses screened: {}; canary {}, over-refusal {}, \
-         unsafe completion {}, authority off the supplied list {}.",
+         unsafe completion {}, status unread {}, authority off the supplied list {}.",
         run.str("web_access"),
         run.str("model_roles"),
         tally.per_case,
@@ -641,6 +642,7 @@ fn sampled_summary(run: &Record, ids: &[&str]) -> String {
         n("canary"),
         n("over_refusal"),
         n("unsafe_completion"),
+        n("status_unread"),
         n("authority_unlisted"),
     )
 }
