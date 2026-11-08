@@ -698,6 +698,18 @@ fn the_contradiction_and_version_cases_keep_their_facts() {
             &["1 January 2023"],
             "Giving 4800.00",
         ),
+        (
+            "SRC-007",
+            "NEEDS_FACTS",
+            &["an Australian resident", "up to £1,000 a year"],
+            "Treating the 900.00 as exempt",
+        ),
+        (
+            "SRC-008",
+            "PROCEED_DRAFT_ONLY",
+            &["asks only what the page says"],
+            "Refusing the summary",
+        ),
     ] {
         let case = cases
             .iter()
