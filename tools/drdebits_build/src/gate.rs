@@ -61,13 +61,18 @@
 //! With `--authorities FILE`, each authority the draft cites in one of 2
 //! forms must be in the file's closed list: a section of an Act named in
 //! full, `s 8-1 of the Income Tax Assessment Act 1997` (`section` may replace
-//! `s`), and a ruling id in one of the series `SERIES` lists, such as
-//! `TR 2006/10`, `LCR 2026/D1` or `TPB(GS) 55/2026`. A citation may wrap
-//! across lines. Citations compare exactly, whitespace and line breaks aside:
-//! `s 8-1(1)` is not `s 8-1`, and the withdrawal `TR 2010/3W` is not
-//! `TR 2010/3`. A citation not in the list asks for
-//! REVIEW, and so does section-like or ruling-like text the gate cannot read
-//! whole, such as `s 8-1 ITAA 1997`, `ss 30-35 and 30-40` or `TR 2024`. A
+//! `s`), or one subsection, paragraph or subparagraph of it with its bracketed
+//! part (`subsection 8-1(1)`, `subs`, `sub-s`, `paragraph 8-1(1)(a)`,
+//! `para`, `subparagraph`, `subpara`), and a ruling id in one of the series
+//! `SERIES` lists, such as `TR 2006/10`, `LCR 2026/D1` or `TPB(GS) 55/2026`.
+//! A citation may wrap across lines. A citation is listed when the list holds
+//! it or a provision containing it, whitespace and line breaks aside: `s 8-1`
+//! lists `subsection 8-1(1)` and `s 8-1(1)` lists `paragraph 8-1(1)(a)`, but
+//! `s 8-1(1)` lists neither `s 8-1` nor `s 8-1(2)`, and the withdrawal
+//! `TR 2010/3W` is not `TR 2010/3`. A citation not in the
+//! list asks for REVIEW, and so does section-like or ruling-like text the gate
+//! cannot read whole, such as `s 8-1 ITAA 1997`, `ss 30-35 and 30-40`,
+//! `subsections 8-1(1) and (2)` or `TR 2024`. A
 //! possessive such as `the client's 2 trusts` is not a section. Divisions,
 //! Parts, Schedules, cases, bare Act names and other series are not read, so
 //! a PASS does not show that every authority the draft cites was checked.
@@ -977,27 +982,36 @@ const SERIES: &str = r"TR|TD|LCR|GSTR|GSTD|MT|CR|PR|SGR|PCG|PS\s+LA|TPB\(GS\)";
 /// Services Tax) Act 1999`. The year ends the word, so `Act 19970` and
 /// `Act 1997a` name no Act.
 const ACT: &str = r"[A-Z][\w'’-]*(?:\s+(?:[A-Z][\w'’-]*|and|of|for|the|to|on|in|an|a|\([^()]*\)))*\s+Act\s+\d{4}\b";
-/// Anything in a draft that looks like a ruling id or a section reference,
-/// taken whole with any `of the <Act>` that follows, so a citation the gate
-/// cannot read is reported rather than skipped.
+/// Anything in a draft that looks like a ruling id or a reference to a
+/// section, subsection, paragraph or subparagraph, in full or abbreviated
+/// (`s`, `ss`, `subs`, `sub-s`, `para`, `subpara`), taken whole with any
+/// `of the <Act>` that follows, so a citation the gate cannot read is reported
+/// rather than skipped. Each word is spelt out with its `sub` prefix: `\b`
+/// finds no word start before `section` in `subsection`, so `\bsection` alone
+/// skipped every subsection. A paragraph needs a bracketed part or a named
+/// Act, so `paragraph 45` of a ruling or document is not taken.
 static AUTHORITY_TEXT: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"\b(?:{SERIES})\s*\d[\w/]*|\b(?i:ss?|sections?)\s+\d[\w-]*(?:\([0-9A-Za-z]+\))*(?:\s+of\s+the\s+{ACT})?"
+        r"\b(?:{SERIES})\s*\d[\w/]*|\b(?:(?i:(?:sub-?)?(?:ss?|sections?))\s+\d[\w-]*(?:\([0-9A-Za-z]+\))*|(?i:(?:sub-?)?para(?:graph)?s?)\s+\d[\w-]*(?:(?:\([0-9A-Za-z]+\))+|\s+of\s+the\s+{ACT}))(?:\s+of\s+the\s+{ACT})?"
     ))
     .expect("pattern")
 });
 /// A readable citation: a ruling id, whose first part has 2 or 4 digits (a
 /// year before 1999 has 2), with an optional draft `D` before its number and
-/// a suffix such as `W` or `A1`, or one section of a named Act.
+/// a suffix such as `W` or `A1`, or one section of a named Act, or one
+/// subsection, paragraph or subparagraph of it with its bracketed part. A
+/// plural such as `ss` or `subsections` may list more than the scanner takes,
+/// so it is never read.
 static AUTHORITY: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"^(?:({SERIES})\s+((?:\d{{2}}|\d{{4}})/D?\d{{1,4}}(?:[A-Z]+\d*)?)|(?i:s|section)\s+(\d+[A-Z]*(?:-\d+[A-Z]*)?(?:\([0-9A-Za-z]+\))*)\s+of\s+the\s+({ACT}))$"
+        r"^(?:({SERIES})\s+((?:\d{{2}}|\d{{4}})/D?\d{{1,4}}(?:[A-Z]+\d*)?)|(?:(?i:s|section)\s+(\d+[A-Z]*(?:-\d+[A-Z]*)?(?:\([0-9A-Za-z]+\))*)|(?i:sub-?(?:s|section)|(?:sub-?)?para(?:graph)?)\s+(\d+[A-Z]*(?:-\d+[A-Z]*)?(?:\([0-9A-Za-z]+\))+))\s+of\s+the\s+({ACT}))$"
     ))
     .expect("pattern")
 });
 
 /// One cited or listed authority, in the form it compares by: `s <section>
-/// of the <Act>` or `<series> <id>`, with single spaces.
+/// of the <Act>` or `<series> <id>`, with single spaces. A subsection or
+/// paragraph keeps its bracketed parts: `subsection 8-1(1)` is `s 8-1(1)`.
 #[derive(Debug, PartialEq)]
 pub struct Authority(String);
 
@@ -1007,7 +1021,7 @@ impl Authority {
         let words = |i: usize| c[i].split_whitespace().collect::<Vec<_>>().join(" ");
         Some(Authority(match c.get(1) {
             Some(_) => format!("{} {}", words(1), &c[2]),
-            None => format!("s {} of the {}", &c[3], words(4)),
+            None => format!("s {} of the {}", c.get(3).or(c.get(4))?.as_str(), words(5)),
         }))
     }
 
@@ -1021,6 +1035,20 @@ impl Authority {
             }
             None => self.0.clone(),
         }
+    }
+
+    /// The citation and each provision containing it, narrowest first:
+    /// `s 8-1(1)(a)`, `s 8-1(1)`, `s 8-1`. A ruling id contains nothing else.
+    fn containing(&self) -> Vec<Authority> {
+        let Some((mut provision, act)) = self.0.split_once(" of the ") else {
+            return vec![Authority(self.0.clone())];
+        };
+        let mut found = vec![Authority(format!("{provision} of the {act}"))];
+        while let Some(i) = provision.rfind('(') {
+            provision = &provision[..i];
+            found.push(Authority(format!("{provision} of the {act}")));
+        }
+        found
     }
 }
 
@@ -1064,7 +1092,9 @@ pub fn load_authorities(text: &str) -> Result<Vec<Authority>, String> {
 
 /// Flag each section of a named Act or ruling id the draft cites that is not
 /// in the authorities list, and each section-like or ruling-like text the
-/// gate cannot read. This check adds reviews and a note only, never a block:
+/// gate cannot read. A citation is listed when the list holds it or a
+/// provision containing it, so `s 8-1(1)` lists `s 8-1(1)(a)` but neither
+/// `s 8-1` nor `s 8-1(2)`. This check adds reviews and a note only, never a block:
 /// it cannot show that a listed authority is current or correctly applied.
 pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut Report) {
     let mut unlisted: Vec<String> = Vec::new();
@@ -1088,7 +1118,7 @@ pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut
         let written = m.as_str().split_whitespace().collect::<Vec<_>>().join(" ");
         let list = match Authority::read(&written) {
             None => &mut unread,
-            Some(a) if authorities.contains(&a) => continue,
+            Some(a) if a.containing().iter().any(|c| authorities.contains(c)) => continue,
             Some(_) => &mut unlisted,
         };
         if !list.contains(&written) {
@@ -1108,7 +1138,7 @@ pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut
         ));
     }
     report.notes.push(
-        "authorities check: it reads only a section of a named Act and a ruling id, so a pass does not show that every authority the draft cites was checked; a listed authority is not thereby current or correctly applied"
+        "authorities check: it reads only a section of a named Act, or a subsection or paragraph of one, and a ruling id, so a pass does not show that every authority the draft cites was checked; a listed authority is not thereby current or correctly applied"
             .into(),
     );
 }
