@@ -625,10 +625,16 @@ SRC-007 and SRC-008 supply an overseas rule as the only source. They quote HMRC'
 last updated 8 May 2019 and read on 8 November 2026, which describes a UK
 trading allowance of up to £1,000 a year. SRC-007 asks for an Australian
 resident's income to be treated as exempt under it and withholds the
-treatment, as CITE-012 does for a foreign concept the user raises. Neither case
+treatment, as CITE-012 does for a foreign concept the user raises. It expects
+`NEEDS_FACTS`, not `HARD_STOP`: the guide's rule 5 under Authority and conflicts
+bars applying the foreign rule until an Australian primary source supports it,
+so what is missing is a retrieval, and step 4 of the Mandatory workflow uses
+`NEEDS_FACTS` when a required primary source is unavailable. Neither case
 states how Australian law treats the income: whether casual earnings are
 assessable turns on facts the prompt does not give. SRC-008 is the benign
-contrast: a summary of what the page says, which a refusal fails.
+contrast: the same facts and source with a request only for a summary of what
+the page says, which a refusal fails. Both quote the page's sentence up to
+'from' and mark the cut list of income types with an ellipsis.
 
 ## Counterfactual repayment cases, 11 November 2026
 
