@@ -1010,6 +1010,8 @@ const PARAGRAPH_WORD: &str = r"\b(?i:(?:sub-?)?para(?:graph)?s?)";
 const AFTER_WORD: &str = r"\.?\s*";
 /// One bracketed part of a provision, such as `(1)` or `(a)`.
 const PART: &str = r"\([0-9A-Za-z]+\)";
+/// A list separator, including a comma followed by a conjunction.
+const SEPARATOR: &str = r"(?:,\s*(?:(?i:and|or)\b\s*)?|(?i:and|or)\b\s*)";
 /// Anything in a draft that looks like a ruling id or a reference to a
 /// section, subsection, paragraph or subparagraph, taken whole with any
 /// `of the <Act>` and any sibling parts that follow, such as `, (2) and (3)`,
@@ -1021,8 +1023,14 @@ const PART: &str = r"\([0-9A-Za-z]+\)";
 /// `subsection (2)`, is taken alone; `check_authorities` passes over it when
 /// it opens a composite citation that ends in a numbered one.
 static AUTHORITY_TEXT: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let provision = format!(r"\d[\w-]*(?:{PART})*");
+    // A named Act distinguishes compact section numbers from source labels
+    // and unbracketed paragraphs from ruling paragraphs.
+    let qualified = format!(
+        r"(?:{SECTION_WORD}{AFTER_WORD}{provision}|{PARAGRAPH_WORD}{AFTER_WORD}{provision}(?:\s*{SEPARATOR}(?:{provision}|(?:{PART})+))*)\s+of\s+the\s+{ACT}"
+    );
     regex::Regex::new(&format!(
-        r"\b(?:{SERIES})\s*\d[\w/]*|(?:{SECTION_NUMBER}(?:{PART})*|{PARAGRAPH_WORD}{AFTER_WORD}(?:\d[\w-]*(?:{PART})+|\d[\w-]*\s+of\s+the\s+{ACT}|(?P<range>\d\w*-[\w-]*)))(?:\s+of\s+the\s+{ACT})?(?:\s*(?:,|and|or)\s*(?:{PART})+)*|(?P<bare>(?:{SECTION_WORD}|{PARAGRAPH_WORD}){AFTER_WORD}(?:{PART})+)"
+        r"\b(?:{SERIES})\s*\d[\w/]*|(?:{qualified}|{SECTION_NUMBER}(?:{PART})*|{PARAGRAPH_WORD}{AFTER_WORD}(?:\d[\w-]*(?:{PART})+|(?P<range>\d\w*-[\w-]*)))(?:\s*{SEPARATOR}(?:{PART})+)*|(?P<bare>(?:{SECTION_WORD}|{PARAGRAPH_WORD}){AFTER_WORD}(?:{PART})+)"
     ))
     .expect("pattern")
 });
@@ -1038,6 +1046,13 @@ static COMPOSITE_OPENING: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// provision of an Act rather than a range of a ruling's paragraphs.
 static OF_THE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"^\s+of\s+the\b").expect("pattern"));
+/// A ruling named after a paragraph range is checked by its own citation.
+static RULING_TAIL: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(&format!(
+        r"^\s+of\s+the\s+(?:(?i:ruling)\s+)?(?:{SERIES})\s*\d"
+    ))
+    .expect("pattern")
+});
 /// A readable citation: a ruling id, whose first part has 2 or 4 digits (a
 /// year before 1999 has 2), with an optional draft `D` before its number and
 /// a suffix such as `W` or `A1`, or one section of a named Act, or one
@@ -1134,16 +1149,17 @@ pub fn load_authorities(text: &str) -> Result<Vec<Authority>, String> {
 
 /// Whether a match of `AUTHORITY_TEXT` is a citation to check: not a
 /// possessive such as `client's 2 trusts` (a quotation opening on `'s 8-1` is
-/// still read), nor a hyphenated paragraph number without `of the` after it,
-/// such as `paragraphs 45-50 of TR 2006/10`.
+/// still read), nor a hyphenated paragraph number without `of the` after it
+/// or followed by an explicit ruling reference.
 fn is_citation(text: &str, c: &regex::Captures) -> bool {
     let start = c.get(0).expect("whole match").start();
     let mut before = text[..start].chars().rev();
     let possessive = matches!(before.next(), Some('\'' | '’'))
         && before.next().is_some_and(char::is_alphanumeric);
-    let ruling_range = c
-        .name("range")
-        .is_some_and(|r| !OF_THE.is_match(&text[r.end()..]));
+    let ruling_range = c.name("range").is_some_and(|r| {
+        let tail = &text[r.end()..];
+        !OF_THE.is_match(tail) || RULING_TAIL.is_match(tail)
+    });
     !possessive && !ruling_range
 }
 

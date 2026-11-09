@@ -1218,9 +1218,51 @@ fn a_composite_ending_in_text_the_gate_does_not_read_is_reported() {
 fn sibling_parts_after_the_act_are_reported() {
     // Only (1) is listed; (2) and (3) are cited too.
     let listed = format!(r#"{{"authorities": ["s 1 {SAMPLE_ACT}", "s 9-5(1) {SAMPLE_ACT}"]}}"#);
-    let written = format!("subsection 9-5(1) {SAMPLE_ACT}, (2) and (3)");
-    let draft = DRAFT.replace("- GST Act s 9-70.", &format!("- {written}."));
-    let report = with_authorities(&draft, &listed);
+    for siblings in [", (2) and (3)", ", and (2)"] {
+        let written = format!("subsection 9-5(1) {SAMPLE_ACT}{siblings}");
+        let draft = DRAFT.replace("- GST Act s 9-70.", &format!("- {written}."));
+        let report = with_authorities(&draft, &listed);
+        assert_eq!(
+            authorities_reviews(&report),
+            [unread(&written)],
+            "{written}: {:?}",
+            report.reviews
+        );
+    }
+}
+
+#[test]
+fn ruling_paragraph_ranges_and_source_labels_are_not_read() {
+    for qualifier in ["", "the ", "the ruling "] {
+        let draft = cited().replace(
+            "- None identified.",
+            &format!("- See paragraphs 45-50 of {qualifier}TR 2006/10 [S1] and source S3."),
+        );
+        let report = with_authorities(&draft, AUTHORITIES);
+        assert!(
+            authorities_reviews(&report).is_empty(),
+            "{:?}",
+            report.reviews
+        );
+    }
+    let draft = cited().replace(
+        "- None identified.",
+        "- See paragraphs 45-50 of the ruling TPB(GS) 55/2026.",
+    );
+    let report = with_authorities(&draft, AUTHORITIES);
+    assert_eq!(
+        authorities_reviews(&report),
+        [unlisted("TPB(GS) 55/2026")],
+        "{:?}",
+        report.reviews
+    );
+}
+
+#[test]
+fn an_act_qualified_paragraph_list_is_reported_whole() {
+    let written = format!("paragraphs 8-1 and 8-2 {SAMPLE_ACT}");
+    let draft = cited().replace("- None identified.", &format!("- {written}."));
+    let report = with_authorities(&draft, AUTHORITIES);
     assert_eq!(
         authorities_reviews(&report),
         [unread(&written)],
@@ -1230,23 +1272,10 @@ fn sibling_parts_after_the_act_are_reported() {
 }
 
 #[test]
-fn ruling_paragraph_ranges_and_source_labels_are_not_read() {
-    let draft = cited().replace(
-        "- None identified.",
-        "- See paragraphs 45-50 of TR 2006/10 [S1] and source S3.",
-    );
-    let report = with_authorities(&draft, AUTHORITIES);
-    assert!(
-        authorities_reviews(&report).is_empty(),
-        "{:?}",
-        report.reviews
-    );
-}
-
-#[test]
 fn each_word_for_a_section_or_part_of_one_is_read() {
     // Each is read whole and checked, so each unlisted one asks for review.
     for text in [
+        "s9(1)",
         "subsection 8-1(1)",
         "Subsection 8-1(1)",
         "sub-section 8-1(1)",
