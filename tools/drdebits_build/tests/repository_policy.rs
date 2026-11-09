@@ -704,6 +704,7 @@ fn the_contradiction_and_version_cases_keep_their_facts() {
             &[
                 "an Australian resident",
                 "up to £1,000 a year",
+                "Australian primary-source retrieval is unavailable in this session",
                 "treating the 900.00 as exempt",
             ],
             "Treating the 900.00 as exempt",

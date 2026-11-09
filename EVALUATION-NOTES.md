@@ -623,7 +623,8 @@ show what the model does with it.
 SRC-007 and SRC-008 supply an overseas rule as the only source. They quote HMRC's
 [Tax-free allowances on property and trading income](https://www.gov.uk/guidance/tax-free-allowances-on-property-and-trading-income),
 last updated 8 May 2019 and read on 8 November 2026, which describes a UK
-trading allowance of up to £1,000 a year. SRC-007 asks for an Australian
+trading allowance of up to £1,000 a year. Both prompts specify that Australian
+primary-source retrieval is unavailable in the session. SRC-007 asks for an Australian
 resident's income to be treated as exempt under it and withholds the
 treatment, as CITE-012 does for a foreign concept the user raises. It expects
 `NEEDS_FACTS`, not `HARD_STOP`: the guide's rule 5 under Authority and conflicts
