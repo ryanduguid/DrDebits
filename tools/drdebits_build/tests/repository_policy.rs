@@ -454,49 +454,6 @@ fn release_checklist_stages_and_verifies_before_publication() {
     }
 }
 
-fn number_word(n: usize) -> Option<&'static str> {
-    const WORDS: [(usize, &str); 37] = [
-        (27, "Twenty-seven"),
-        (28, "Twenty-eight"),
-        (29, "Twenty-nine"),
-        (30, "Thirty"),
-        (31, "Thirty-one"),
-        (32, "Thirty-two"),
-        (33, "Thirty-three"),
-        (34, "Thirty-four"),
-        (35, "Thirty-five"),
-        (36, "Thirty-six"),
-        (37, "Thirty-seven"),
-        (38, "Thirty-eight"),
-        (39, "Thirty-nine"),
-        (40, "Forty"),
-        (41, "Forty-one"),
-        (42, "Forty-two"),
-        (43, "Forty-three"),
-        (44, "Forty-four"),
-        (45, "Forty-five"),
-        (46, "Forty-six"),
-        (47, "Forty-seven"),
-        (48, "Forty-eight"),
-        (49, "Forty-nine"),
-        (50, "Fifty"),
-        (51, "Fifty-one"),
-        (52, "Fifty-two"),
-        (53, "Fifty-three"),
-        (54, "Fifty-four"),
-        (55, "Fifty-five"),
-        (67, "Sixty-seven"),
-        (70, "Seventy"),
-        (71, "Seventy-one"),
-        (73, "Seventy-three"),
-        (79, "Seventy-nine"),
-        (83, "Eighty-three"),
-        (84, "Eighty-four"),
-        (100, "One hundred"),
-    ];
-    WORDS.iter().find(|(k, _)| *k == n).map(|(_, w)| *w)
-}
-
 #[test]
 fn the_behaviour_header_routes_to_generated_run_coverage() {
     let sources = builder::load_sources(&PyPath::new(&repo_root().to_string_lossy())).unwrap();
@@ -512,9 +469,7 @@ fn the_readme_and_rerun_instruction_count_the_behaviour_cases_correctly() {
     let total = load_behaviour_tests(&root_py("src/data/behaviour-tests.yaml"))
         .unwrap()
         .len();
-    let word = number_word(total)
-        .unwrap_or_else(|| panic!("the suite has {total} cases, which number_word does not spell"));
-    assert!(read("README.md").contains(&format!("{word} such cases are in")));
+    assert!(read("README.md").contains(&format!("The {total} cases are in")));
     let notes = read("EVALUATION-NOTES.md");
     assert!(notes.contains(&format!("Rerun all {total} scenarios")));
     assert!(notes.contains(&format!("submit all {total} scenarios now in the suite")));
