@@ -290,6 +290,48 @@ fn every_link_of_a_chain_is_checked() {
 }
 
 #[test]
+fn a_bracket_the_gate_cannot_pair_blocks() {
+    // The gate sees only part of a sentence and cannot tell where a bracket
+    // closed inside a calculation opened, so it blocks, even a correct sum.
+    for text in [
+        // The line's total is $350; the gate sees only `$200 + $50) = $250`.
+        "$100 + (wages $200 + $50) = $250",
+        "$100 + (wages $200 + $50) = $350",
+        "Net income (salary $1,000 - $200) = $900",
+        "Net income (salary $1,000 - $200) = $800",
+        "Net (salary $1,000 - $200) = $800 - $100 = $700",
+        "Net (salary $1,000 - $200) × 2 = $1,600",
+        // A label inside the bracket.
+        "Rent (weekly $500 × 52) = $26,000",
+        // An aside ending in a digit: the gate sees `1) + $50 = $150`.
+        "$100 (note 1) + $50 = $150",
+        "$100 (s 8-1) + $50 = $150",
+    ] {
+        let found = calculations(text);
+        assert_eq!(found.len(), 1, "{text}");
+        assert!(!found[0].matches, "{text}: {}", found[0].computed);
+        assert!(
+            found[0].computed.starts_with("could not read"),
+            "{text}: {}",
+            found[0].computed
+        );
+    }
+    // A bracket opened before the calculation, a paired one and a bracket
+    // outside the calculation are read.
+    for text in [
+        "(2 + 3 = 5)",
+        "(1,000 - 200) × 2 = 1,600",
+        "a) $100 + $50 = $150",
+        "(see s 8-1) $100 + $50 = $150",
+        "$100 + $50 = $150 (1)",
+    ] {
+        let found = calculations(text);
+        assert_eq!(found.len(), 1, "{text}");
+        assert!(found[0].matches, "{text}: {}", found[0].computed);
+    }
+}
+
+#[test]
 fn a_bracketed_amount_is_ambiguous_and_blocks() {
     for text in [
         "($100) + $50 = $150",
@@ -564,6 +606,22 @@ fn an_amount_without_a_fact_or_calculation_asks_for_review() {
     let report = with_facts(&text, FACTS);
     assert_eq!(report.verdict().1, EXIT_REVIEW);
     assert!(facts_reviews(&report)[0].starts_with("facts check: $100.00, $100 not"));
+}
+
+#[test]
+fn part_of_a_bracketed_sum_is_neither_reperformed_nor_traced() {
+    // Every amount is a fact, but `$250` is not the line's total of $350.
+    let facts = r#"{"facts": {"invoice total": "$1,100", "a": "$100", "b": "$200", "c": "$50"}}"#;
+    let text = DRAFT.replace("- None identified.", "- $100 + (wages $200 + $50) = $250");
+    let report = with_facts(&text, facts);
+    assert_eq!(report.verdict().1, EXIT_BLOCK, "{:?}", report.reviews);
+    assert!(
+        facts_reviews(&report)
+            .first()
+            .is_some_and(|r| r.starts_with("facts check: $250 not")),
+        "{:?}",
+        report.reviews
+    );
 }
 
 #[test]

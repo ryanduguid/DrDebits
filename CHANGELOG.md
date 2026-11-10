@@ -31,6 +31,7 @@ release.
 
 ### Fixed
 
+- `gate` blocks a calculation with a bracket that does not pair within its step between `=` signs, such as `(salary $1,000 - $200) = $900`, instead of passing it unchecked. The gate sees only part of the sentence and cannot tell what the bracket encloses, so a correct sum written this way, such as `(salary $1,000 - $200) = $800`, now blocks too, as does an aside ending in a digit before an operator, such as `$100 (note 1) + $50 = $150`; write the calculation on its own. A bracket opened before a calculation, as in `(2 + 3 = 5)`, is read as before.
 - The weekly link check no longer reports the synthetic `portal.example` link in a behaviour-test prompt as dead: links on RFC 2606 documentation names are listed as `EXAMPLE` and never requested.
 
 ## [v0.5.0] - 2026-10-31

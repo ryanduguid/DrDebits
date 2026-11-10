@@ -24,7 +24,11 @@
 //! exact decimal arithmetic. A minus sign needs spaces around it, so section
 //! numbers such as `8-1` and years such as `2026-27` are not subtractions. A
 //! lone bracketed amount such as `(120)` blocks as ambiguous, because it may
-//! be an accounting negative.
+//! be an accounting negative. A bracket opened before a calculation, as in
+//! `(2 + 3 = 5)`, belongs to the sentence. Any other bracket that does not
+//! pair within its step between `=` signs blocks the calculation, even a
+//! correct one: the gate sees only part of the sentence and cannot tell what
+//! the bracket encloses.
 //!
 //! Mandatory sections follow Risk classification for `PROCEED_DRAFT_ONLY` and
 //! `NEEDS_FACTS`. An `ESCALATE` or `HARD_STOP` draft may be the abbreviated
@@ -476,6 +480,15 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
             .map(|l| evaluate(l))
             .collect::<Option<Vec<_>>>()
         else {
+            // Every character `CLAIM` admits is a token, so only brackets
+            // that do not pair within a step leave it unreadable.
+            out.push(Calculation {
+                text,
+                computed: "could not read: a bracket does not pair within its step between `=` signs, so the gate cannot tell what it encloses; write the calculation on its own".into(),
+                matches: false,
+                operands: Vec::new(),
+                results: Vec::new(),
+            });
             continue;
         };
         let Some(values) = values.into_iter().collect::<Option<Vec<Q>>>() else {
