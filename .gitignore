@@ -33,5 +33,5 @@ env/
 Thumbs.db
 
 # Evaluation transcripts stay local; only the verdict records in evals/results/
-# and evals/observations/ (one verdict per case, no prompts or responses) are committed
+# and evals/observations/ (verdicts and counts only, no prompts or responses) are committed
 evals/transcripts/

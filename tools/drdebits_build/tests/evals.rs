@@ -444,17 +444,17 @@ fn a_proposed_record_cannot_sit_among_the_confirmed_results() {
     let (dir, root) = fixture();
     write_result_from(
         dir.path(),
-        "2026-09-18-example-model.json",
+        "2026-11-08-example-model.json",
         &proposed(),
-        &[],
+        &[("run_date", s("2026-11-08"))],
     );
     assert!(model_error(results(&root)).contains("verdict_basis must be 'human-confirmed'"));
     std::fs::remove_file(
         dir.path()
-            .join("evals/results/2026-09-18-example-model.json"),
+            .join("evals/results/2026-11-08-example-model.json"),
     )
     .unwrap();
-    write_observation_from(dir.path(), "2026-09-18-example-model.json", &bound(), &[]);
+    write_observation_from(dir.path(), "2026-11-08-example-model.json", &sampled(), &[]);
     assert!(model_error(observations(&root)).contains("verdict_basis must be 'model-proposed'"));
 }
 
@@ -610,4 +610,117 @@ fn only_the_two_record_directories_give_a_basis() {
     for directory in [".", "evals", "evals/results/old", "Evals/Results"] {
         assert_eq!(evals::directory_basis(directory), None, "{directory}");
     }
+}
+
+/// From 8 November 2026 a confirmed record lists each sample's verdict and
+/// carries web access, model roles and the screens; a bound record dated
+/// earlier keeps its shape.
+#[test]
+fn a_sampled_record_lists_every_sample_and_carries_its_screens() {
+    let (dir, root) = fixture();
+    let name = "2026-11-08-example-model.json";
+    write_result_from(dir.path(), name, &sampled(), &[]);
+    assert_eq!(
+        results(&root).unwrap()[0].samples("A-001"),
+        Some(vec!["pass"])
+    );
+    let screens = |pairs: &[(&str, Json)]| merged(sampled().get("screens").unwrap(), pairs);
+    let two = |a: &str, b: &str| obj(&[("A-001", Json::Array(vec![s(a), s(b)]))]);
+    for (overrides, message) in [
+        (
+            vec![("results", obj(&[("A-001", s("pass"))]))],
+            "A-001 must be a list with one verdict per sample, 1 in all, got 'pass'",
+        ),
+        (
+            vec![("samples_per_case", int(2))],
+            "A-001 must be a list with one verdict per sample, 2 in all",
+        ),
+        (
+            vec![
+                ("samples_per_case", int(2)),
+                ("results", two("pass", "review")),
+            ],
+            "A-001 must be pass, fail or violation, got 'review'",
+        ),
+        (
+            vec![("web_access", s("unknown"))],
+            "web_access must be 'off' or 'on', got 'unknown'",
+        ),
+        (
+            vec![("model_roles", s(" "))],
+            "model_roles must be a non-empty string",
+        ),
+        (
+            vec![("screens", screens(&[("canary", int(2))]))],
+            "screens must give canary, over_refusal, unsafe_completion, status_unread, authority_unlisted as counts of responses from 0 to 1",
+        ),
+        (
+            vec![("screens", screens(&[("over_refusal", Json::Null)]))],
+            "screens must give",
+        ),
+        (
+            vec![("screens", screens(&[("extra", int(0))]))],
+            "screens must give",
+        ),
+        (vec![("screens", s("none"))], "screens must give"),
+    ] {
+        write_result_from(dir.path(), name, &sampled(), &overrides);
+        let error = model_error(results(&root));
+        assert!(error.contains(message), "{error}");
+    }
+    write_result_from(
+        dir.path(),
+        name,
+        &sampled(),
+        &[("screens", screens(&[("authority_unlisted", int(1))]))],
+    );
+    assert!(results(&root).is_ok());
+    std::fs::remove_file(dir.path().join("evals/results").join(name)).unwrap();
+    write_result_from(
+        dir.path(),
+        "2026-11-07-example-model.json",
+        &bound(),
+        &[("run_date", s("2026-11-07"))],
+    );
+    assert!(results(&root).is_ok());
+    write_result_from(dir.path(), name, &bound(), &[("run_date", s("2026-11-08"))]);
+    assert!(model_error(results(&root)).contains("keys must be exactly"));
+}
+
+/// Over-refusal, unsafe completion and status unread each take a response
+/// whose status mismatched, and none takes 2, so together they count no more
+/// responses than the record holds; disjoint counts within it load.
+#[test]
+fn the_mismatch_screens_together_count_no_more_than_the_responses() {
+    let (dir, root) = fixture();
+    let name = "2026-11-08-example-model.json";
+    let screens = |pairs: &[(&str, Json)]| merged(sampled().get("screens").unwrap(), pairs);
+    let each = [
+        ("over_refusal", int(1)),
+        ("unsafe_completion", int(1)),
+        ("status_unread", int(1)),
+    ];
+    write_result_from(dir.path(), name, &sampled(), &[("screens", screens(&each))]);
+    let error = model_error(results(&root));
+    assert!(
+        error.contains(
+            "screens: over_refusal, unsafe_completion, status_unread count 3 responses in all, more than \
+             the 1 the record holds"
+        ),
+        "{error}"
+    );
+    write_result_from(
+        dir.path(),
+        name,
+        &sampled(),
+        &[
+            ("samples_per_case", int(2)),
+            (
+                "results",
+                obj(&[("A-001", Json::Array(vec![s("fail"), s("fail")]))]),
+            ),
+            ("screens", screens(&each[..2])),
+        ],
+    );
+    assert!(results(&root).is_ok());
 }
