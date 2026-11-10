@@ -414,6 +414,25 @@ fn release_status_line_must_appear_once_and_name_the_tag() {
 }
 
 #[test]
+fn a_missing_guide_still_reports_a_failed_candidate_verification() {
+    let (dir, root) = fixture();
+    make_candidate_metadata(dir.path());
+    edit(
+        &dir.path().join("src/data/changelog.yaml"),
+        "status: \"Draft\"",
+        "status: \"Unreleased\"",
+    );
+    sync(&root);
+    std::fs::remove_file(dir.path().join("drdebits.md")).unwrap();
+    let failures = verify(&root);
+    assert!(any(&failures, "drdebits.md: missing committed file"));
+    assert!(!any(
+        &failures,
+        "drdebits.md: found 0 'Release status:' lines"
+    ));
+}
+
+#[test]
 fn release_status_phrase_must_open_the_value() {
     let (dir, root) = fixture();
     sync(&root);

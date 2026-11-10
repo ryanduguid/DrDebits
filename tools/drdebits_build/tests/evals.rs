@@ -598,6 +598,17 @@ fn a_record_without_a_results_map_has_no_results() {
 }
 
 #[test]
+fn a_record_with_an_invalid_case_value_has_no_verdict_for_that_case() {
+    let record = evals::Record(vec![(
+        "results".into(),
+        obj(&[("A-001", int(1)), ("A-002", s("pass"))]),
+    )]);
+    assert_eq!(record.samples("A-001"), None);
+    assert_eq!(record.result("A-001"), None);
+    assert_eq!(record.result("A-002"), Some("pass"));
+}
+
+#[test]
 fn only_the_two_record_directories_give_a_basis() {
     assert_eq!(
         evals::directory_basis("evals/results"),

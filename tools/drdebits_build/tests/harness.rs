@@ -883,6 +883,7 @@ fn the_prohibited_screen_sees_through_typographic_variants() {
         markers: vec![
             "the safe harbour protects".into(),
             "it's non-assessable".into(),
+            "say \"hello, friend\"".into(),
         ],
     }];
     for variant in [
@@ -898,6 +899,7 @@ fn the_prohibited_screen_sees_through_typographic_variants() {
         "it\u{2019}s non-assessable",
         "it\u{2bc}s non\u{2010}assessable",
         "it's non assessable",
+        "say \u{201c}hello, friend\u{201d}",
     ] {
         assert_eq!(
             prohibited_hits(variant, &conclusions),
@@ -911,6 +913,29 @@ fn the_prohibited_screen_sees_through_typographic_variants() {
         "it is assessable",
     ] {
         assert!(prohibited_hits(clean, &conclusions).is_empty(), "{clean:?}");
+    }
+}
+
+#[test]
+fn scoring_refuses_invalid_run_conditions_without_writing_a_record() {
+    let (dir, root) = fixture();
+    for (field, value, expected) in [
+        ("web_access", s("maybe"), "web_access must be 'off' or 'on'"),
+        (
+            "samples_per_case",
+            int(0),
+            "samples_per_case must be an integer of at least 1",
+        ),
+    ] {
+        let path = write_responses(
+            dir.path(),
+            &root,
+            one("HARD_STOP.", Json::Array(vec![])),
+            &[(field, value)],
+        );
+        let message = harness_error(harness::score_from_file(&root, &path, None, None));
+        assert!(message.contains(expected), "{message}");
+        assert!(!observations_dir(dir.path()).exists());
     }
 }
 

@@ -416,6 +416,12 @@ fn an_engine_record_with_a_bad_read_is_refused() {
             "nothing at the read path",
         ),
         (
+            "\"path\": [\n     \"due\"\n    ]",
+            "\"path\": \"due\"",
+            "read path must be a list",
+        ),
+        ("\"benchmark_rate\"\n", "0\n", "nothing at the read path"),
+        (
             "\"form\": \"whole-dollars\"",
             "\"form\": \"percent\"",
             "D7A-005",
@@ -562,6 +568,11 @@ fn a_question_left_out_is_unanswered() {
 #[test]
 fn a_malformed_answers_file_is_refused_rather_than_scored() {
     for (answers, expected) in [
+        ("[]", "the 'answers' key must hold an object"),
+        (
+            r#"{"answers": []}"#,
+            "the 'answers' key must hold an object",
+        ),
         (
             r#"{"replies": {}}"#,
             "the 'answers' key must hold an object",
