@@ -25,6 +25,8 @@ const CONDITION_KEYS: [&str; 5] = [
     "samples_per_case",
 ];
 
+const SAMPLED_CONDITION_KEYS: [&str; 2] = ["web_access", "model_roles"];
+
 #[derive(clap::Args)]
 pub struct Args {
     /// Record path relative to --root, or an absolute path.
@@ -169,6 +171,13 @@ pub fn compare_records(baseline: &Record, candidate: &Record) -> Vec<(String, Js
             _ => reasons.push(format!("{key} is missing")),
         }
     }
+    // Records from 8 November 2026 also state web access and model roles; a
+    // difference there, or one record silent on it, changes the conditions.
+    for key in SAMPLED_CONDITION_KEYS {
+        if baseline.get(key) != candidate.get(key) {
+            reasons.push(format!("{key} differs"));
+        }
+    }
     if [baseline, candidate]
         .iter()
         .any(|r| r.get("verdict_basis").and_then(Json::as_str) != Some(evals::HUMAN_CONFIRMED))
@@ -246,11 +255,11 @@ pub fn compare_records(baseline: &Record, candidate: &Record) -> Vec<(String, Js
         ("metadata_changes".into(), Json::Object(metadata_changes)),
         (
             "baseline_counts".into(),
-            counts(before.iter().filter_map(|(_, v)| v.as_str())),
+            counts(before.iter().filter_map(|(k, _)| baseline.result(k))),
         ),
         (
             "candidate_counts".into(),
-            counts(after.iter().filter_map(|(_, v)| v.as_str())),
+            counts(after.iter().filter_map(|(k, _)| candidate.result(k))),
         ),
         (
             "shared_case_count".into(),
@@ -349,7 +358,7 @@ pub fn check_regressions(
     let mut nonpasses: Vec<&str> = candidate
         .results()
         .iter()
-        .filter(|(_, v)| v.as_str() != Some("pass"))
+        .filter(|(k, _)| candidate.result(k) != Some("pass"))
         .map(|(k, _)| k.as_str())
         .collect();
     nonpasses.sort();

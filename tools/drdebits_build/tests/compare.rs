@@ -185,7 +185,7 @@ fn cli_reuses_validation_and_never_writes_records() {
     write_observation(
         dir.path(),
         "2026-09-18-candidate.json",
-        &[("results", results(&[("A-001", "review")]))],
+        &[("results", obj(&[("A-001", Json::Array(vec![s("review")]))]))],
     );
     let before = std::fs::read(dir.path().join("evals/results/2026-09-18-baseline.json")).unwrap();
     let args = [
@@ -611,4 +611,41 @@ fn a_source_value_error_is_invalid_evidence_as_python_caught_it() {
             assert_eq!(out.stdout, "", "{value} {args:?}");
         }
     }
+}
+
+/// Web access and model roles are run conditions: a change in either
+/// withholds fixed and regressed. A case passes only when every sample
+/// passed, so one failing sample of 2 is a regression.
+#[test]
+fn web_access_and_model_roles_are_conditions_and_every_sample_counts() {
+    let after = merged(&sampled(), &[("web_access", s("on"))]);
+    let out = compare_records(&record(sampled()), &record(after));
+    assert_eq!(
+        field(&out, "limitations"),
+        &Json::Array(vec![s("web_access differs")])
+    );
+    let out = compare_records(&record(bound()), &record(sampled()));
+    let Json::Array(limitations) = field(&out, "limitations") else {
+        panic!()
+    };
+    assert!(limitations.contains(&s("model_roles differs")));
+    let two = |second: &str| {
+        merged(
+            &sampled(),
+            &[
+                ("samples_per_case", int(2)),
+                (
+                    "results",
+                    obj(&[("A-001", Json::Array(vec![s("pass"), s(second)]))]),
+                ),
+            ],
+        )
+    };
+    let out = compare_records(&record(two("pass")), &record(two("fail")));
+    assert_eq!(field(&out, "comparison_supported"), &Json::Bool(true));
+    assert_eq!(
+        changes(&out),
+        [("A-001".to_string(), "regressed".to_string())]
+    );
+    assert_eq!(field(&out, "candidate_counts"), &obj(&[("fail", int(1))]));
 }
