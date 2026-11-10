@@ -10,7 +10,7 @@ fields:
   - key: owner
     value: "Ryan Duguid"
   - key: canonical_repository
-    value: "https://github.com/ryanduguid/llm-tax-guardrails"
+    value: "https://github.com/ryanduguid/DrDebits"
   - key: release_tag
     value: "v0.5.0"
   - key: sources_checked_at

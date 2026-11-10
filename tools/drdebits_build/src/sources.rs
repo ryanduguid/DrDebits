@@ -33,8 +33,7 @@ const API: &str = "https://api.prod.legislation.gov.au/v1";
 // The API host is not the website host; if the API ever refuses too, the run
 // exits 2 for incomplete verification. A missing answer never establishes
 // that a compilation has been superseded.
-const UA: &str =
-    "llm-tax-guardrails source-check (+https://github.com/ryanduguid/llm-tax-guardrails)";
+const UA: &str = "llm-tax-guardrails source-check (+https://github.com/ryanduguid/DrDebits)";
 const TIMEOUT: u64 = 60;
 const SELECT: &str = "titleId,registerId,compilationNumber,start";
 // Longer than the gap between source reviews, so a change registered just

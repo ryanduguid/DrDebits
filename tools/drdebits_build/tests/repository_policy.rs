@@ -289,7 +289,7 @@ fn security_policy_uses_private_reporting_and_safe_reproduction_data() {
     );
     assert_eq!(
         normalise_prose(&section(&policy, "## Reporting a vulnerability")),
-        "report privately at <https://github.com/ryanduguid/llm-tax-guardrails/security/advisories/new>. please use this \
+        "report privately at <https://github.com/ryanduguid/drdebits/security/advisories/new>. please use this \
          repository's private vulnerability reporting feature. do not open a public issue or pull request for a suspected \
          security vulnerability. include a clear description, reproduction steps, impact, and any suggested mitigation. a \
          valid report will be acknowledged within 7 days, and the fix and disclosure timeline will be agreed with the reporter."

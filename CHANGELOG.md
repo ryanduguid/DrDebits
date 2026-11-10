@@ -130,6 +130,6 @@ reporting (#99, #144, #149, #152, #154, #157, #158, #166, #167), and CI and
 documentation housekeeping (#48, #101, #111, #135, #184, #185, #186, #189, #198,
 #207).
 
-[Unreleased]: https://github.com/ryanduguid/llm-tax-guardrails/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/ryanduguid/DrDebits/compare/v0.5.0...HEAD
 [v0.5.0]: https://github.com/ryanduguid/llm-tax-guardrails/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://github.com/ryanduguid/llm-tax-guardrails/compare/v0.3.3...v0.4.0

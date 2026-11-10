@@ -11,7 +11,7 @@
 # 11-digit pattern would match compilation numbers, section references and
 # dates throughout the guide and the gate would be turned off within a week.
 
-title = "llm-tax-guardrails"
+title = "DrDebits"
 
 [extend]
 useDefault = true

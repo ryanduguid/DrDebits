@@ -19,9 +19,7 @@ fn register_entry_names_the_release_tag_in_metadata() {
     .unwrap();
     let tag = meta_get(&meta, "release_tag").unwrap();
     let entry = std::fs::read_to_string(root.join("docs/ai-register-entry.md")).unwrap();
-    assert!(entry.contains(&format!(
-        "| Name and version | DrDebits (`llm-tax-guardrails`) release {tag}, "
-    )));
+    assert!(entry.contains(&format!("| Name and version | DrDebits release {tag}, ")));
     // The limits and updates rows name the release too; a bump must revisit them.
     let pattern =
         regex::Regex::new(r"\bv\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?").unwrap();
