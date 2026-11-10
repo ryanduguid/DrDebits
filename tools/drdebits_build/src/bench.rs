@@ -496,14 +496,14 @@ fn cited(key: &Key, written: &[&str]) -> Cited {
 /// Mark an answers file, refusing one that names an unknown id or field.
 pub fn score(keys: &[Key], answers: &Json) -> Result<Vec<Scored>, String> {
     let fail = |m: String| format!("answers file: {m}");
-    let Some(Json::Object(given)) = answers.get("answers") else {
-        return Err(fail("the 'answers' key must hold an object".into()));
+    let missing_answers = || fail("the 'answers' key must hold an object".into());
+    let Json::Object(top) = answers else {
+        return Err(missing_answers());
     };
-    let extra = match answers {
-        Json::Object(top) => top.iter().find(|(field, _)| field != "answers"),
-        _ => None,
+    let Some((_, Json::Object(given))) = top.iter().find(|(field, _)| field == "answers") else {
+        return Err(missing_answers());
     };
-    if let Some((field, _)) = extra {
+    if let Some((field, _)) = top.iter().find(|(field, _)| field != "answers") {
         return Err(fail(format!("unknown field {field}")));
     }
     if let Some((id, _)) = given

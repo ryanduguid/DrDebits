@@ -365,6 +365,12 @@ mod tests {
     }
 
     #[test]
+    fn stderr_text_writer_reports_the_original_byte_count() {
+        let text = b"stderr text\n";
+        assert_eq!(PyText::stderr().write(text).unwrap(), text.len());
+    }
+
+    #[test]
     fn uncaught_errors_name_the_python_exception() {
         let line = |e: Fail| internal_line("verify", &e);
         assert_eq!(
