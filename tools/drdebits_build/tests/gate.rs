@@ -920,7 +920,7 @@ fn only_adds_its_own_findings(prefix: &str, with_check: impl Fn(&str) -> gate::R
 }
 
 const AUTHORITIES: &str = r#"{"authorities": ["s 9-70 of the A New Tax System (Goods and Services Tax) Act 1999", "TR 2006/10"]}"#;
-const AUTHORITIES_CAVEAT: &str = "authorities check: it reads only a section of a named Act and a ruling id, so a pass does not show that every authority the draft cites was checked; a listed authority is not thereby current or correctly applied";
+const AUTHORITIES_CAVEAT: &str = "authorities check: it reads only a section of a named Act, or a subsection, paragraph or subparagraph of one, and a ruling id, so a pass does not show that every authority the draft cites was checked; a listed authority is not thereby current or correctly applied";
 
 /// `DRAFT` with its authority cited in full, and a ruling.
 fn cited() -> String {
@@ -954,7 +954,7 @@ fn unlisted(written: &str) -> String {
 
 fn unread(written: &str) -> String {
     format!(
-        "authorities check: could not read {written} as a section of a named Act or a ruling id; a person must check each"
+        "authorities check: could not read {written} as a section, subsection, paragraph or subparagraph of a named Act or a ruling id; a person must check each"
     )
 }
 
@@ -1036,8 +1036,7 @@ fn the_check_reads_a_section_of_a_named_act_and_a_ruling_id() {
 fn a_citation_matches_only_the_same_authority() {
     let listed = r#"{"authorities": ["s 8-1 of the Income Tax Assessment Act 1997", "TR 2010/3"]}"#;
     for text in [
-        // A subsection, or the section of another Act, is another authority.
-        "s 8-1(1) of the Income Tax Assessment Act 1997",
+        // The same section of another Act is another authority.
         "s 8-1 of the Income Tax Assessment Act 1936",
         "s 8-1 of the Income Tax Rates Act 1986",
         // A withdrawal, an addendum and a draft are other documents.
@@ -1056,6 +1055,262 @@ fn a_citation_matches_only_the_same_authority() {
     }
 }
 
+const SAMPLE_ACT: &str = "of the Sample Consumption Tax Act 2099";
+
+/// Gate a draft whose only authority is `citation` of the sample Act: PASS
+/// when `listed`, otherwise REVIEW naming the citation as unlisted.
+fn assert_listed(citation: &str, authorities: &str, listed: bool) {
+    let written = format!("{citation} {SAMPLE_ACT}");
+    let draft = DRAFT.replace("- GST Act s 9-70.", &format!("- {written}."));
+    let report = with_authorities(&draft, authorities);
+    if listed {
+        assert_eq!(
+            report.verdict(),
+            ("PASS", EXIT_PASS),
+            "{written}: {:?}",
+            report.reviews
+        );
+    } else {
+        assert_eq!(report.verdict(), ("REVIEW", EXIT_REVIEW), "{written}");
+        assert_eq!(
+            authorities_reviews(&report),
+            [unlisted(&written)],
+            "{written}"
+        );
+    }
+}
+
+#[test]
+fn a_listed_section_lists_its_subsections_and_paragraphs() {
+    let listed = format!(r#"{{"authorities": ["s 1 {SAMPLE_ACT}", "s 8-1 {SAMPLE_ACT}"]}}"#);
+    for citation in ["s 8-1(1)", "subsection 8-1(1)", "paragraph 8-1(1)(a)"] {
+        assert_listed(citation, &listed, true);
+    }
+    // Without the section, a subsection's citation asks for review.
+    let without = format!(r#"{{"authorities": ["s 1 {SAMPLE_ACT}"]}}"#);
+    assert_listed("subsection 8-1(1)", &without, false);
+}
+
+#[test]
+fn a_listed_subsection_lists_what_it_contains_only() {
+    let listed = format!(r#"{{"authorities": ["s 1 {SAMPLE_ACT}", "s 9-5(1) {SAMPLE_ACT}"]}}"#);
+    // Itself, whatever word cites it, and a paragraph within it, but not a
+    // sibling or its whole section.
+    for (citation, is_listed) in [
+        ("subsection 9-5(2)", false),
+        ("s 9-5(1)", true),
+        ("subsection 9-5(1)", true),
+        ("paragraph 9-5(1)(a)", true),
+        ("s 9-5", false),
+    ] {
+        assert_listed(citation, &listed, is_listed);
+    }
+    // A paragraph named before its subsection is read as the subsection, so
+    // a listed paragraph does not list it.
+    let paragraph =
+        format!(r#"{{"authorities": ["s 1 {SAMPLE_ACT}", "s 9-5(1)(a) {SAMPLE_ACT}"]}}"#);
+    let draft = DRAFT.replace(
+        "- GST Act s 9-70.",
+        &format!("- paragraph (a) of subsection 9-5(1) {SAMPLE_ACT}."),
+    );
+    let report = with_authorities(&draft, &paragraph);
+    assert_eq!(
+        authorities_reviews(&report),
+        [unlisted(&format!("subsection 9-5(1) {SAMPLE_ACT}"))]
+    );
+    // An authorities file may name a subsection by its word.
+    assert_eq!(
+        load_authorities(&format!(
+            r#"{{"authorities": ["subsection 9-5(1) {SAMPLE_ACT}"]}}"#
+        )),
+        load_authorities(&format!(r#"{{"authorities": ["s 9-5(1) {SAMPLE_ACT}"]}}"#)),
+    );
+}
+
+#[test]
+fn an_abbreviation_with_a_full_stop_or_no_space_is_read() {
+    for text in [
+        "s. 8-1(1)",
+        "sec 8-1(1)",
+        "sec. 8-1(1)",
+        "subsec 8-1(1)",
+        "sub-s. 8-1(1)",
+        "subs. 8-1(1)",
+        "para. 8-1(1)(a)",
+        "s8-1(1)",
+        "§ 8-1(1)",
+    ] {
+        let written = format!("{text} {SAMPLE_ACT}");
+        let draft = cited().replace("- None identified.", &format!("- {written}."));
+        let report = with_authorities(&draft, AUTHORITIES);
+        assert_eq!(
+            authorities_reviews(&report),
+            [unlisted(&written)],
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+    let listed = format!(r#"{{"authorities": ["s 1 {SAMPLE_ACT}", "s 8-1 {SAMPLE_ACT}"]}}"#);
+    assert_listed("s. 8-1(1)", &listed, true);
+    assert_listed("§ 8-1(1)", &listed, true);
+}
+
+#[test]
+fn a_part_named_without_its_section_is_reported() {
+    let listed = format!(
+        r#"{{"authorities": ["s 1 {SAMPLE_ACT}", "s 8-1 {SAMPLE_ACT}", "s 9-5(1) {SAMPLE_ACT}"]}}"#
+    );
+    for (text, unread_text) in [
+        (
+            format!("subsection 9-5(1) {SAMPLE_ACT} and subsection (2)"),
+            "subsection (2)",
+        ),
+        (
+            format!("s 1 {SAMPLE_ACT}; see also paragraph (b) of subsection (2)"),
+            "paragraph (b), subsection (2)",
+        ),
+    ] {
+        let draft = DRAFT.replace("- GST Act s 9-70.", &format!("- {text}."));
+        let report = with_authorities(&draft, &listed);
+        assert_eq!(
+            authorities_reviews(&report),
+            [unread(unread_text)],
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+    // A composite ending in a numbered provision is read as that provision.
+    for text in [
+        format!("subsection (1) of section 8-1 {SAMPLE_ACT}"),
+        format!("paragraph (a) of subsection 9-5(1) {SAMPLE_ACT}"),
+        format!("subparagraph (i) of paragraph (a) of subsection 9-5(1) {SAMPLE_ACT}"),
+    ] {
+        let draft = DRAFT.replace("- GST Act s 9-70.", &format!("- {text}."));
+        let report = with_authorities(&draft, &listed);
+        assert_eq!(
+            report.verdict(),
+            ("PASS", EXIT_PASS),
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+}
+
+#[test]
+fn a_composite_ending_in_text_the_gate_does_not_read_is_reported() {
+    // `paragraph 3 of Schedule 1` is no citation the gate reads, so the part
+    // that opens the composite cannot be passed over.
+    let listed = format!(r#"{{"authorities": ["s 1 {SAMPLE_ACT}"]}}"#);
+    let draft = DRAFT.replace(
+        "- GST Act s 9-70.",
+        "- subparagraph (a) of paragraph 3 of Schedule 1 to the Sample Consumption Tax Act 2099.",
+    );
+    let report = with_authorities(&draft, &listed);
+    assert_eq!(
+        authorities_reviews(&report),
+        [unread("subparagraph (a)")],
+        "{:?}",
+        report.reviews
+    );
+}
+
+#[test]
+fn sibling_parts_after_the_act_are_reported() {
+    // Only (1) is listed; (2) and (3) are cited too.
+    let listed = format!(r#"{{"authorities": ["s 1 {SAMPLE_ACT}", "s 9-5(1) {SAMPLE_ACT}"]}}"#);
+    for siblings in [", (2) and (3)", ", and (2)"] {
+        let written = format!("subsection 9-5(1) {SAMPLE_ACT}{siblings}");
+        let draft = DRAFT.replace("- GST Act s 9-70.", &format!("- {written}."));
+        let report = with_authorities(&draft, &listed);
+        assert_eq!(
+            authorities_reviews(&report),
+            [unread(&written)],
+            "{written}: {:?}",
+            report.reviews
+        );
+    }
+}
+
+#[test]
+fn ruling_paragraph_ranges_and_source_labels_are_not_read() {
+    for qualifier in ["", "the ", "the ruling "] {
+        let draft = cited().replace(
+            "- None identified.",
+            &format!("- See paragraphs 45-50 of {qualifier}TR 2006/10 [S1] and source S3."),
+        );
+        let report = with_authorities(&draft, AUTHORITIES);
+        assert!(
+            authorities_reviews(&report).is_empty(),
+            "{:?}",
+            report.reviews
+        );
+    }
+    let draft = cited().replace(
+        "- None identified.",
+        "- See paragraphs 45-50 of the ruling TPB(GS) 55/2026.",
+    );
+    let report = with_authorities(&draft, AUTHORITIES);
+    assert_eq!(
+        authorities_reviews(&report),
+        [unlisted("TPB(GS) 55/2026")],
+        "{:?}",
+        report.reviews
+    );
+}
+
+#[test]
+fn an_act_qualified_paragraph_list_is_reported_whole() {
+    let written = format!("paragraphs 8-1 and 8-2 {SAMPLE_ACT}");
+    let draft = cited().replace("- None identified.", &format!("- {written}."));
+    let report = with_authorities(&draft, AUTHORITIES);
+    assert_eq!(
+        authorities_reviews(&report),
+        [unread(&written)],
+        "{:?}",
+        report.reviews
+    );
+}
+
+#[test]
+fn each_word_for_a_section_or_part_of_one_is_read() {
+    // Each is read whole and checked, so each unlisted one asks for review.
+    for text in [
+        "s9(1)",
+        "subsection 8-1(1)",
+        "Subsection 8-1(1)",
+        "sub-section 8-1(1)",
+        "subs 8-1(1)",
+        "sub-s 8-1(1)",
+        "paragraph 8-1(1)(a)",
+        "para 8-1(1)(a)",
+        "subparagraph 8-1(1)(a)(i)",
+        "sub-paragraph 8-1(1)(a)(i)",
+        "subpara 8-1(1)(a)(i)",
+    ] {
+        let written = format!("{text} {SAMPLE_ACT}");
+        let draft = cited().replace("- None identified.", &format!("- {written}."));
+        let report = with_authorities(&draft, AUTHORITIES);
+        assert_eq!(
+            authorities_reviews(&report),
+            [unlisted(&written)],
+            "{text}: {:?}",
+            report.reviews
+        );
+    }
+    // A paragraph of a ruling or a document has no bracketed part and is not
+    // a provision.
+    let draft = cited().replace(
+        "- None identified.",
+        "- See paragraph 45 of TR 2006/10 and paragraphs 3 to 5 above.",
+    );
+    let report = with_authorities(&draft, AUTHORITIES);
+    assert!(
+        authorities_reviews(&report).is_empty(),
+        "{:?}",
+        report.reviews
+    );
+}
+
 #[test]
 fn authority_like_text_the_gate_cannot_read_is_reported() {
     for (text, written) in [
@@ -1070,6 +1325,36 @@ fn authority_like_text_the_gate_cannot_read_is_reported() {
             "ss 30-35",
         ),
         ("sections 15, 45 and 101", "sections 15"),
+        // A subsection or paragraph of an abbreviated Act, a list of them, or
+        // one named without its bracketed part.
+        ("subsection 8-1(1) of the ITAA 1997", "subsection 8-1(1)"),
+        ("paragraph 8-1(1)(a) ITAA 1997", "paragraph 8-1(1)(a)"),
+        (
+            "subsections 8-1(1) and (2) of the Income Tax Assessment Act 1997",
+            "subsections 8-1(1) and (2)",
+        ),
+        (
+            "ss 8-1(1) of the Income Tax Assessment Act 1997",
+            "ss 8-1(1) of the Income Tax Assessment Act 1997",
+        ),
+        (
+            "subsection 8-1 of the Income Tax Assessment Act 1997",
+            "subsection 8-1 of the Income Tax Assessment Act 1997",
+        ),
+        (
+            "paragraph 8-1 of the Income Tax Assessment Act 1997",
+            "paragraph 8-1 of the Income Tax Assessment Act 1997",
+        ),
+        ("paragraph 8-1 of the ITAA 1997", "paragraph 8-1"),
+        // A plural before a named Act.
+        (
+            "subsections 8-1(1) of the Income Tax Assessment Act 1997",
+            "subsections 8-1(1) of the Income Tax Assessment Act 1997",
+        ),
+        (
+            "paragraphs 8-1(1)(a) of the Income Tax Assessment Act 1997",
+            "paragraphs 8-1(1)(a) of the Income Tax Assessment Act 1997",
+        ),
         // A ruling id without its number, run together or with a lowercase
         // suffix.
         ("TR 2006", "TR 2006"),
@@ -1191,6 +1476,15 @@ fn a_malformed_authorities_file_is_refused() {
             "not an authority the gate can read: 'ITAA 1997 s 8-1'",
         ),
         (r#"{"authorities": ["s 8-1"]}"#, "not an authority"),
+        // A subsection or paragraph must name its bracketed part.
+        (
+            r#"{"authorities": ["subsection 8-1 of the Income Tax Assessment Act 1997"]}"#,
+            "not an authority",
+        ),
+        (
+            r#"{"authorities": ["paragraph 8-1 of the Income Tax Assessment Act 1997"]}"#,
+            "not an authority",
+        ),
         (r#"{"authorities": [" TR 2006/10"]}"#, "not an authority"),
         (
             r#"{"authorities": ["TR 2006/10, TR 93/31"]}"#,

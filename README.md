@@ -111,13 +111,25 @@ reviewer accepts:
 ```
 
 The list is closed for these 2 forms only: a section of an Act named in full,
-as above (`section` may replace `s`), and a ruling id in the TR, TD, LCR,
+as above (`section`, `sec`, `s.` or `§` may replace `s`, and `s8-1(1)` needs
+no space), or one subsection, paragraph or subparagraph of it with its
+bracketed part, such as `subsection 8-1(1)`, `sub-s 8-1(1)`, `sub-sec 8-1(1)`
+or `paragraph 8-1(1)(a)`, read as the last
+numbered provision in a composite such as `paragraph (a) of subsection 9-5(1)`,
+and a ruling id in the TR, TD, LCR,
 GSTR, GSTD, MT, CR, PR, SGR, PCG, PS LA or TPB(GS) series, including a draft
-such as `LCR 2026/D1`. A citation may wrap across lines. Citations compare
-exactly, so `s 8-1(1)` is not `s 8-1` and the withdrawal `TR 2010/3W` is not
-`TR 2010/3`; list each one the draft may cite. Section-like or ruling-like
+such as `LCR 2026/D1`. A citation may wrap across lines. A citation is listed
+when the list holds it or a provision containing it: `s 8-1` lists
+`subsection 8-1(1)` and `s 8-1(1)` lists `paragraph 8-1(1)(a)`, but `s 8-1(1)`
+lists neither `s 8-1` nor `s 8-1(2)`, and the withdrawal `TR 2010/3W` is not
+`TR 2010/3`. Section-like or ruling-like
 text the gate cannot read whole, such as `s 8-1 ITAA 1997`,
-`ss 30-35 and 30-40` or `TR 2024`, is listed for review. Divisions, Parts,
+`ss 30-35 and 30-40`, `subsections 8-1(1) and (2)`, sibling parts after the
+Act such as `, (2) and (3)`, `subsection (2)` without its section or
+`TR 2024`, is listed for review. Expect such a review for discussion after a
+full citation, such as 'subsection (1) allows' or 'see paragraph (a) above':
+the gate cannot tell which section a part named alone belongs to, so it asks
+rather than pass it unchecked. Divisions, Parts,
 Schedules, cases, bare Act names and other series are not read, so a pass
 does not establish that every authority the draft cites was checked. A
 malformed authorities file stops the gate with exit 2. Like `--facts`, this
