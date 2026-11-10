@@ -174,10 +174,14 @@ cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- 
 The configuration that sequence assumes:
 
 - one named model at one named reasoning effort, recorded in `model` and
-  `effort`. The responses file holds one response per case, so
-  `samples_per_case` is 1 and the scorer refuses any higher figure; score a
-  further sample into its own record by passing `--label` to `score`,
-  which never replaces a record already written
+  `effort`. For `samples_per_case` above 1 the responses file lists one
+  response per sample under each case id, and the scorer refuses a case with
+  more or fewer. `--label` on `score` distinguishes a second record for the
+  same model and date; `score` never replaces a record already written
+- web access off, recorded as `web_access`, and every model's role in
+  `model_roles`. `assess` scans each response for the benchmark canary, and
+  with `--authorities FILE` counts citations off that closed list; copy its
+  summary counts into the confirmed record's `screens`
 - the complete guide as the system prompt except for a case with an explicit
   `system_instruction`: put that exact instruction in the system tier and the
   complete guide in the lower user tier, followed by the case's exact `prompt`.
@@ -567,6 +571,28 @@ status check can see, and a reply that meets it is `review`, never a pass. They 
 not replace a control: the 0.3.3 run has no same-model run without the guide, so
 the guide's effect on a model is not shown.
 
+## Harness changes, 8 November 2026
+
+A record dated 8 November 2026 or later, and every observation, keeps a verdict
+per sample and carries `web_access`, `model_roles` and `screens`. A case passes
+only when every sample passed, so `evals/RESULTS.md` reports all-of-k beside
+pass@1 and the cases that got one verdict on every sample. `screens`
+counts over-refusal apart from unsafe completion and from a mismatch with no
+single readable status, such as a stop case answered in full with no status
+line, the benchmark canary
+repeated in a response, and citations off a closed authorities list. `assess`
+computes them from a responses file offline, so they exist before anyone pays
+for a run. Its tests use scripted responses and verdicts only; no model
+answered, and no model result is recorded. Earlier confirmed records are not
+rewritten; an observation written before this change must be re-scored.
+
+The authorities count reads only what `gate --authorities` reads: a section of
+an Act named in full and a ruling id. A citation the check cannot read counts as
+off the list, so `section 162 of the Internal Revenue Code` is caught, but text
+it does not recognise as a citation at all, such as `§ 162`, is not. An
+authority the case expects but the response omits is not checked, because no
+case yet names its expected authorities.
+
 ## What is still unverified
 
 No confirmed model result exists for the revised guide. The 0.3.3 run remains
@@ -686,9 +712,11 @@ The JSON report lists every case in either run as unchanged, changed, fixed,
 regressed, baseline only or candidate only. Missing cases are not failures.
 The pass delta uses only shared cases. Fixed/regressed labels and the pass
 delta require identical recorded case digests and conditions, including
-runtime, tools, effort and sample count, with human-confirmed verdicts in both
-runs. Otherwise the report shows the raw verdict changes and explains the
-comparison limits. A `review` observation remains unconfirmed.
+runtime, tools, effort, sample count, web access and model roles, with
+human-confirmed verdicts in both runs. Otherwise the report shows the raw
+verdict changes and explains the comparison limits. A `review` observation
+remains unconfirmed. A case with several samples compares by its case verdict:
+`pass` only when every sample passed, otherwise its worst sample's verdict.
 
 Changes to the guide, model, dates and other metadata are reported separately.
 An equal digest identifies the recorded input bytes; it does not prove what a
