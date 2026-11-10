@@ -126,6 +126,54 @@ fn keys_that_do_not_answer_the_questions_one_for_one_are_refused() {
 }
 
 #[test]
+fn matching_duplicate_ids_are_refused() {
+    let tree = copy();
+    for file in ["questions.json", "keys.json"] {
+        edit(
+            tree.path(),
+            file,
+            "\"id\": \"PDS-002\"",
+            "\"id\": \"PDS-001\"",
+        );
+    }
+    assert_eq!(
+        bench::load_keys(&py(tree.path())).unwrap_err(),
+        "a question id appears twice"
+    );
+}
+
+#[test]
+fn malformed_keys_are_refused_before_scoring() {
+    for (from, to, expected) in [
+        (
+            "\"keys\":",
+            "\"entries\":",
+            "keys must be a list with entries",
+        ),
+        (
+            "\"kind\": \"text\"",
+            "\"kind\": \"date\"",
+            "unknown kind date",
+        ),
+        (
+            "\"kind\": \"text\"",
+            "\"kind\": \"number\"",
+            "is not a number",
+        ),
+        (
+            "\"rule\": \"business-days\"",
+            "\"rule\": \"guess\"",
+            "unknown rule guess",
+        ),
+    ] {
+        let tree = copy();
+        edit(tree.path(), "keys.json", from, to);
+        let error = bench::load_keys(&py(tree.path())).unwrap_err();
+        assert!(error.contains(expected), "{error}");
+    }
+}
+
+#[test]
 fn a_changed_canary_is_refused() {
     let tree = copy();
     edit(tree.path(), "keys.json", "DRDEBITS-BENCHMARK", "BENCHMARK");
