@@ -43,19 +43,27 @@ fn python_unbuffered() -> bool {
 fn python_stdout(unbuffered: bool) -> Box<dyn Write + Send> {
     use std::io::IsTerminal;
     let stdout = io::stdout();
-    if stdout.is_terminal() {
+    let terminal = stdout.is_terminal();
+    buffer_stdout(stdout, terminal, unbuffered, |stdout| {
+        #[cfg(unix)]
+        let handle = std::os::fd::AsFd::as_fd(stdout);
+        #[cfg(windows)]
+        let handle = std::os::windows::io::AsHandle::as_handle(stdout);
+        handle.try_clone_to_owned().map(std::fs::File::from)
+    })
+}
+
+fn buffer_stdout<W: Write + Send + 'static>(
+    stdout: W,
+    terminal: bool,
+    unbuffered: bool,
+    duplicate: impl FnOnce(&W) -> io::Result<std::fs::File>,
+) -> Box<dyn Write + Send> {
+    if terminal {
         return Box::new(io::LineWriter::new(stdout));
     }
     if unbuffered {
-        #[cfg(unix)]
-        let handle = std::os::fd::AsFd::as_fd(&stdout)
-            .try_clone_to_owned()
-            .map(std::fs::File::from);
-        #[cfg(windows)]
-        let handle = std::os::windows::io::AsHandle::as_handle(&stdout)
-            .try_clone_to_owned()
-            .map(std::fs::File::from);
-        return match handle {
+        return match duplicate(&stdout) {
             Ok(file) => Box::new(file),
             Err(_) => Box::new(FlushEach(stdout)),
         };
@@ -64,9 +72,9 @@ fn python_stdout(unbuffered: bool) -> Box<dyn Write + Send> {
 }
 
 /// Unbuffered stdout when the handle cannot be cloned: each write is flushed.
-struct FlushEach(io::Stdout);
+struct FlushEach<W>(W);
 
-impl Write for FlushEach {
+impl<W: Write> Write for FlushEach<W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let written = self.0.write(buf)?;
         self.0.flush()?;
@@ -87,7 +95,11 @@ pub(crate) fn write_stdout(text: &str) -> io::Result<()> {
 }
 
 pub(crate) fn write_stdout_bytes(bytes: &[u8]) -> io::Result<()> {
-    stdout().write_all(bytes).inspect_err(|error| {
+    remember_stdout_failure(stdout().write_all(bytes))
+}
+
+fn remember_stdout_failure(result: io::Result<()>) -> io::Result<()> {
+    result.inspect_err(|error| {
         *OUTPUT_FAILED.lock().unwrap_or_else(PoisonError::into_inner) = Some(stream_error(error));
     })
 }
@@ -97,10 +109,11 @@ pub(crate) fn write_stderr(text: &str) -> io::Result<()> {
 }
 
 pub(crate) fn write_stderr_bytes(bytes: &[u8]) -> io::Result<()> {
-    io::stderr()
-        .lock()
-        .write_all(bytes)
-        .inspect_err(|_| STDERR_FAILED.store(true, Ordering::SeqCst))
+    remember_stderr_failure(io::stderr().lock().write_all(bytes))
+}
+
+fn remember_stderr_failure(result: io::Result<()>) -> io::Result<()> {
+    result.inspect_err(|_| STDERR_FAILED.store(true, Ordering::SeqCst))
 }
 
 /// The exception line of a failed write to a standard stream:
@@ -164,11 +177,16 @@ pub fn argparse(error: &clap::Error) {
     } else {
         anstream::AutoStream::auto(io::stdout()).current_choice()
     };
+    argparse_with_choice(error, choice);
+}
+
+fn argparse_with_choice(error: &clap::Error, choice: anstream::ColorChoice) {
     #[cfg(windows)]
     if choice == anstream::ColorChoice::Always {
         // Legacy Windows consoles need Clap's Wincon renderer.
-        if error.print().is_err() && error.use_stderr() {
-            STDERR_FAILED.store(true, Ordering::SeqCst);
+        let result = error.print();
+        if error.use_stderr() {
+            let _ = remember_stderr_failure(result);
         }
         return;
     }
@@ -220,4 +238,96 @@ pub fn shutdown(code: i32) -> i32 {
 
 pub(crate) fn flush_stdout() -> io::Result<()> {
     stdout().flush()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn terminal_stdout_flushes_complete_lines() {
+        let file = tempfile::tempfile().unwrap();
+        let mut writer = buffer_stdout(
+            file.try_clone().unwrap(),
+            true,
+            true,
+            std::fs::File::try_clone,
+        );
+        writer.write_all(b"hello").unwrap();
+        assert_eq!(file.metadata().unwrap().len(), 0);
+        writer.write_all(b"\n").unwrap();
+        assert_eq!(file.metadata().unwrap().len(), 6);
+    }
+
+    #[test]
+    fn unbuffered_stdout_flushes_when_its_handle_cannot_be_duplicated() {
+        let file = tempfile::tempfile().unwrap();
+        let buffered = io::BufWriter::new(file.try_clone().unwrap());
+        let mut writer = buffer_stdout(buffered, false, true, |_| {
+            Err(io::Error::other("handle unavailable"))
+        });
+        writer.write_all(b"hello").unwrap();
+        assert_eq!(file.metadata().unwrap().len(), 5);
+        writer.flush().unwrap();
+    }
+
+    #[test]
+    fn a_failed_raw_stdout_write_survives_until_shutdown() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let mut read_only = std::fs::File::open(file.path()).unwrap();
+        assert!(remember_stdout_failure(read_only.write_all(b"report")).is_err());
+        assert_eq!(shutdown(0), 1);
+        assert_eq!(shutdown(0), 0);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn legacy_console_rendering_uses_the_requested_stream() {
+        use clap::error::ErrorKind;
+        const CHILD: &str = "DRDEBITS_TEST_LEGACY_CONSOLE";
+        if std::env::var_os(CHILD).is_some() {
+            for (kind, message) in [
+                (ErrorKind::DisplayHelp, "legacy help"),
+                (ErrorKind::UnknownArgument, "legacy error"),
+            ] {
+                let error = clap::Error::raw(kind, message);
+                argparse_with_choice(&error, anstream::ColorChoice::Always);
+            }
+            return;
+        }
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "stdio::tests::legacy_console_rendering_uses_the_requested_stream",
+            ])
+            .env(CHILD, "1")
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{output:?}");
+        assert!(String::from_utf8_lossy(&output.stdout).contains("legacy help"));
+        assert!(String::from_utf8_lossy(&output.stderr).contains("legacy error"));
+    }
+
+    #[test]
+    fn errors_without_an_os_code_keep_their_diagnostic() {
+        let error = io::Error::other("output unavailable");
+        assert_eq!(stream_error(&error), "OSError: output unavailable");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn other_unix_stream_errors_keep_their_errno() {
+        let error = io::Error::from_raw_os_error(13);
+        assert!(stream_error(&error).starts_with("OSError: [Errno 13] "));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_full_windows_volume_reports_enospc() {
+        let error = io::Error::from_raw_os_error(112);
+        assert_eq!(
+            stream_error(&error),
+            "OSError: [Errno 28] No space left on device"
+        );
+    }
 }

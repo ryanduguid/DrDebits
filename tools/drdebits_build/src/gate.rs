@@ -1506,3 +1506,21 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
     }
     code
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn arithmetic_rejects_unknown_operators_and_missing_operands() {
+        for expression in ["2 ^ 3", "2 + )"] {
+            assert!(evaluate(expression).is_none(), "{expression}");
+        }
+    }
+
+    #[test]
+    fn a_ruling_has_no_subsection_to_strip() {
+        let authority = Authority::read("TR 2020/1").unwrap();
+        assert_eq!(authority.section(), "TR 2020/1");
+    }
+}

@@ -12,6 +12,9 @@ use drdebits::gate::{
     check_authorities, check_facts, check_quotes, load_authorities, load_facts,
 };
 use drdebits::model::Conclusion;
+use drdebits::pyjson;
+use std::io::Write;
+use std::process::{Command, Stdio};
 
 const DRAFT: &str = "DRAFT — PROFESSIONAL REVIEW REQUIRED
 
@@ -110,6 +113,11 @@ fn each_missing_contract_element_blocks() {
             "- state_changing_tool_action: NONE\n",
             "",
             "missing field: state_changing_tool_action",
+        ),
+        (
+            "- state_changing_tool_action: NONE\n",
+            "- state_changing_tool_action:\n",
+            "state_changing_tool_action is empty",
         ),
         (
             "Current duties: SOURCE CURRENCY NOT CONFIRMED",
@@ -219,6 +227,7 @@ fn reperformance_follows_precedence_percentages_and_rounding() {
         ("100 / 1,000 = 12%", false),
         ("1,000 − 250 = 750", true),
         ("-5 + 2 = -3", true),
+        ("8 / -2 = -4", true),
         ("10 ÷ 4 = 2.5", true),
         ("1,100 / 11 = 101", false),
     ];
@@ -237,6 +246,7 @@ fn reperformance_follows_precedence_percentages_and_rounding() {
 fn dates_years_bullets_and_prose_are_not_calculations() {
     for text in [
         "Lodged 1/7/2026 = on time",
+        "Lodged 1/7/2026 = 2026",
         "The 2026-27 year = the current year",
         "- 5 items were reviewed",
         "s 284-75(6) applies",
@@ -246,6 +256,43 @@ fn dates_years_bullets_and_prose_are_not_calculations() {
     ] {
         assert!(calculations(text).is_empty(), "{text}");
     }
+}
+
+#[test]
+fn unparseable_operands_or_results_are_never_marked_correct() {
+    for text in ["2 + 3 = ٥", "2 + (3 = 5", "2 + (3) ) = 5"] {
+        assert!(
+            calculations(text).iter().all(|claim| !claim.matches),
+            "{text}"
+        );
+    }
+}
+
+#[test]
+fn the_command_checks_a_draft_piped_to_stdin() {
+    let tree = common::Tree::new();
+    let mut child = Command::new(env!("CARGO_BIN_EXE_drdebits_build"))
+        .current_dir(tree.path())
+        .args(["gate", "--json", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(DRAFT.as_bytes())
+        .unwrap();
+    let result = child.wait_with_output().unwrap();
+    assert!(result.status.success(), "{result:?}");
+    let stdout = String::from_utf8(result.stdout).unwrap();
+    let report = pyjson::loads(&stdout).unwrap();
+    assert_eq!(
+        report.get("verdict").and_then(pyjson::Json::as_str),
+        Some("PASS")
+    );
 }
 
 #[test]
@@ -1681,6 +1728,7 @@ fn a_verbatim_quotation_passes_and_says_it_is_text_membership_only() {
         "The ruling says 'sufficient appropriate evidence' is needed.",
         "As stated:\n\n> sufficient appropriate evidence\n\nSo it is needed.",
         "As stated:\n\n> An approved auditor must obtain\n> sufficient appropriate evidence\n\nDone.",
+        "As stated:\n\n> An approved auditor must obtain\n> sufficient appropriate evidence",
     ] {
         let report = with_quotes(draft);
         assert_eq!(report.reviews, Vec::<String>::new(), "{draft}");

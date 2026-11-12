@@ -671,7 +671,9 @@ impl PyPath {
             if !server.is_empty() && !share.is_empty() {
                 return (format!("\\\\{server}\\{share}\\"), tail);
             }
-            return ("\\".into(), rest);
+            // Pathlib preserves the supplied UNC prefix even if the server or
+            // share is missing. Collapsing it to one slash changes the root.
+            return (text[..text.len() - tail.len()].replace('/', "\\"), tail);
         }
         if bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic() {
             let drive = &text[..2];
@@ -1251,6 +1253,8 @@ mod tests {
             ("c:/x", r"c:\", r"c:\x"),
             ("/rest", r"\", r"\rest"),
             (r"\rest", r"\", r"\rest"),
+            ("//server", r"\\server", r"\\server"),
+            ("//server//share", r"\\server\\", r"\\server\\share"),
             ("//server/share/x", r"\\server\share\", r"\\server\share\x"),
         ] {
             let path = PyPath::new(text);
