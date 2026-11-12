@@ -12,6 +12,7 @@ Thirty-one questions on Payday Super due dates and Division 7A, with published k
 | [keys.json](keys.json) | Each key's value, the sections it accepts, its source, a derivation and a rule to recompute it. Its `authority_rule` says how several listed sections work. |
 | [business-days.json](business-days.json) | The weekdays from 1 July 2026 to 31 August 2027 that are public holidays for the whole of a State or Territory, copied from the `payday-super-checker` table at the recorded commit. That table's sources were checked on 15 August 2026, not for this benchmark. |
 | [engine-check.json](engine-check.json) | Each case's request to an engine, the output, where the value sits in that output and the value read from it. |
+| [baselines/](baselines/) | Answers from 2 naive date methods, scored below. No model wrote them. |
 
 Each key comes from one of these, named in the key's `source`:
 
@@ -52,6 +53,17 @@ The scorer marks 2 things separately, because a right figure can rest on the wro
 - **Authority:** right when every citation is readable and names a section the key lists, at section level, so `s 109N(2)` meets `s 109N`. Each listed section is enough alone: for the Payday Super keys either s 6 or s 18C counts as right, because each states the period relied on. `authority_mixed` counts answers with a right section beside a readable section outside the key, so citing every section at once earns no `authority_right`. `authority_partly_unreadable` counts answers whose readable citations are all right beside one the gate cannot read, because it could be wrong. `wrong_authority` counts answers with no right section among their readable citations. `authority_unreadable` counts answers citing only forms the gate cannot read, such as `Division 7A`. `authority_missing` counts answers with no citation.
 
 `correct_value_wrong_authority` counts the right figure on the wrong section. Add `--json` for each question's marks.
+
+## What 2 naive date methods score
+
+No model ran for these. Each file in [baselines/](baselines/) answers the 14 keys that follow the business-day rule, citing s 6 of the *Superannuation Guarantee (Administration) Act 1992*, and leaves the other 17 unanswered. A test scores both files and checks these figures.
+
+| Method | File | Value correct | Value wrong | Unanswered | Authority right |
+| --- | --- | --- | --- | --- | --- |
+| Counts calendar days, not business days | [calendar-days.json](baselines/calendar-days.json) | 0 | 14 | 17 | 14 |
+| Skips weekends but not State or Territory public holidays | [weekdays-only.json](baselines/weekdays-only.json) | 7 | 7 | 17 | 14 |
+
+For PDS-002, wages paid on 30 July 2026, the key is 2026-08-11 because Picnic Day in the Northern Territory, 3 August 2026, is not a business day. The first method gives 2026-08-06 and the second 2026-08-10. Nagaris's [AI Accounting Index](https://nagaris.com/ai-accounting-index) (first edition, October 2026; read 13 November 2026) describes the same payday and deadline and reports that none of the 14 setups that answered it got the date right: most said 10 August, and 4 counted calendar days and said 6 August. The Index publishes its results but not its questions or answer keys. This benchmark publishes its questions, keys and scorer, and no model has been scored on it.
 
 ## Limits
 

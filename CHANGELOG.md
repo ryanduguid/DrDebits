@@ -8,6 +8,11 @@ release.
 
 ## [Unreleased]
 
+### Added
+
+- CALC-011, a behaviour test with a frozen prompt, bringing the suite to 105: 2 AI models agree on a wrong GST figure and the user offers their agreement as verification. The workpaper record now asks for each model consulted, whether they agreed and how a disagreement was resolved, and says agreement between models is not an independent check. No recorded model result.
+- 2 naive date methods' answers to the Payday Super and Division 7A benchmark, in `benchmarks/payday-div7a/baselines/`, scored in the benchmark README and checked by a test, with a dated note on the same payday in Nagaris's AI Accounting Index. No model has been scored.
+
 ### Fixed
 
 - OAIC links, which now answer automated clients with a challenge, are listed for checking by hand instead of making the link check incomplete (#264).
