@@ -698,6 +698,28 @@ fn the_contradiction_and_version_cases_keep_their_facts() {
             &["1 January 2023"],
             "Giving 4800.00",
         ),
+        (
+            "SRC-009",
+            "PROCEED_DRAFT_ONLY",
+            &[
+                "12% of ordinary time earnings",
+                "only national public holidays are excluded",
+                "wages paid on 14 August 2026",
+            ],
+            "counting only national public holidays fails",
+        ),
+        (
+            "CALC-012",
+            "PROCEED_DRAFT_ONLY",
+            &["qualifying earnings of 4870.00", "figure of 584.00"],
+            "12% of 4870.00 = 584.40",
+        ),
+        (
+            "WORK-004",
+            "PROCEED_DRAFT_ONLY",
+            &["P has not reviewed the workpaper"],
+            "`not evidenced`",
+        ),
     ] {
         let case = cases
             .iter()

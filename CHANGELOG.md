@@ -8,6 +8,10 @@ release.
 
 ## [Unreleased]
 
+### Added
+
+- SRC-009, CALC-012 and WORK-004, behaviour tests with frozen prompts, bringing the suite to 107: a vendor article that states the super guarantee rules before 1 July 2026 as current, a super guarantee contribution rounded down to whole dollars (12% of 4870.00 is 584.40, not 584.00), and model-written BAS commentary ending with a partner sign-off the partner has not given. No recorded model result.
+
 ### Fixed
 
 - OAIC links, which now answer automated clients with a challenge, are listed for checking by hand instead of making the link check incomplete (#264).
