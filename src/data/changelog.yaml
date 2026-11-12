@@ -1,4 +1,8 @@
 entries:
+  - version: "0.6.0"
+    date: "2026-11-12"
+    status: "Published"
+    change: "Adds an AI tool register and incident log to the AI-specific TPB rules, a rule to weigh a tribunal decision on another taxpayer’s facts as reasoning and never as settling the client’s position, and a rule to treat another jurisdiction’s terms, authorities and rules as unverified leads until an Australian primary source supports them; corrects the TPB interim suspension to allow more than one extension. Adds vendor checklist questions VA-38 to VA-47 on source authority, connectors, recordings and sharing, the APES 110 value chain start date and AUSTRAC’s table 6 examples in the AML/CTF intake classification. Adds 37 behaviour tests, bringing the suite to 104 cases. No change to the control model, authority handling or human-decision boundaries; the builder gains review checks for quoted spans and uncited authorities, a pre-run report and a block on calculations with unmatched brackets, and the repository gains a 31-question Payday Super and Division 7A benchmark with no scored run. Licensed under the Ryan Duguid Public Attribution Licence 1.0. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet."
   - version: "0.5.0"
     date: "2026-10-31"
     status: "Published"

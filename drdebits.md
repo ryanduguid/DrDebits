@@ -1,11 +1,11 @@
 ---
 title: DrDebits
-guide_version: 0.5.0
+guide_version: 0.6.0
 status: current
 jurisdiction: AU
 owner: Ryan Duguid
 canonical_repository: https://github.com/ryanduguid/DrDebits
-release_tag: v0.5.0
+release_tag: v0.6.0
 sources_checked_at: 2026-10-14T00:00:00+11:00
 review_due: 2027-01-14
 tasa_compilation: C2026C00441
@@ -32,23 +32,23 @@ apes_ai_alert_label: Technical Alert
 apes_ai_alert_date: 2025-10-31
 tpb_guidance_statement_count: 55
 tpb_library_index_count: 55
-guide_end_marker: DRDEBITS-END-v0.5.0
+guide_end_marker: DRDEBITS-END-v0.6.0
 ---
 
 # DrDebits
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
 >
-> Version: `0.5.0`
+> Version: `0.6.0`
 >
-> Release status: published; signed tag `v0.5.0`
+> Release status: published; signed tag `v0.6.0`
 >
 > Jurisdiction: Australia
 >
 > Sources last checked: `2026-10-14` (Australia/Sydney)
 
 The published evaluation records describe release 0.3.3; no confirmed model
-evaluation covers release 0.5.0 yet. Identify a committed revision by its
+evaluation covers release 0.6.0 yet. Identify a committed revision by its
 Git commit and guide version. For an uncommitted review, retain the base commit,
 complete diff and diff digest as well as the guide version; the base commit
 alone does not identify the changed guide.
@@ -634,6 +634,7 @@ Retrieve these files when a routing decision needs them. The `SHA256SUMS` file a
 
 | Version | Date | Status | Change |
 |---|---|---|---|
+| 0.6.0 | 2026-11-12 | Published | Adds an AI tool register and incident log to the AI-specific TPB rules, a rule to weigh a tribunal decision on another taxpayer’s facts as reasoning and never as settling the client’s position, and a rule to treat another jurisdiction’s terms, authorities and rules as unverified leads until an Australian primary source supports them; corrects the TPB interim suspension to allow more than one extension. Adds vendor checklist questions VA-38 to VA-47 on source authority, connectors, recordings and sharing, the APES 110 value chain start date and AUSTRAC’s table 6 examples in the AML/CTF intake classification. Adds 37 behaviour tests, bringing the suite to 104 cases. No change to the control model, authority handling or human-decision boundaries; the builder gains review checks for quoted spans and uncited authorities, a pre-run report and a block on calculations with unmatched brackets, and the repository gains a 31-question Payday Super and Division 7A benchmark with no scored run. Licensed under the Ryan Duguid Public Attribution Licence 1.0. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet. |
 | 0.5.0 | 2026-10-31 | Published | Adds a conditional automated-decision transparency check to the data and privacy gate for APP 1.7 to 1.9 of the Privacy Act 1988, which start on 10 December 2026, with vendor checklist question VA-37 and a matching row in the AI register entry; each leaves the legal conclusion to the firm. Adds 8 behaviour tests for output-side TFN and cross-client leaks and for assuming a flagged fact, bringing the suite to 67 cases, and a benchmark canary string in the evaluation files. No other model-facing guide control change; the builder gains a review check for untraced amounts (gate --facts) and a stricter prohibited-text screen. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet. |
 | 0.4.0 | 2026-10-28 | Published | Adds TPB sanctions controls and corrects the s 15 and s 45 rows for the Tax Agent Services Act and Code of Professional Conduct amendments that apply from 1 October 2026. Pins TASA C2026C00441 (Compilation No 27), TASR F2026C01004 (Compilation No 5) and the Code Determination F2026C00953 (Compilation No 4). Adds the AI tool and vendor assurance checklist and the TPB(GS) 55/2026 concordance. Clarifies decision statuses, evidence requirements, instruction handling and source verification, holds prohibited conclusions in hypotheticals, and adds calculator, citation and workpaper behaviour tests. Adds TPB Annual Report 2025-26 context to the source status. Relicenses the guide under FSL-1.1-ALv2; v0.3.3 and earlier stay CC BY 4.0. Sources checked 14 October 2026; review due 14 January 2027. No confirmed model evaluation covers this release yet. |
 | 0.3.3 | 2026-09-06 | Published | Repository renamed from DrDebits to llm-tax-guardrails on 6 September 2026; the canonical repository in the metadata, CITATION.cff and llms.txt now name it (the old URL redirects). README opens with a worked behaviour test instead of a banner and badges. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged. No control change. |
@@ -643,4 +644,4 @@ Retrieve these files when a routing decision needs them. The `SHA256SUMS` file a
 | 0.2.0-draft | 2026-08-16 | Published draft | Added APES 220, the TAA 1953 Sch 1 penalty and safe-harbour layer and an AML/CTF control set; added a low-impact proportionality lane; release integrity now rests on `SHA256SUMS` digests with the end marker demoted to a truncation check; behaviour tests, TPB catalogue, APES 110 map and maintenance protocol split into separate files; added PROP-001 and AML-001 behaviour tests. |
 | 0.1.0-draft | 2026-08-16 | Published draft | Initial source-backed guide; 55-statement TPB catalogue; APES 110 July 2025 mapping; AI, tax-planning, NOCLAR, privacy and independence controls; original DrDebits prose licensed under CC BY 4.0. |
 
-DRDEBITS-END-v0.5.0
+DRDEBITS-END-v0.6.0

@@ -19,7 +19,7 @@ DrDebits is an independent, source-linked prompt guide for accountants and tax a
 
 **0 of 104 current cases are confirmed on the current revision.** The one human-confirmed model run, 19 of 25 on v0.3.3 on 8 September 2026 or 18 of 25 without a pass that breached the guide elsewhere, predates this guide and case set, and there is no same-model run without the guide, so the guide's effect on a model is not shown. For scale, a constant responder that refuses everything meets the status check on 43 of 104 cases, and one that always proceeds on 22 of 104; no model ran for those figures, which are in [evals/RESULTS.md](./evals/RESULTS.md).
 
-> **Notice for v0.3.3 users.** Release v0.3.3 predates the [Tax Agent Services Act](https://www.legislation.gov.au/C2009A00013/latest) and Code of Professional Conduct amendments that apply to conduct and events on or after 1 October 2026. For those, its s 15 row omits the new requirement that a notification identify the client and the statement, its s 45 row still applies the 30-day existing-client rule, and it has no TPB sanctions controls. Release v0.4.0 and later correct those rows and add the 'TPB sanctions from 1 October 2026' section. Deploy the signed v0.5.0 release for that work; v0.3.3 does not cover it.
+> **Notice for v0.3.3 users.** Release v0.3.3 predates the [Tax Agent Services Act](https://www.legislation.gov.au/C2009A00013/latest) and Code of Professional Conduct amendments that apply to conduct and events on or after 1 October 2026. For those, its s 15 row omits the new requirement that a notification identify the client and the statement, its s 45 row still applies the 30-day existing-client rule, and it has no TPB sanctions controls. Release v0.4.0 and later correct those rows and add the 'TPB sanctions from 1 October 2026' section. Deploy the signed v0.6.0 release for that work; v0.3.3 does not cover it.
 
 **Input:** a user asks the model to conclude that the s 284-75(6) safe harbour applies to their position (behaviour test SAFE-001).
 
@@ -33,9 +33,9 @@ The 104 cases are in [tests/behaviour-tests.md](./tests/behaviour-tests.md). The
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
 >
-> Version: `0.5.0` · Jurisdiction: Australia · Sources last checked: 2026-10-14
+> Version: `0.6.0` · Jurisdiction: Australia · Sources last checked: 2026-10-14
 >
-> Release status: published. The signed tag is `v0.5.0`.
+> Release status: published. The signed tag is `v0.6.0`.
 
 DrDebits converts the Tax Practitioners Board framework, [APES 110, APES 220](https://apesb.org.au/) and the sector's [AML/CTF obligations](https://www.austrac.gov.au/industry-and-business/your-industry/accountants) into practical controls for drafting, research, calculations and review.
 
