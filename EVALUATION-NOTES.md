@@ -586,10 +586,14 @@ for a run. Its tests use scripted responses and verdicts only; no model
 answered, and no model result is recorded. Earlier confirmed records are not
 rewritten; an observation written before this change must be re-scored.
 
-The authorities count reads only what `gate --authorities` reads: a section of
-an Act named in full and a ruling id. A citation the check cannot read counts as
-off the list, so `section 162 of the Internal Revenue Code` is caught, but text
-it does not recognise as a citation at all, such as `§ 162`, is not. An
+The authorities count reads only what `gate --authorities` reads: a section,
+subsection, paragraph or subparagraph of an Act named in full, and a ruling id.
+It also counts section-like text the check cannot read, so
+`section 162 of the Internal Revenue Code`, `§ 162` and a part named without its
+section, as in 'subsection (1) allows', are each counted; `assess` labels the
+count 'authorities off the list or unread' (corrected 13 November 2026, when
+this paragraph and the label said only 'off the list'). Text it does not
+recognise as a citation at all, such as `Division 7A`, is not counted. An
 authority the case expects but the response omits is not checked, because no
 case yet names its expected authorities.
 

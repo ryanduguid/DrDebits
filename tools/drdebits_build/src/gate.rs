@@ -168,6 +168,14 @@ static NUMBER: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(NUM).
 /// negative. `(-120)` carries its sign and is not ambiguous.
 static BRACKETED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(&format!(r"\([ \t]*(?:{NUM})[ \t]*\)")).expect("pattern"));
+/// The text before a calculation ends in an amount, an operator and words,
+/// as `$100 + wages ` does before `$200 + $50 = $250`.
+static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(&format!(
+        r"(?:{NUM})(?:[ \t]*[+×*/÷][ \t]*|[ \t]+[-−x][ \t]+)(?:[^\d\s=+×*/÷()$]+[ \t]*)+$"
+    ))
+    .expect("pattern")
+});
 static DATE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\d{1,2}/\d{1,2}/\d{2,4}").expect("pattern"));
 static NUMBERED: LazyLock<regex::Regex> =
@@ -428,19 +436,28 @@ pub struct Calculation {
     pub results: Vec<String>,
 }
 
-/// Every `a op b = c` in the text, reperformed. The claimed result matches
+/// Every `a op b = c` in the text, reperformed, and the number of each line
+/// the scan gave up on. The claimed result matches
 /// when it is within one unit of its last decimal place, so a result rounded
 /// up, down or to nearest passes and a wrong digit does not. In a chain
 /// `a op b = c op d = e`, each link must equal either the whole next
 /// expression or its leading number, as a running total writes it.
-pub fn calculations(text: &str) -> Vec<Calculation> {
+pub fn calculations(text: &str) -> (Vec<Calculation>, Vec<usize>) {
     let mut out = Vec::new();
+    let mut unscanned = Vec::new();
     let lines: Vec<String> = py::splitlines(text).into_iter().map(normalise).collect();
-    for m in lines
-        .iter()
-        .flat_map(|line| CLAIM.captures_iter(line.as_str()))
-        .filter_map(Result::ok)
-    {
+    let scanned = lines.iter().enumerate().flat_map(|(index, line)| {
+        CLAIM
+            .captures_iter(line.as_str())
+            .map(move |m| (index + 1, line.as_str(), m))
+    });
+    for (line_number, line, m) in scanned {
+        // An error is the pattern's backtracking limit; the line's iterator
+        // ends after it.
+        let Ok(m) = m else {
+            unscanned.push(line_number);
+            continue;
+        };
         let (whole, left, right) = (&m[0], &m[1], &m[2]);
         if DATE.is_match(left) {
             continue;
@@ -451,6 +468,19 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
                 text,
                 computed: "ambiguous: a bracketed amount may be negative; write a minus sign"
                     .into(),
+                matches: false,
+                operands: Vec::new(),
+                results: Vec::new(),
+            });
+            continue;
+        }
+        // The tail of a sum that a word interrupts, as in `$200 + $50 = $250`
+        // after `$100 + wages `: the gate cannot tell what the sum adds.
+        let start = m.get(0).expect("whole match").start();
+        if INTERRUPTED.is_match(&line[..start]) {
+            out.push(Calculation {
+                text,
+                computed: "could not read: a word interrupts the sum before this step, so the gate sees only its tail; write the calculation without words between its amounts".into(),
                 matches: false,
                 operands: Vec::new(),
                 results: Vec::new(),
@@ -568,7 +598,7 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
             results,
         });
     }
-    out
+    (out, unscanned)
 }
 
 /// A line without Markdown emphasis, heading marks or list markers. A marker
@@ -784,11 +814,17 @@ pub fn check(response: &str, conclusions: &[Conclusion]) -> Report {
             "{problem} {heading} section; required where material"
         ));
     }
-    report.calculations = calculations(response);
+    let (found, unscanned) = calculations(response);
+    report.calculations = found;
     for c in report.calculations.iter().filter(|c| !c.matches) {
         report.blocks.push(format!(
             "calculation does not reperform: {} (computes to {})",
             c.text, c.computed
+        ));
+    }
+    for number in unscanned {
+        report.reviews.push(format!(
+            "calculation check: gave up scanning line {number} for calculations; a person must check its arithmetic"
         ));
     }
     for label in harness::prohibited_hits(response, conclusions) {

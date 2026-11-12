@@ -232,7 +232,7 @@ fn reperformance_follows_precedence_percentages_and_rounding() {
         ("1,100 / 11 = 101", false),
     ];
     for (text, ok) in cases {
-        let found = calculations(text);
+        let found = calculations(text).0;
         assert_eq!(found.len(), 1, "{text}");
         assert_eq!(
             found[0].matches, ok,
@@ -254,7 +254,7 @@ fn dates_years_bullets_and_prose_are_not_calculations() {
         "x = 5",
         "Rate 10% applies; 5 = five",
     ] {
-        assert!(calculations(text).is_empty(), "{text}");
+        assert!(calculations(text).0.is_empty(), "{text}");
     }
 }
 
@@ -262,7 +262,7 @@ fn dates_years_bullets_and_prose_are_not_calculations() {
 fn unparseable_operands_or_results_are_never_marked_correct() {
     for text in ["2 + 3 = ٥", "2 + (3 = 5", "2 + (3) ) = 5"] {
         assert!(
-            calculations(text).iter().all(|claim| !claim.matches),
+            calculations(text).0.iter().all(|claim| !claim.matches),
             "{text}"
         );
     }
@@ -297,7 +297,7 @@ fn the_command_checks_a_draft_piped_to_stdin() {
 
 #[test]
 fn division_by_zero_does_not_reperform() {
-    let found = calculations("100 / 0 = 0");
+    let found = calculations("100 / 0 = 0").0;
     assert_eq!(found.len(), 1);
     assert!(!found[0].matches);
     assert_eq!(found[0].computed, "undefined (division by zero)");
@@ -325,13 +325,13 @@ fn every_link_of_a_chain_is_checked() {
         ("(GST: 1,100 / 11 = 100)", true),
         ("(2 + 3 = 6)", false),
     ] {
-        let found = calculations(text);
+        let found = calculations(text).0;
         assert_eq!(found.len(), 1, "{text}");
         assert_eq!(found[0].matches, ok, "{text}: {}", found[0].computed);
     }
-    assert_eq!(calculations("1 + 1 = 3 + 2 = 5")[0].computed, "2.00");
+    assert_eq!(calculations("1 + 1 = 3 + 2 = 5").0[0].computed, "2.00");
     assert_eq!(
-        calculations("Item 2 = $500 + $300 = $800")[0].text,
+        calculations("Item 2 = $500 + $300 = $800").0[0].text,
         "$500 + $300 = $800"
     );
 }
@@ -354,7 +354,7 @@ fn a_bracket_the_gate_cannot_pair_blocks() {
         "$100 (note 1) + $50 = $150",
         "$100 (s 8-1) + $50 = $150",
     ] {
-        let found = calculations(text);
+        let found = calculations(text).0;
         assert_eq!(found.len(), 1, "{text}");
         assert!(!found[0].matches, "{text}: {}", found[0].computed);
         assert!(
@@ -372,10 +372,72 @@ fn a_bracket_the_gate_cannot_pair_blocks() {
         "(see s 8-1) $100 + $50 = $150",
         "$100 + $50 = $150 (1)",
     ] {
-        let found = calculations(text);
+        let found = calculations(text).0;
         assert_eq!(found.len(), 1, "{text}");
         assert!(found[0].matches, "{text}: {}", found[0].computed);
     }
+}
+
+/// The fixture draft with one more line under its flags.
+fn with_line(line: &str) -> gate::Report {
+    check(
+        &DRAFT.replace("- None identified.", &format!("- {line}")),
+        &conclusions(),
+    )
+}
+
+#[test]
+fn a_sum_a_word_interrupts_blocks() {
+    // The gate sees only the tail after the word, so the line's real total
+    // is unknown to it: neither the tail's sum nor the whole line's passes.
+    for text in [
+        "$100 + wages $200 + $50 = $250",
+        "$100 + wages $200 + $50 = $350",
+        "$1,000 - rent $200 - $50 = $750",
+        "5 x hours at 3 + 4 = 7",
+    ] {
+        let report = with_line(text);
+        assert_eq!(
+            report.verdict().1,
+            EXIT_BLOCK,
+            "{text}: {:?}",
+            report.blocks
+        );
+        assert!(
+            report
+                .blocks
+                .iter()
+                .any(|b| b.contains("could not read: a word interrupts the sum")),
+            "{text}: {:?}",
+            report.blocks
+        );
+    }
+    // A label, a word before an operator that starts the line, and an
+    // earlier calculation's result are not an interrupted sum.
+    for text in [
+        "Total: $100 + $200 = $300",
+        "Fees - $100 + $50 = $150",
+        "Step 2: $100 + $50 = $150",
+        "1 + 1 = 2 and 3 + 4 = 7",
+    ] {
+        let report = with_line(text);
+        assert_eq!(report.verdict().1, EXIT_PASS, "{text}: {:?}", report.blocks);
+    }
+}
+
+#[test]
+fn a_line_too_complex_to_scan_asks_for_review() {
+    // A sum of 9 terms with no number after `=` takes the pattern past its
+    // backtracking limit, and the scan gives up on the line, so the wrong sum
+    // after it is not checked either and a person must check the line.
+    let report = with_line("1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 = x, and 2 + 2 = 5");
+    assert_eq!(report.verdict().1, EXIT_REVIEW, "{:?}", report.blocks);
+    assert_eq!(
+        report.reviews,
+        [
+            "calculation check: gave up scanning line 28 for calculations; a person must check its arithmetic"
+        ]
+    );
 }
 
 #[test]
@@ -385,12 +447,12 @@ fn a_bracketed_amount_is_ambiguous_and_blocks() {
         "($100) + $50 = ($50)",
         "100 + 20 = (120) + 5 = 125",
     ] {
-        let found = calculations(text);
+        let found = calculations(text).0;
         assert_eq!(found.len(), 1, "{text}");
         assert!(!found[0].matches, "{text}");
         assert!(found[0].computed.starts_with("ambiguous"), "{text}");
     }
-    assert!(calculations("(2 + 3) × 4 = 20")[0].matches);
+    assert!(calculations("(2 + 3) × 4 = 20").0[0].matches);
     // A signed bracketed amount is explicit and reperforms.
     for (text, ok) in [
         ("100 + (-20) = 80", true),
@@ -398,7 +460,7 @@ fn a_bracketed_amount_is_ambiguous_and_blocks() {
         ("100 - 150 = (-50)", true),
         ("100 + (20) = 120", false),
     ] {
-        let found = calculations(text);
+        let found = calculations(text).0;
         assert_eq!(found.len(), 1, "{text}");
         assert_eq!(found[0].matches, ok, "{text}: {}", found[0].computed);
     }
