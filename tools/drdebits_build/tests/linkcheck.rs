@@ -323,6 +323,10 @@ fn only_the_listed_hosts_and_page_are_manual() {
     for (url, manual) in [
         ("https://www.tpb.gov.au/guidance", true),
         ("https://www.austrac.gov.au/obligations", true),
+        (
+            "https://www.oaic.gov.au/__data/assets/pdf_file/fact-sheet.pdf",
+            true,
+        ),
         (ATO_DENIED, true),
         (
             "https://www.ato.gov.au/about-ato/ato-advice-and-guidance/how-our-advice-and-guidance-protects-you",

@@ -36,9 +36,13 @@ const DEAD_HTTP_STATUSES: [u16; 2] = [404, 410];
 // one resolved (issue 113). The advice-and-guidance page answered the
 // 18 October 2026 run "UNREACHABLE 403" (run 39174483634, issue 134) and
 // answered 200 with its own title from a residential connection on
-// 19 October 2026. An unreachable link here is listed for checking by hand
-// instead of making the check incomplete; a dead answer still fails.
-const MANUAL_HOSTS: [&str; 2] = ["www.tpb.gov.au", "www.austrac.gov.au"];
+// 19 October 2026. The OAIC host answered the 12 November 2026 run 403
+// (run 43211724201, issue 134) and, on 13 November 2026, answered a
+// residential connection with a Cloudflare challenge page, so no automated
+// client can confirm its links. An unreachable link here is listed for
+// checking by hand instead of making the check incomplete; a dead answer
+// still fails.
+const MANUAL_HOSTS: [&str; 3] = ["www.tpb.gov.au", "www.austrac.gov.au", "www.oaic.gov.au"];
 const MANUAL_URLS: [&str; 2] = [
     "https://www.ato.gov.au/law/view/document?docid=PSR%2FPS20125%2FNAT%2FATO%2F00001",
     "https://www.ato.gov.au/about-ato/ato-advice-and-guidance/how-our-advice-and-guidance-protects-you",
