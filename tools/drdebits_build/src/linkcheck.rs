@@ -39,10 +39,18 @@ const DEAD_HTTP_STATUSES: [u16; 2] = [404, 410];
 // 19 October 2026. The OAIC host answered the 12 November 2026 run 403
 // (run 43211724201, issue 134) and, on 13 November 2026, answered a
 // residential connection with a Cloudflare challenge page, so no automated
-// client can confirm its links. An unreachable link here is listed for
-// checking by hand instead of making the check incomplete; a dead answer
-// still fails.
-const MANUAL_HOSTS: [&str; 3] = ["www.tpb.gov.au", "www.austrac.gov.au", "www.oaic.gov.au"];
+// client can confirm its links. The Attorney-General's Department host timed
+// out on both of the runners' attempts in the 12 November 2026 runs
+// 43211724201 and 43315310696 (issue 134), each attempt allowed 20 seconds,
+// and answered a residential connection 200 within a second on 13 November
+// 2026. An unreachable link here is listed for checking by hand instead of
+// making the check incomplete; a dead answer still fails.
+const MANUAL_HOSTS: [&str; 4] = [
+    "www.tpb.gov.au",
+    "www.austrac.gov.au",
+    "www.oaic.gov.au",
+    "www.ag.gov.au",
+];
 const MANUAL_URLS: [&str; 2] = [
     "https://www.ato.gov.au/law/view/document?docid=PSR%2FPS20125%2FNAT%2FATO%2F00001",
     "https://www.ato.gov.au/about-ato/ato-advice-and-guidance/how-our-advice-and-guidance-protects-you",
