@@ -8,6 +8,10 @@ release.
 
 ## [Unreleased]
 
+### Fixed
+
+- OAIC links, which now answer automated clients with a challenge, are listed for checking by hand instead of making the link check incomplete (#264).
+
 ## [v0.6.0] - 2026-11-12
 
 Changes released in `0.6.0`, merged since `v0.5.0` (31 October 2026). Sources were not rechecked: they stay as checked on 14 October 2026.
