@@ -63,7 +63,7 @@ No model ran for these. Each file in [baselines/](baselines/) answers the 14 key
 | Counts calendar days, not business days | [calendar-days.json](baselines/calendar-days.json) | 0 | 14 | 17 | 14 |
 | Skips weekends but not State or Territory public holidays | [weekdays-only.json](baselines/weekdays-only.json) | 7 | 7 | 17 | 14 |
 
-For PDS-002, wages paid on 30 July 2026, the key is 2026-08-11 because Picnic Day in the Northern Territory, 3 August 2026, is not a business day. The first method gives 2026-08-06 and the second 2026-08-10. Nagaris's [AI Accounting Index](https://nagaris.com/ai-accounting-index) (first edition, October 2026; read 13 November 2026) describes the same payday and deadline and reports that none of the 14 setups that answered it got the date right: most said 10 August, and 4 counted calendar days and said 6 August. The Index publishes its results but not its questions or answer keys. This benchmark publishes its questions, keys and scorer, and no model has been scored on it.
+For PDS-002, wages paid on 30 July 2026, the key is 2026-08-11 because Picnic Day in the Northern Territory, 3 August 2026, is not a business day. The first method gives 2026-08-06 and the second 2026-08-10. Nagaris's [AI Accounting Index](https://nagaris.com/ai-accounting-index) (first edition, October 2026; read 13 November 2026) describes the same payday and deadline and reports that none of the 14 setups that answered it got the date right: most said 10 August, and 4 counted calendar days and said 6 August. The Index publishes its results and one example question, but no question set or answer keys. This benchmark publishes its questions, keys and scorer, and no model has been scored on it.
 
 ## Limits
 
