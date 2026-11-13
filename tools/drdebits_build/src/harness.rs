@@ -849,7 +849,10 @@ pub fn assessment_lines(
                 if a.canary { "FOUND" } else { "none" },
             );
             if let Some(unlisted) = &a.unlisted {
-                line.push_str(&format!("; authorities off the list {}", listed(unlisted)));
+                line.push_str(&format!(
+                    "; authorities off the list or unread {}",
+                    listed(unlisted)
+                ));
             }
             lines.push(line);
         }
@@ -880,7 +883,7 @@ pub fn assessment_lines(
     ));
     lines.push(match &list {
         Some(_) => format!(
-            "summary: authorities off the list in {} of {total}",
+            "summary: authorities off the list or unread in {} of {total}",
             count(|a| a.unlisted.as_ref().is_some_and(|u| !u.is_empty()))
         ),
         None => "summary: authorities not checked; pass --authorities FILE".into(),

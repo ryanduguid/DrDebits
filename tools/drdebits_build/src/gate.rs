@@ -12,8 +12,9 @@
 //! 0   PASS    every mechanical check passed; a human still reviews the draft
 //! 1   BLOCK   the draft breaks the output contract or its arithmetic
 //! 2   the gate could not run (unreadable response, guide sources or `--source` file)
-//! 3   REVIEW  nothing blocked, but the prohibited-conclusion screen fired or
-//!             the draft records a state-changing action; a human decides
+//! 3   REVIEW  nothing blocked, but the prohibited-conclusion screen fired,
+//!             the draft records a state-changing action or the calculation
+//!             scan gave up on a line; a human decides
 //! ```
 //!
 //! Checked: the draft banner; one primary decision status naming one allowed
@@ -28,7 +29,14 @@
 //! `(2 + 3 = 5)`, belongs to the sentence. Any other bracket that does not
 //! pair within its step between `=` signs blocks the calculation, even a
 //! correct one: the gate sees only part of the sentence and cannot tell what
-//! the bracket encloses.
+//! the bracket encloses. For the same reason a calculation blocks, even a
+//! correct one, when an amount and, after it, an operator come before it on
+//! its line with text other than whitespace and no `=` or `$` between: a sum
+//! that a word interrupts, as in `$100 + wages $200 + $50 = $250` and
+//! `$500 wages + $200 + $50 = $250`, and also a sum after such a label, as
+//! in `Item 3 - Deductions $100 + $50 = $150`. A minus, `x` or `/` counts as
+//! an operator only with spaces round it, so dates such as `1/7/2025` are
+//! not read as one, and nor is `$100/wages`.
 //!
 //! Mandatory sections follow Risk classification for `PROCEED_DRAFT_ONLY` and
 //! `NEEDS_FACTS`. An `ESCALATE` or `HARD_STOP` draft may be the abbreviated
@@ -168,6 +176,18 @@ static NUMBER: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(NUM).
 /// negative. `(-120)` carries its sign and is not ambiguous.
 static BRACKETED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(&format!(r"\([ \t]*(?:{NUM})[ \t]*\)")).expect("pattern"));
+/// When an amount and, after it, an operator stand before a calculation with
+/// no `=` or `$` between that amount and the calculation, the calculation may
+/// be the tail of a longer sum, as after `$100 + wages `, `$500 wages + ` and
+/// `$100 + ... `; `+`, `×`, `*` and `÷` are operators wherever they stand, and
+/// a minus, `x` and `/` only with whitespace round them, since they also mark
+/// hyphens, words and dates such as `1/7/2025`.
+static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(&format!(
+        r"(?:{NUM})[^=$]*(?:[+×*÷]|[ \t][-−x/](?:[ \t]|$))[^=$]*$"
+    ))
+    .expect("pattern")
+});
 static DATE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\d{1,2}/\d{1,2}/\d{2,4}").expect("pattern"));
 static NUMBERED: LazyLock<regex::Regex> =
@@ -428,19 +448,28 @@ pub struct Calculation {
     pub results: Vec<String>,
 }
 
-/// Every `a op b = c` in the text, reperformed. The claimed result matches
+/// Every `a op b = c` in the text, reperformed, and the number of each line
+/// the scan gave up on. The claimed result matches
 /// when it is within one unit of its last decimal place, so a result rounded
 /// up, down or to nearest passes and a wrong digit does not. In a chain
 /// `a op b = c op d = e`, each link must equal either the whole next
 /// expression or its leading number, as a running total writes it.
-pub fn calculations(text: &str) -> Vec<Calculation> {
+pub fn calculations(text: &str) -> (Vec<Calculation>, Vec<usize>) {
     let mut out = Vec::new();
+    let mut unscanned = Vec::new();
     let lines: Vec<String> = py::splitlines(text).into_iter().map(normalise).collect();
-    for m in lines
-        .iter()
-        .flat_map(|line| CLAIM.captures_iter(line.as_str()))
-        .filter_map(Result::ok)
-    {
+    let scanned = lines.iter().enumerate().flat_map(|(index, line)| {
+        CLAIM
+            .captures_iter(line.as_str())
+            .map(move |m| (index + 1, line.as_str(), m))
+    });
+    for (line_number, line, m) in scanned {
+        // An error is the pattern's backtracking limit; the line's iterator
+        // ends after it.
+        let Ok(m) = m else {
+            unscanned.push(line_number);
+            continue;
+        };
         let (whole, left, right) = (&m[0], &m[1], &m[2]);
         if DATE.is_match(left) {
             continue;
@@ -451,6 +480,19 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
                 text,
                 computed: "ambiguous: a bracketed amount may be negative; write a minus sign"
                     .into(),
+                matches: false,
+                operands: Vec::new(),
+                results: Vec::new(),
+            });
+            continue;
+        }
+        // The tail of a sum that a word interrupts, as in `$200 + $50 = $250`
+        // after `$100 + wages `: the gate cannot tell what the sum adds.
+        let start = m.get(0).expect("whole match").start();
+        if INTERRUPTED.is_match(&line[..start]) {
+            out.push(Calculation {
+                text,
+                computed: "could not read: a word interrupts the sum before this step, so the gate sees only its tail; write the calculation on a line of its own, without words between its amounts".into(),
                 matches: false,
                 operands: Vec::new(),
                 results: Vec::new(),
@@ -568,7 +610,7 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
             results,
         });
     }
-    out
+    (out, unscanned)
 }
 
 /// A line without Markdown emphasis, heading marks or list markers. A marker
@@ -784,11 +826,17 @@ pub fn check(response: &str, conclusions: &[Conclusion]) -> Report {
             "{problem} {heading} section; required where material"
         ));
     }
-    report.calculations = calculations(response);
+    let (found, unscanned) = calculations(response);
+    report.calculations = found;
     for c in report.calculations.iter().filter(|c| !c.matches) {
         report.blocks.push(format!(
             "calculation does not reperform: {} (computes to {})",
             c.text, c.computed
+        ));
+    }
+    for number in unscanned {
+        report.reviews.push(format!(
+            "calculation check: gave up scanning line {number} for calculations; a person must check its arithmetic"
         ));
     }
     for label in harness::prohibited_hits(response, conclusions) {
