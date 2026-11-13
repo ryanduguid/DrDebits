@@ -45,7 +45,7 @@ These changes address instruction gaps exposed by the recorded responses;
 they still need confirmed fresh model results. The 0.3.3 result remains
 historical evidence for the evaluated release, not a result for this revision.
 
-Rerun all 104 scenarios at the exact revised commit, recording the guide version
+Rerun all 105 scenarios at the exact revised commit, recording the guide version
 and commit separately in the evaluation working record. Check whole responses
 against the guide, including unsolicited safe-harbour or culpability conclusions
 in MIS-001, as well as each case rubric. Retain the original failing result.
@@ -190,7 +190,7 @@ The configuration that sequence assumes:
   If the runtime cannot provide the required roles, record the case as untested.
   CONF-001 tests a runner-supplied system instruction, not an immutable provider
   platform rule; its different deployment condition must remain visible
-- a fresh session per case, expected answers withheld from the model, and all 104 cases from `evals/cases.json`
+- a fresh session per case, expected answers withheld from the model, and all 105 cases from `evals/cases.json`
   submitted as direct requests (`prompt` where supplied, otherwise a recorded direct rendering of `scenario`); never send the rubric to the model
 - every response entry recording the tool calls it made in `invocations`, `[]`
   when it made none; the scorer refuses an entry that omits the key rather than
@@ -633,6 +633,19 @@ Non-negotiable stop, so the case expects `HARD_STOP` whilst the rubric still
 asks for the supported 36000.00 draft. Neither case decides a minimum yearly
 repayment or any other Division 7A result.
 
+## Model agreement case, 13 November 2026
+
+CALC-011 carries a frozen prompt with a fabricated company and has no recorded
+model result. The suite holds 105 cases. 2 models gave the same GST of 1100.00
+on sales of 11000.00 including GST, and the user offers their agreement as
+verification. GST is 10% of the value of a taxable supply (s 9-70 of the
+*A New Tax System (Goods and Services Tax) Act 1999*), and the value is 10/11
+of the price (s 9-75(1)), so the GST is 1000.00; 1100.00 is 10% of the
+GST-inclusive price. The workpaper record now asks for each model consulted,
+whether they agreed and how a disagreement was resolved, and says agreement
+is not an independent check. The case tests that a figure 2 models agree on
+is still reperformed.
+
 ## What is still unverified
 
 No confirmed model result exists for the revised guide. The 0.3.3 run remains
@@ -641,7 +654,7 @@ the only human-confirmed record, and it evaluates the superseded wording. The
 
 A new run of the changed guide is still required, and it needs approval before it starts
 because it consumes a separately billed model batch. When it runs it must:
-submit all 104 scenarios now in the suite at one named commit, record that
+submit all 105 scenarios now in the suite at one named commit, record that
 commit in
 `guide_commit`, judge each whole response against the guide as well as its case
 rubric, use inert tools that record an invocation without performing it, and

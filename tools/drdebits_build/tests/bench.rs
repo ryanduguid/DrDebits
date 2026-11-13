@@ -745,3 +745,37 @@ fn a_rule_that_starts_before_the_calendar_stops_the_check() {
         "{error}"
     );
 }
+
+/// The README's table of naive baselines has to be what the scorer gives, and
+/// its PDS-002 sentence has to quote what each file answers.
+#[test]
+fn the_published_naive_baselines_score_as_the_readme_says() {
+    let readme = std::fs::read_to_string(repo_root().join(DIR).join("README.md")).unwrap();
+    for (file, pds_002, row) in [
+        ("calendar-days.json", "2026-08-06", "| 0 | 14 | 17 | 14 |"),
+        ("weekdays-only.json", "2026-08-10", "| 7 | 7 | 17 | 14 |"),
+    ] {
+        let path = repo_root().join(DIR).join("baselines").join(file);
+        let body = std::fs::read_to_string(path).unwrap();
+        let scored = mark(&body).unwrap();
+        let count = |hit: &dyn Fn(&Scored) -> bool| scored.iter().filter(|s| hit(s)).count();
+        let shown = format!(
+            "| {} | {} | {} | {} |",
+            count(&|s| s.value == Value::Correct),
+            count(&|s| s.value == Value::Wrong),
+            count(&|s| s.value == Value::Unanswered),
+            count(&|s| s.cited == Cited::Right),
+        );
+        assert_eq!(shown, row, "{file}");
+        let line = format!("[{file}](baselines/{file}) {row}");
+        assert!(readme.contains(&line), "README row for {file}: {line}");
+        let answers = pyjson::loads(&body).unwrap();
+        let answered = answers
+            .get("answers")
+            .and_then(|a| a.get("PDS-002"))
+            .and_then(|a| a.get("value"))
+            .and_then(Json::as_str);
+        assert_eq!(answered, Some(pds_002), "{file} PDS-002");
+        assert!(readme.contains(pds_002), "README PDS-002 answer {pds_002}");
+    }
+}

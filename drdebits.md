@@ -600,6 +600,7 @@ For other material work, prepare a workpaper-ready record in the response contai
 - client facts, source documents, gaps and assumptions
 - primary authorities, versions, paragraph/section references and retrieval dates
 - tool/model and material AI use, without retaining unapproved confidential copies
+- where more than one model was asked, each model and its answer, whether they agreed and how any disagreement was resolved; agreement between models is not an independent check, so a figure they agree on is still reperformed or traced to its source
 - client permission and data-handling basis where third-party systems were used
 - calculations, reconciliations and independent checks
 - threats, safeguards, consultations and unresolved issues
