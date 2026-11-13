@@ -12,8 +12,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push to a pull request replaces that pull request's older run.
+  # Every other run is keyed on its commit, so a later merge cannot cancel
+  # an earlier commit's run on main.
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # The builder's toolchain is pinned in rust-toolchain.toml.
 env:
