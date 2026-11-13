@@ -35,10 +35,12 @@
 //! `$500 wages + $200 + $50 = $250`, and also a sum after such a label, as
 //! in `Item 3 - Deductions $100 + $50 = $150`. So does `amount = amount`
 //! after such text, as in `Wages $500 + super $50 = $600`, where a word
-//! stands between the operator and the amount. A minus, `x` or `/` counts as
-//! an operator only with spaces round it, so dates such as `1/7/2025` are
-//! not read as one, and nor is `$100/wages`, which reads as a rate such as
-//! `$2,000/month`. A date written as a calculation's only operand, as in
+//! stands between the operator and the amount, and in
+//! `(95,000 + 20,000 - 10,000) / 480,000 = 105,000 / 480,000`, whose result
+//! is an expression. A minus, `x` or `/` counts as an operator only with
+//! spaces round it, so dates such as `1/7/2025` are not read as one, and nor
+//! is `$100/wages`, which reads as a rate such as `$2,000/month`. A date
+//! written as a calculation's only operand, bracketed or not, as in
 //! `1/7/2026 = 2026`, is prose; a date with other operands, as in
 //! `1/7/2025 + 2 + 2 = 5`, blocks, and so does a calculation with digits
 //! other than 0 to 9, such as Arabic-Indic `٥`. The scan runs in time linear
@@ -497,7 +499,7 @@ fn unread(text: String, computed: &str) -> Calculation {
     }
 }
 
-const INTERRUPTION: &str = "could not read: a word interrupts the sum before this step, so the gate sees only its tail; write the calculation on a line of its own, without words between its amounts";
+const INTERRUPTION: &str = "could not read: an amount and an operator stand before this step with no `=` between, so it may be the tail of a longer sum the gate cannot read, such as one a word interrupts; write the calculation on a line of its own, with only amounts, operators and brackets before each `=` and one amount after the last";
 
 /// Every `a op b = c` in the text, reperformed. The claimed result matches
 /// when it is within one unit of its last decimal place, so a result rounded
@@ -541,12 +543,14 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
             continue;
         }
         if DATE.is_match(left) {
-            // A date alone, as in `1/7/2026 = 2026`, is prose; a date with
-            // other operands, as in `1/7/2025 + 2 + 2 = 5`, is a sum the gate
-            // cannot read.
+            // A date alone, bracketed or not, as in `1/7/2026 = 2026`, is
+            // prose; a date with other operands, as in `1/7/2025 + 2 + 2 = 5`,
+            // is a sum the gate cannot read.
             let dates_only = left
                 .split('=')
-                .map(str::trim)
+                .map(|link| {
+                    link.trim_matches(|c: char| matches!(c, '(' | ')') || c.is_whitespace())
+                })
                 .filter(|s| !s.is_empty())
                 .all(|link| DATE.find(link).is_some_and(|d| d.len() == link.len()));
             if !dates_only {
@@ -569,9 +573,8 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
         }
         // A signed bracketed result, `(-50)`.
         let right = right.trim_start_matches('(').trim_end_matches(')').trim();
-        let Some((claimed, places, percent)) = number(right) else {
-            continue;
-        };
+        let (claimed, places, percent) =
+            number(right).expect("a result of the digits 0 to 9, as checked above");
         // An opening bracket of the surrounding prose, as in `(2 + 3 = 5)`.
         let unopened = left
             .matches('(')

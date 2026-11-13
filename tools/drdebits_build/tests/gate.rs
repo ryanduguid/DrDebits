@@ -247,6 +247,7 @@ fn dates_years_bullets_and_prose_are_not_calculations() {
     for text in [
         "Lodged 1/7/2026 = on time",
         "Lodged 1/7/2026 = 2026",
+        "Due (28/10/2026) = 28 days after the quarter",
         "The 2026-27 year = the current year",
         "- 5 items were reviewed",
         "s 284-75(6) applies",
@@ -431,11 +432,17 @@ fn a_sum_a_word_interrupts_blocks() {
         ("Note 2 *estimate* $100 + $50 = $150", true),
         // A tail with no operator left in it, `amount = amount`, after a word
         // between an operator and an amount, right or wrong, and after a rate
-        // and an operator.
+        // and an operator, a unit and an operator, or a sum with an
+        // expression for its result.
         ("Wages $500 + super $50 = $600", true),
         ("Wages $500 + super $50 = $550", true),
         ("Wages $500 + super $50 = $600 + $10 = $610", true),
         ("Rent $2,000/month × 12 = $24,000", true),
+        ("2,514 km × 0.88 = $2,212", true),
+        (
+            "(95,000 + 20,000 - 10,000) / 480,000 = 105,000 / 480,000",
+            true,
+        ),
         // Whitespace alone, a label with no amount and operator before it, a
         // word before an operator that starts the line, and an earlier
         // calculation's result are not an interrupted sum.
@@ -469,10 +476,9 @@ fn a_sum_a_word_interrupts_blocks() {
         .iter()
         .filter_map(|&(text, blocks)| {
             let report = with_line(text);
-            let interrupted = report
-                .blocks
-                .iter()
-                .any(|b| b.contains("could not read: a word interrupts the sum"));
+            let interrupted = report.blocks.iter().any(|b| {
+                b.contains("could not read: an amount and an operator stand before this step")
+            });
             let exit = report.verdict().1;
             let right = if blocks {
                 exit == EXIT_BLOCK && interrupted
