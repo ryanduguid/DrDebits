@@ -417,22 +417,27 @@ fn a_sum_a_word_interrupts_blocks() {
         ("$500 wages - $200 + $50 = $250", true),
         ("$500 FY2025 + $200 + $50 = $250", true),
         ("$500 ... + $200 + $50 = $250", true),
+        // `*` is an operator with or without spaces.
+        ("$100*wages $200 + $50 = $250", true),
+        ("$100 *wages $200 + $50 = $250", true),
+        ("$100* wages $200 + $50 = $250", true),
         // A label after an amount and an operator reads the same way, so
-        // these correct sums block too: each needs a line of its own.
+        // these correct sums block too: each needs a line of its own. So does
+        // italic text after a number.
         ("Item 3 - Deductions $100 + $50 = $150", true),
         ("FY 2025 - Australia: $100 + $50 = $150", true),
         ("1 x laptop $1,000 + $200 = $1,200", true),
         ("Interest at 5% + fees apply. Total $100 + $50 = $150", true),
+        ("Note 2 *estimate* $100 + $50 = $150", true),
         // Whitespace alone, a label with no amount and operator before it, a
         // word before an operator that starts the line, and an earlier
         // calculation's result are not an interrupted sum.
         ("$100 +   $200 + $50 = $350", false),
-        // An earlier amount with no operator after it, and emphasis marks,
-        // which are not operators.
+        // An earlier amount with no operator after it, and bold marks, which
+        // the gate strips before it reads the line.
         ("You paid $500 in wages, so $200 + $50 = $250", false),
         ("1. **Total:** $100 + $50 = $150", false),
         ("3. **GST**: $1,100 / 11 = $100", false),
-        ("Note 2 *estimate* $100 + $50 = $150", false),
         ("Total: $100 + $200 = $300", false),
         ("Fees - $100 + $50 = $150", false),
         ("Step 2: $100 + $50 = $150", false),

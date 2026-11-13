@@ -176,12 +176,12 @@ static BRACKETED: LazyLock<regex::Regex> =
 /// When an amount and, after it, an operator stand before a calculation with
 /// no `=` or `$` between that amount and the calculation, the calculation may
 /// be the tail of a longer sum, as after `$100 + wages `, `$500 wages + ` and
-/// `$100 + ... `; `+`, `×` and `÷` are operators wherever they stand, and `*`,
+/// `$100 + ... `; `+`, `×`, `*` and `÷` are operators wherever they stand, and
 /// a minus, `x` and `/` only with whitespace round them, since they also mark
-/// emphasis, hyphens, words and dates such as `1/7/2025`.
+/// hyphens, words and dates such as `1/7/2025`.
 static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:{NUM})[^=$]*(?:[+×÷]|[ \t][-−x/*](?:[ \t]|$))[^=$]*$"
+        r"(?:{NUM})[^=$]*(?:[+×*÷]|[ \t][-−x/](?:[ \t]|$))[^=$]*$"
     ))
     .expect("pattern")
 });
