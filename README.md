@@ -72,9 +72,8 @@ content, and recomputes every written `a op b = c` calculation, including each
 link of a chain, in exact decimal arithmetic. It exits 0 when those checks
 pass, 1 when the draft breaks the contract or a calculation does not
 reperform, 2 when it could not run and 3 when nothing blocked but the
-prohibited-conclusion screen matched, the draft records a state-changing
-action or the calculation scan gave up on a line, which a person must
-resolve. `--json` prints the findings for the
+prohibited-conclusion screen matched or the draft records a state-changing
+action, which a person must resolve. `--json` prints the findings for the
 host. A pass does not establish that the facts,
 sources or conclusion are right; a person still reviews the draft.
 

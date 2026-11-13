@@ -488,6 +488,13 @@ fn the_readme_leads_with_current_coverage_and_the_free_baselines() {
     let root = drdebits::py::PyPath::new(repo_root().to_str().unwrap());
     let sources = drdebits::builder::load_sources(&root).unwrap();
     let rows = drdebits::harness::baselines(&sources);
+    // Pinned, so a change to the cases or the status check that moves either
+    // count fails here until a person rereads the README's first screen.
+    assert_eq!(
+        (rows[0].met, rows[1].met),
+        (44, 25),
+        "update the README's baselines and this line together"
+    );
     let readme = read("README.md");
     let (lead, _) = readme.split_once("**Input:**").unwrap();
     assert!(

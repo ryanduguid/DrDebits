@@ -232,7 +232,7 @@ fn reperformance_follows_precedence_percentages_and_rounding() {
         ("1,100 / 11 = 101", false),
     ];
     for (text, ok) in cases {
-        let found = calculations(text).0;
+        let found = calculations(text);
         assert_eq!(found.len(), 1, "{text}");
         assert_eq!(
             found[0].matches, ok,
@@ -254,7 +254,7 @@ fn dates_years_bullets_and_prose_are_not_calculations() {
         "x = 5",
         "Rate 10% applies; 5 = five",
     ] {
-        assert!(calculations(text).0.is_empty(), "{text}");
+        assert!(calculations(text).is_empty(), "{text}");
     }
 }
 
@@ -262,7 +262,7 @@ fn dates_years_bullets_and_prose_are_not_calculations() {
 fn unparseable_operands_or_results_are_never_marked_correct() {
     for text in ["2 + 3 = ٥", "2 + (3 = 5", "2 + (3) ) = 5"] {
         assert!(
-            calculations(text).0.iter().all(|claim| !claim.matches),
+            calculations(text).iter().all(|claim| !claim.matches),
             "{text}"
         );
     }
@@ -297,7 +297,7 @@ fn the_command_checks_a_draft_piped_to_stdin() {
 
 #[test]
 fn division_by_zero_does_not_reperform() {
-    let found = calculations("100 / 0 = 0").0;
+    let found = calculations("100 / 0 = 0");
     assert_eq!(found.len(), 1);
     assert!(!found[0].matches);
     assert_eq!(found[0].computed, "undefined (division by zero)");
@@ -325,13 +325,13 @@ fn every_link_of_a_chain_is_checked() {
         ("(GST: 1,100 / 11 = 100)", true),
         ("(2 + 3 = 6)", false),
     ] {
-        let found = calculations(text).0;
+        let found = calculations(text);
         assert_eq!(found.len(), 1, "{text}");
         assert_eq!(found[0].matches, ok, "{text}: {}", found[0].computed);
     }
-    assert_eq!(calculations("1 + 1 = 3 + 2 = 5").0[0].computed, "2.00");
+    assert_eq!(calculations("1 + 1 = 3 + 2 = 5")[0].computed, "2.00");
     assert_eq!(
-        calculations("Item 2 = $500 + $300 = $800").0[0].text,
+        calculations("Item 2 = $500 + $300 = $800")[0].text,
         "$500 + $300 = $800"
     );
 }
@@ -354,7 +354,7 @@ fn a_bracket_the_gate_cannot_pair_blocks() {
         "$100 (note 1) + $50 = $150",
         "$100 (s 8-1) + $50 = $150",
     ] {
-        let found = calculations(text).0;
+        let found = calculations(text);
         assert_eq!(found.len(), 1, "{text}");
         assert!(!found[0].matches, "{text}: {}", found[0].computed);
         assert!(
@@ -372,7 +372,7 @@ fn a_bracket_the_gate_cannot_pair_blocks() {
         "(see s 8-1) $100 + $50 = $150",
         "$100 + $50 = $150 (1)",
     ] {
-        let found = calculations(text).0;
+        let found = calculations(text);
         assert_eq!(found.len(), 1, "{text}");
         assert!(found[0].matches, "{text}: {}", found[0].computed);
     }
@@ -429,6 +429,13 @@ fn a_sum_a_word_interrupts_blocks() {
         ("1 x laptop $1,000 + $200 = $1,200", true),
         ("Interest at 5% + fees apply. Total $100 + $50 = $150", true),
         ("Note 2 *estimate* $100 + $50 = $150", true),
+        // A tail with no operator left in it, `amount = amount`, after a word
+        // between an operator and an amount, right or wrong, and after a rate
+        // and an operator.
+        ("Wages $500 + super $50 = $600", true),
+        ("Wages $500 + super $50 = $550", true),
+        ("Wages $500 + super $50 = $600 + $10 = $610", true),
+        ("Rent $2,000/month × 12 = $24,000", true),
         // Whitespace alone, a label with no amount and operator before it, a
         // word before an operator that starts the line, and an earlier
         // calculation's result are not an interrupted sum.
@@ -453,6 +460,10 @@ fn a_sum_a_word_interrupts_blocks() {
             "which is 10/11 of the GST-inclusive price, so 11000.00 / 11 = 1000.00",
             false,
         ),
+        // Nor is one before a word: it reads as a rate, so a rate before a
+        // calculation leaves it to be reperformed, and so does `$100/wages`.
+        ("Rent is $2,000/month, so 12 × $2,000 = $24,000", false),
+        ("$100/wages $200 + $50 = $250", false),
     ];
     let wrong: Vec<String> = rows
         .iter()
@@ -475,18 +486,78 @@ fn a_sum_a_word_interrupts_blocks() {
 }
 
 #[test]
-fn a_line_too_complex_to_scan_asks_for_review() {
-    // A sum of 9 terms with no number after `=` takes the pattern past its
-    // backtracking limit, and the scan gives up on the line, so the wrong sum
-    // after it is not checked either and a person must check the line.
+fn a_long_line_is_scanned_whole() {
+    // A sum with no number after `=`, of 9 terms or of 20,000, took a
+    // backtracking scan past its limit, so it gave up on the line. The scan
+    // now runs in linear time and reads the wrong sum after it.
     let report = with_line("1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 = x, and 2 + 2 = 5");
-    assert_eq!(report.verdict().1, EXIT_REVIEW, "{:?}", report.blocks);
     assert_eq!(
-        report.reviews,
-        [
-            "calculation check: gave up scanning line 28 for calculations; a person must check its arithmetic"
-        ]
+        report.blocks,
+        ["calculation does not reperform: 2 + 2 = 5 (computes to 4.00)"]
     );
+    assert!(report.reviews.is_empty(), "{:?}", report.reviews);
+    let long = format!("{}1 = x, and 2 + 2 = 5", "1 + ".repeat(20_000));
+    let started = std::time::Instant::now();
+    let found = calculations(&long);
+    // Linear time is the `regex` crate's guarantee; the clock only catches
+    // a return to backtracking, so its bound is loose.
+    let elapsed = started.elapsed();
+    assert_eq!(found.len(), 1);
+    assert_eq!(
+        (found[0].text.as_str(), found[0].matches),
+        ("2 + 2 = 5", false)
+    );
+    assert!(elapsed < std::time::Duration::from_secs(30), "{elapsed:?}");
+}
+
+#[test]
+fn a_date_among_a_sums_operands_blocks() {
+    // A date alone before `=` is prose, as in `Lodged 1/7/2026 = 2026`; with
+    // other operands the gate cannot tell what the sum adds, right or wrong.
+    for line in [
+        "Rent 1/7/2025 + 2 + 2 = 5",
+        "Rent 1/7/2025 + 2 + 2 = 4",
+        "Lodged 1/7/2026 = 2026 + 1 = 2028",
+    ] {
+        let report = with_line(line);
+        assert_eq!(
+            report.verdict().1,
+            EXIT_BLOCK,
+            "{line}: {:?}",
+            report.blocks
+        );
+        assert!(
+            report
+                .blocks
+                .iter()
+                .any(|b| b.contains("a date stands in the sum")),
+            "{line}: {:?}",
+            report.blocks
+        );
+    }
+}
+
+#[test]
+fn a_digit_other_than_0_to_9_blocks() {
+    // The scan reads any decimal digit, such as Arabic-Indic `٥`, and the
+    // gate reads only 0 to 9, so it blocks such a calculation, right or wrong.
+    for line in ["2 + 3 = ٥", "2 + 3 = ٤", "٢ + 3 = 5"] {
+        let report = with_line(line);
+        assert_eq!(
+            report.verdict().1,
+            EXIT_BLOCK,
+            "{line}: {:?}",
+            report.blocks
+        );
+        assert!(
+            report
+                .blocks
+                .iter()
+                .any(|b| b.contains("digits other than 0 to 9")),
+            "{line}: {:?}",
+            report.blocks
+        );
+    }
 }
 
 #[test]
@@ -496,12 +567,12 @@ fn a_bracketed_amount_is_ambiguous_and_blocks() {
         "($100) + $50 = ($50)",
         "100 + 20 = (120) + 5 = 125",
     ] {
-        let found = calculations(text).0;
+        let found = calculations(text);
         assert_eq!(found.len(), 1, "{text}");
         assert!(!found[0].matches, "{text}");
         assert!(found[0].computed.starts_with("ambiguous"), "{text}");
     }
-    assert!(calculations("(2 + 3) × 4 = 20").0[0].matches);
+    assert!(calculations("(2 + 3) × 4 = 20")[0].matches);
     // A signed bracketed amount is explicit and reperforms.
     for (text, ok) in [
         ("100 + (-20) = 80", true),
@@ -509,7 +580,7 @@ fn a_bracketed_amount_is_ambiguous_and_blocks() {
         ("100 - 150 = (-50)", true),
         ("100 + (20) = 120", false),
     ] {
-        let found = calculations(text).0;
+        let found = calculations(text);
         assert_eq!(found.len(), 1, "{text}");
         assert_eq!(found[0].matches, ok, "{text}: {}", found[0].computed);
     }
