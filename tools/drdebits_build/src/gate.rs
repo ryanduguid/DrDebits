@@ -209,8 +209,9 @@ static BRACKETED: LazyLock<regex::Regex> =
 /// no `=` between that amount and the calculation, the calculation may be the
 /// tail of a longer sum, as after `$100 + wages `, `$100 + $20 wages `,
 /// `$500 wages + ` and `$100 + ... `; `+`, `×`, `*` and `÷` are operators
-/// wherever they stand, and a minus, `x` and `/` only with whitespace round them, since they also mark
-/// hyphens, words, dates such as `1/7/2025` and rates such as `$2,000/month`.
+/// wherever they stand, and a minus, `x` and `/` only with whitespace round
+/// them, since they also mark hyphens, words, dates such as `1/7/2025` and
+/// rates such as `$2,000/month`.
 static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
         r"(?:{NUM})[^=]*(?:[+×*÷]|[ \t][-−x/](?:[ \t]|$))[^=]*$"

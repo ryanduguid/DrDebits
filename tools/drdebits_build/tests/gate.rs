@@ -432,13 +432,13 @@ fn a_sum_a_word_interrupts_blocks() {
         // word, punctuation.
         ("$500 wages + $200 + $50 = $250", true),
         ("$100 + $20 wages + $200 + $50 = $250", true),
+        ("$500 wages - $200 + $50 = $250", true),
+        ("$500 FY2025 + $200 + $50 = $250", true),
+        ("$500 ... + $200 + $50 = $250", true),
         // A dollar amount between the operator and the tail: the line's terms
         // total $370.
         ("$100 + $20 wages $200 + $50 = $250", true),
         ("$100 + $20 wages $200 + $50 = $370", true),
-        ("$500 wages - $200 + $50 = $250", true),
-        ("$500 FY2025 + $200 + $50 = $250", true),
-        ("$500 ... + $200 + $50 = $250", true),
         // `*` is an operator with or without spaces.
         ("$100*wages $200 + $50 = $250", true),
         ("$100 *wages $200 + $50 = $250", true),
@@ -454,6 +454,7 @@ fn a_sum_a_word_interrupts_blocks() {
         // A correct sum after an earlier amount and operator, with a dollar
         // amount between.
         ("Range $100 - $200 a week, so $100 + $50 = $150", true),
+        ("| Laptop | 2 x $1,000 | 2 x $1,000 = $2,000 |", true),
         // A tail with no operator left in it, `amount = amount`, after a word
         // between an operator and an amount, right or wrong, and after a rate
         // and an operator, a unit and an operator, or a sum with an
