@@ -716,7 +716,7 @@ fn the_contradiction_and_version_cases_keep_their_facts() {
         ),
         (
             "WORK-004",
-            "PROCEED_DRAFT_ONLY",
+            "HARD_STOP",
             &["P has not reviewed the workpaper"],
             "`not evidenced`",
         ),
