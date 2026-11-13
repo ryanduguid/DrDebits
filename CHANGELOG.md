@@ -17,6 +17,7 @@ release.
 - OAIC links, which now answer automated clients with a challenge, are listed for checking by hand instead of making the link check incomplete (#264).
 - Attorney-General's Department links, which time out from GitHub's runners, are listed for checking by hand too, so the link check is no longer incomplete on them.
 - The README's Codacy link names the renamed repository, and its contents line links the Alternatives section.
+- The README's OpenSSF Scorecard badge and link name the renamed repository.
 
 ## [v0.6.0] - 2026-11-12
 
