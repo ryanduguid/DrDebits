@@ -50,6 +50,9 @@ suite replays it on every platform.
   extent the gate cannot tell, and a sum that a word interrupts, such as
   `$100 + wages $200 + $50 = $250`, block, the last 2 even in a correct sum
   such as `(salary $1,000 - $200) = $800` or `$100 + wages $200 + $50 = $350`.
+  A correct sum after a label that follows an amount and an operator, as in
+  `Item 3 - Deductions $100 + $50 = $150`, blocks for the same reason; write
+  the calculation on a line of its own.
   A mandatory section must have
   content. Exit 0 is a mechanical pass, 1 a contract or arithmetic breach, 2
   a gate that could not run and 3, for human review, a prohibited-conclusion

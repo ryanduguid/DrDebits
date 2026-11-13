@@ -12,8 +12,9 @@
 //! 0   PASS    every mechanical check passed; a human still reviews the draft
 //! 1   BLOCK   the draft breaks the output contract or its arithmetic
 //! 2   the gate could not run (unreadable response, guide sources or `--source` file)
-//! 3   REVIEW  nothing blocked, but the prohibited-conclusion screen fired or
-//!             the draft records a state-changing action; a human decides
+//! 3   REVIEW  nothing blocked, but the prohibited-conclusion screen fired,
+//!             the draft records a state-changing action or the calculation
+//!             scan gave up on a line; a human decides
 //! ```
 //!
 //! Checked: the draft banner; one primary decision status naming one allowed
@@ -28,7 +29,11 @@
 //! `(2 + 3 = 5)`, belongs to the sentence. Any other bracket that does not
 //! pair within its step between `=` signs blocks the calculation, even a
 //! correct one: the gate sees only part of the sentence and cannot tell what
-//! the bracket encloses.
+//! the bracket encloses. For the same reason a calculation blocks, even a
+//! correct one, when an amount, an operator and words come before it on its
+//! line: a sum that a word interrupts, as in
+//! `$100 + wages $200 + $50 = $250`, and also a sum after such a label, as
+//! in `Item 3 - Deductions $100 + $50 = $150`.
 //!
 //! Mandatory sections follow Risk classification for `PROCEED_DRAFT_ONLY` and
 //! `NEEDS_FACTS`. An `ESCALATE` or `HARD_STOP` draft may be the abbreviated
@@ -169,10 +174,11 @@ static NUMBER: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(NUM).
 static BRACKETED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(&format!(r"\([ \t]*(?:{NUM})[ \t]*\)")).expect("pattern"));
 /// The text before a calculation ends in an amount, an operator and words,
-/// as `$100 + wages ` does before `$200 + $50 = $250`.
+/// which may hold operators and brackets, as `$100 + wages ` and
+/// `$100 + (wages) + ` do before `$200 + $50 = $250`.
 static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:{NUM})(?:[ \t]*[+×*/÷][ \t]*|[ \t]+[-−x][ \t]+)(?:[^\d\s=+×*/÷()$]+[ \t]*)+$"
+        r"(?:{NUM})(?:[ \t]*[+×*/÷][ \t]*|[ \t]+[-−x][ \t]+)(?:[^\d\s=$]+[ \t]*)+$"
     ))
     .expect("pattern")
 });
@@ -480,7 +486,7 @@ pub fn calculations(text: &str) -> (Vec<Calculation>, Vec<usize>) {
         if INTERRUPTED.is_match(&line[..start]) {
             out.push(Calculation {
                 text,
-                computed: "could not read: a word interrupts the sum before this step, so the gate sees only its tail; write the calculation without words between its amounts".into(),
+                computed: "could not read: a word interrupts the sum before this step, so the gate sees only its tail; write the calculation on a line of its own, without words between its amounts".into(),
                 matches: false,
                 operands: Vec::new(),
                 results: Vec::new(),

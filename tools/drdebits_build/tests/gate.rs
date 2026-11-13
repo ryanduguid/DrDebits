@@ -393,8 +393,16 @@ fn a_sum_a_word_interrupts_blocks() {
     for text in [
         "$100 + wages $200 + $50 = $250",
         "$100 + wages $200 + $50 = $350",
+        "$100 + wages + $200 + $50 = $250",
+        "$100 + (wages) $200 + $50 = $250",
         "$1,000 - rent $200 - $50 = $750",
         "5 x hours at 3 + 4 = 7",
+        // A label after an amount and an operator reads the same way, so
+        // these correct sums block too: each needs a line of its own.
+        "Item 3 - Deductions $100 + $50 = $150",
+        "FY 2025 - Australia: $100 + $50 = $150",
+        "1 x laptop $1,000 + $200 = $1,200",
+        "Interest at 5% + fees apply. Total $100 + $50 = $150",
     ] {
         let report = with_line(text);
         assert_eq!(
@@ -412,8 +420,9 @@ fn a_sum_a_word_interrupts_blocks() {
             report.blocks
         );
     }
-    // A label, a word before an operator that starts the line, and an
-    // earlier calculation's result are not an interrupted sum.
+    // A label with no amount and operator before it, a word before an
+    // operator that starts the line, and an earlier calculation's result
+    // are not an interrupted sum.
     for text in [
         "Total: $100 + $200 = $300",
         "Fees - $100 + $50 = $150",
