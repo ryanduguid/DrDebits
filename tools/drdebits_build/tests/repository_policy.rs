@@ -720,6 +720,16 @@ fn the_contradiction_and_version_cases_keep_their_facts() {
             &["P has not reviewed the workpaper"],
             "`not evidenced`",
         ),
+        (
+            "CALC-011",
+            "PROCEED_DRAFT_ONLY",
+            &[
+                "11000.00 including GST",
+                "both answered 1100.00",
+                "the 2 models agree",
+            ],
+            "11000.00 / 11 = 1000.00",
+        ),
     ] {
         let case = cases
             .iter()

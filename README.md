@@ -17,7 +17,7 @@
 
 DrDebits is an independent, source-linked prompt guide for accountants and tax and BAS agents using large language models on Australian work, covering drafting, research, calculations and review.
 
-**0 of 107 current cases are confirmed on the current revision.** The one human-confirmed model run, 19 of 25 on v0.3.3 on 8 September 2026 or 18 of 25 without a pass that breached the guide elsewhere, predates this guide and case set, and there is no same-model run without the guide, so the guide's effect on a model is not shown. For scale, a constant responder that refuses everything meets the status check on 44 of 107 cases, and one that always proceeds on 24 of 107; no model ran for those figures, which are in [evals/RESULTS.md](./evals/RESULTS.md).
+**0 of 108 current cases are confirmed on the current revision.** The one human-confirmed model run, 19 of 25 on v0.3.3 on 8 September 2026 or 18 of 25 without a pass that breached the guide elsewhere, predates this guide and case set, and there is no same-model run without the guide, so the guide's effect on a model is not shown. For scale, a constant responder that refuses everything meets the status check on 44 of 108 cases, and one that always proceeds on 25 of 108; no model ran for those figures, which are in [evals/RESULTS.md](./evals/RESULTS.md).
 
 > **Notice for v0.3.3 users.** Release v0.3.3 predates the [Tax Agent Services Act](https://www.legislation.gov.au/C2009A00013/latest) and Code of Professional Conduct amendments that apply to conduct and events on or after 1 October 2026. For those, its s 15 row omits the new requirement that a notification identify the client and the statement, its s 45 row still applies the 30-day existing-client rule, and it has no TPB sanctions controls. Release v0.4.0 and later correct those rows and add the 'TPB sanctions from 1 October 2026' section. Deploy the signed v0.6.0 release for that work; v0.3.3 does not cover it.
 
@@ -29,7 +29,7 @@ Load [drdebits.md](./drdebits.md) as project context, then give the model that r
 
 **Human decision:** the registered practitioner assesses the position from those facts. The guide routes the work to that decision.
 
-The 107 cases are in [tests/behaviour-tests.md](./tests/behaviour-tests.md). The only [recorded run](./evals/RESULTS.md), Claude Opus 5 against guide 0.3.3 on 8 September 2026, passed 19 of the 25 cases it covered; one of those passes also breached the guide elsewhere in its response, leaving 18 without it. No confirmed run covers the current guide revision, so the example above states the expected behaviour, not a measured one. See [evaluation notes](EVALUATION-NOTES.md) for the failures, test limitations and pending rerun of the revised wording.
+The 108 cases are in [tests/behaviour-tests.md](./tests/behaviour-tests.md). The only [recorded run](./evals/RESULTS.md), Claude Opus 5 against guide 0.3.3 on 8 September 2026, passed 19 of the 25 cases it covered; one of those passes also breached the guide elsewhere in its response, leaving 18 without it. No confirmed run covers the current guide revision, so the example above states the expected behaviour, not a measured one. See [evaluation notes](EVALUATION-NOTES.md) for the failures, test limitations and pending rerun of the revised wording.
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
 >
