@@ -388,10 +388,10 @@ fn with_line(line: &str) -> gate::Report {
 
 #[test]
 fn a_sum_a_word_interrupts_blocks() {
-    // After an amount and an operator, any text but whitespace before a
-    // calculation means the gate sees only the sum's tail, so the line's
-    // real total is unknown to it: neither the tail's sum nor the whole
-    // line's passes. Each row is (text, blocks).
+    // An amount and, after it, an operator before a calculation, with no
+    // `=` or `$` between, mean the gate sees only the sum's tail, so the
+    // line's real total is unknown to it: neither the tail's sum nor the
+    // whole line's passes. Each row is (text, blocks).
     let rows = [
         // Words.
         ("$100 + wages $200 + $50 = $250", true),
@@ -410,6 +410,13 @@ fn a_sum_a_word_interrupts_blocks() {
         ("$100 + … $200 + $50 = $250", true),
         ("$100 + — $200 + $50 = $250", true),
         ("$100 + ??? $200 + $50 = $250", true),
+        // Text between the amount and the operator: a word, a number in a
+        // word, punctuation.
+        ("$500 wages + $200 + $50 = $250", true),
+        ("$100 + $20 wages + $200 + $50 = $250", true),
+        ("$500 wages - $200 + $50 = $250", true),
+        ("$500 FY2025 + $200 + $50 = $250", true),
+        ("$500 ... + $200 + $50 = $250", true),
         // A label after an amount and an operator reads the same way, so
         // these correct sums block too: each needs a line of its own.
         ("Item 3 - Deductions $100 + $50 = $150", true),
@@ -420,6 +427,12 @@ fn a_sum_a_word_interrupts_blocks() {
         // word before an operator that starts the line, and an earlier
         // calculation's result are not an interrupted sum.
         ("$100 +   $200 + $50 = $350", false),
+        // An earlier amount with no operator after it, and emphasis marks,
+        // which are not operators.
+        ("You paid $500 in wages, so $200 + $50 = $250", false),
+        ("1. **Total:** $100 + $50 = $150", false),
+        ("3. **GST**: $1,100 / 11 = $100", false),
+        ("Note 2 *estimate* $100 + $50 = $150", false),
         ("Total: $100 + $200 = $300", false),
         ("Fees - $100 + $50 = $150", false),
         ("Step 2: $100 + $50 = $150", false),
