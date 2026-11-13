@@ -515,7 +515,9 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
         for m in scan(&EQUATION, &line) {
             let equation = m.name("calc").expect("a `calc` group");
             let equals = equation.start() + equation.as_str().find('=').expect("an `=`");
-            if !read.iter().any(|r| r.contains(&equals))
+            // `read` is in order and its spans do not overlap.
+            let within = read.partition_point(|r| r.end <= equals);
+            if !read.get(within).is_some_and(|r| r.contains(&equals))
                 && INTERRUPTED.is_match(&line[..equation.start()])
             {
                 out.push(unread(
