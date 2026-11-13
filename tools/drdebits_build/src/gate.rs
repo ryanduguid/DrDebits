@@ -174,11 +174,12 @@ static NUMBER: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(NUM).
 static BRACKETED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(&format!(r"\([ \t]*(?:{NUM})[ \t]*\)")).expect("pattern"));
 /// The text before a calculation ends in an amount, an operator and words,
-/// which may hold operators and brackets, as `$100 + wages ` and
-/// `$100 + (wages) + ` do before `$200 + $50 = $250`.
+/// which may hold digits, operators and brackets, as `$100 + wages `,
+/// `$100 + (wages) + ` and `$100 + FY2025 wages ` do before
+/// `$200 + $50 = $250`.
 static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:{NUM})(?:[ \t]*[+×*/÷][ \t]*|[ \t]+[-−x][ \t]+)(?:[^\d\s=$]+[ \t]*)+$"
+        r"(?:{NUM})(?:[ \t]*[+×*/÷][ \t]*|[ \t]+[-−x][ \t]+)[^=$]*\p{{L}}[^=$]*$"
     ))
     .expect("pattern")
 });

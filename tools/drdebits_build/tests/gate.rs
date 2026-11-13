@@ -397,6 +397,10 @@ fn a_sum_a_word_interrupts_blocks() {
         "$100 + (wages) $200 + $50 = $250",
         "$1,000 - rent $200 - $50 = $750",
         "5 x hours at 3 + 4 = 7",
+        // A word may hold or follow digits.
+        "$100 + wages2 $200 + $50 = $250",
+        "$100 + FY2025 wages $200 + $50 = $250",
+        "$100 + 2025 wages $200 + $50 = $250",
         // A label after an amount and an operator reads the same way, so
         // these correct sums block too: each needs a line of its own.
         "Item 3 - Deductions $100 + $50 = $150",
