@@ -432,6 +432,11 @@ fn a_sum_a_word_interrupts_blocks() {
         "Fees - $100 + $50 = $150",
         "Step 2: $100 + $50 = $150",
         "1 + 1 = 2 and 3 + 4 = 7",
+        // An unspaced `/` in a date or fraction is not an operator.
+        "On 1/7/2025 the client paid $100 + $50 = $150",
+        "For the period 1/7/2025 to 30/6/2026, $100 + $50 = $150",
+        "GST is 1/11 of the price: $1,100 / 11 = $100",
+        "which is 10/11 of the GST-inclusive price, so 11000.00 / 11 = 1000.00",
     ] {
         let report = with_line(text);
         assert_eq!(report.verdict().1, EXIT_PASS, "{text}: {:?}", report.blocks);

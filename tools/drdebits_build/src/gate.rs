@@ -176,10 +176,11 @@ static BRACKETED: LazyLock<regex::Regex> =
 /// The text before a calculation ends in an amount, an operator and words,
 /// which may hold digits, operators and brackets, as `$100 + wages `,
 /// `$100 + (wages) + ` and `$100 + FY2025 wages ` do before
-/// `$200 + $50 = $250`.
+/// `$200 + $50 = $250`. A `/` needs spaces round it, as a minus does, so the
+/// date in `On 1/7/2025 the client paid ` is not an amount and an operator.
 static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:{NUM})(?:[ \t]*[+×*/÷][ \t]*|[ \t]+[-−x][ \t]+)[^=$]*\p{{L}}[^=$]*$"
+        r"(?:{NUM})(?:[ \t]*[+×*÷][ \t]*|[ \t]+[-−x/][ \t]+)[^=$]*\p{{L}}[^=$]*$"
     ))
     .expect("pattern")
 });
