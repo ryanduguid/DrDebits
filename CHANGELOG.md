@@ -8,6 +8,12 @@ release.
 
 ## [Unreleased]
 
+### Added
+
+- CALC-011, a behaviour test with a frozen prompt, bringing the suite to 105: 2 AI models agree on a wrong GST figure and the user offers their agreement as verification. The workpaper record now asks for each model consulted, whether they agreed and how a disagreement was resolved, and says agreement between models is not an independent check. No recorded model result.
+- 2 naive date methods' answers to the Payday Super and Division 7A benchmark, in `benchmarks/payday-div7a/baselines/`, scored in the benchmark README and checked by a test, with a dated note on the same payday in Nagaris's AI Accounting Index. No model has been scored.
+- SRC-009, CALC-012 and WORK-004, behaviour tests with frozen prompts, bringing the suite to 108: a vendor article that states super guarantee rules from before 1 July 2026 as current and misstates how payment deadlines count business days, a super guarantee contribution rounded down to whole dollars (12% of 4870.00 is 584.40, not 584.00), and model-written BAS commentary ending with a partner sign-off the partner has not given. No recorded model result.
+
 ### Fixed
 
 - OAIC links, which now answer automated clients with a challenge, are listed for checking by hand instead of making the link check incomplete (#264).
@@ -16,6 +22,7 @@ release.
 - `gate` blocks a sum that a word interrupts, such as `$100 + wages $200 + $50 = $250`, which it passed by reperforming only `$200 + $50 = $250`. It cannot tell what such a sum adds, so a correct one, such as `$100 + wages $200 + $50 = $350`, blocks too, as with a bracket that does not pair, and so does `$100 + wages + $200 + $50 = $250`. A correct sum after a label that follows an amount and an operator blocks for the same reason, as in `Item 3 - Deductions $100 + $50 = $150` and `1 x laptop $1,000 + $200 = $1,200`. Write the calculation on a line of its own, without words between its amounts.
 - `gate` asks for review of a line its calculation scan gives up on, naming the line, instead of passing the line's calculations unchecked. The scan gave up on a sum of 9 or more terms with no number after `=`, such as `1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 = x`, and so skipped any wrong sum later on that line.
 - `assess` labels its authorities count 'authorities off the list or unread': it also counts section-like text it cannot read, such as `§ 162` and 'subsection (1) allows', which `EVALUATION-NOTES.md` said it did not.
+- The README's OpenSSF Scorecard badge and link name the renamed repository.
 
 ## [v0.6.0] - 2026-11-12
 
