@@ -53,7 +53,10 @@ suite replays it on every platform.
   A correct sum after a label that follows an amount and an operator, as in
   `Item 3 - Deductions $100 + $50 = $150`, blocks for the same reason, as
   does any other text but whitespace on either side of the operator, as in
-  `FY2025 wages`, `2`, `...` or `$500 wages + `; write the calculation on a line of its own.
+  `FY2025 wages`, `2`, `...` or `$500 wages + `. A minus, `x` or `/` counts
+  as an operator only with spaces round it, so dates such as `1/7/2025` are
+  not read as one, and nor is `$100/wages`. Write the calculation on a line
+  of its own.
   A mandatory section must have
   content. Exit 0 is a mechanical pass, 1 a contract or arithmetic breach, 2
   a gate that could not run and 3, for human review, a prohibited-conclusion

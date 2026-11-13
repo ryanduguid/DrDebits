@@ -30,10 +30,13 @@
 //! pair within its step between `=` signs blocks the calculation, even a
 //! correct one: the gate sees only part of the sentence and cannot tell what
 //! the bracket encloses. For the same reason a calculation blocks, even a
-//! correct one, when an amount, an operator and words come before it on its
-//! line: a sum that a word interrupts, as in
-//! `$100 + wages $200 + $50 = $250`, and also a sum after such a label, as
-//! in `Item 3 - Deductions $100 + $50 = $150`.
+//! correct one, when an amount and, after it, an operator come before it on
+//! its line with text other than whitespace and no `=` or `$` between: a sum
+//! that a word interrupts, as in `$100 + wages $200 + $50 = $250` and
+//! `$500 wages + $200 + $50 = $250`, and also a sum after such a label, as
+//! in `Item 3 - Deductions $100 + $50 = $150`. A minus, `x` or `/` counts as
+//! an operator only with spaces round it, so dates such as `1/7/2025` are
+//! not read as one, and nor is `$100/wages`.
 //!
 //! Mandatory sections follow Risk classification for `PROCEED_DRAFT_ONLY` and
 //! `NEEDS_FACTS`. An `ESCALATE` or `HARD_STOP` draft may be the abbreviated
