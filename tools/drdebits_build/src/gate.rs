@@ -173,14 +173,14 @@ static NUMBER: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(NUM).
 /// negative. `(-120)` carries its sign and is not ambiguous.
 static BRACKETED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(&format!(r"\([ \t]*(?:{NUM})[ \t]*\)")).expect("pattern"));
-/// The text before a calculation ends in an amount, an operator and words,
-/// which may hold digits, operators and brackets, as `$100 + wages `,
-/// `$100 + (wages) + ` and `$100 + FY2025 wages ` do before
-/// `$200 + $50 = $250`. A `/` needs spaces round it, as a minus does, so the
-/// date in `On 1/7/2025 the client paid ` is not an amount and an operator.
+/// A sum is interrupted when, between an amount and an operator and the
+/// calculation, the text holds anything but whitespace and no `=` or `$`, as
+/// `$100 + wages `, `$100 + 2 ` and `$100 + ... ` do before
+/// `$200 + $50 = $250`; a minus, `x` or `/` is an operator only with spaces
+/// round it, so the date in `On 1/7/2025 the client paid ` is not one.
 static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:{NUM})(?:[ \t]*[+×*÷][ \t]*|[ \t]+[-−x/][ \t]+)[^=$]*\p{{L}}[^=$]*$"
+        r"(?:{NUM})(?:[ \t]*[+×*÷][ \t]*|[ \t]+[-−x/][ \t]+)[^=$]*[^\s=$][^=$]*$"
     ))
     .expect("pattern")
 });

@@ -388,59 +388,72 @@ fn with_line(line: &str) -> gate::Report {
 
 #[test]
 fn a_sum_a_word_interrupts_blocks() {
-    // The gate sees only the tail after the word, so the line's real total
-    // is unknown to it: neither the tail's sum nor the whole line's passes.
-    for text in [
-        "$100 + wages $200 + $50 = $250",
-        "$100 + wages $200 + $50 = $350",
-        "$100 + wages + $200 + $50 = $250",
-        "$100 + (wages) $200 + $50 = $250",
-        "$1,000 - rent $200 - $50 = $750",
-        "5 x hours at 3 + 4 = 7",
-        // A word may hold or follow digits.
-        "$100 + wages2 $200 + $50 = $250",
-        "$100 + FY2025 wages $200 + $50 = $250",
-        "$100 + 2025 wages $200 + $50 = $250",
+    // After an amount and an operator, any text but whitespace before a
+    // calculation means the gate sees only the sum's tail, so the line's
+    // real total is unknown to it: neither the tail's sum nor the whole
+    // line's passes. Each row is (text, blocks).
+    let rows = [
+        // Words.
+        ("$100 + wages $200 + $50 = $250", true),
+        ("$100 + wages $200 + $50 = $350", true),
+        ("$100 + wages + $200 + $50 = $250", true),
+        ("$100 + (wages) $200 + $50 = $250", true),
+        ("$1,000 - rent $200 - $50 = $750", true),
+        ("5 x hours at 3 + 4 = 7", true),
+        // A word holding or following digits, and digits alone.
+        ("$100 + wages2 $200 + $50 = $250", true),
+        ("$100 + FY2025 wages $200 + $50 = $250", true),
+        ("$100 + 2025 wages $200 + $50 = $250", true),
+        ("$100 + 2 $200 + $50 = $250", true),
+        // Punctuation alone.
+        ("$100 + ... + $200 + $50 = $250", true),
+        ("$100 + … $200 + $50 = $250", true),
+        ("$100 + — $200 + $50 = $250", true),
+        ("$100 + ??? $200 + $50 = $250", true),
         // A label after an amount and an operator reads the same way, so
         // these correct sums block too: each needs a line of its own.
-        "Item 3 - Deductions $100 + $50 = $150",
-        "FY 2025 - Australia: $100 + $50 = $150",
-        "1 x laptop $1,000 + $200 = $1,200",
-        "Interest at 5% + fees apply. Total $100 + $50 = $150",
-    ] {
-        let report = with_line(text);
-        assert_eq!(
-            report.verdict().1,
-            EXIT_BLOCK,
-            "{text}: {:?}",
-            report.blocks
-        );
-        assert!(
-            report
+        ("Item 3 - Deductions $100 + $50 = $150", true),
+        ("FY 2025 - Australia: $100 + $50 = $150", true),
+        ("1 x laptop $1,000 + $200 = $1,200", true),
+        ("Interest at 5% + fees apply. Total $100 + $50 = $150", true),
+        // Whitespace alone, a label with no amount and operator before it, a
+        // word before an operator that starts the line, and an earlier
+        // calculation's result are not an interrupted sum.
+        ("$100 +   $200 + $50 = $350", false),
+        ("Total: $100 + $200 = $300", false),
+        ("Fees - $100 + $50 = $150", false),
+        ("Step 2: $100 + $50 = $150", false),
+        ("1 + 1 = 2 and 3 + 4 = 7", false),
+        // An unspaced `/` in a date or fraction is not an operator.
+        ("On 1/7/2025 the client paid $100 + $50 = $150", false),
+        (
+            "For the period 1/7/2025 to 30/6/2026, $100 + $50 = $150",
+            false,
+        ),
+        ("GST is 1/11 of the price: $1,100 / 11 = $100", false),
+        (
+            "which is 10/11 of the GST-inclusive price, so 11000.00 / 11 = 1000.00",
+            false,
+        ),
+    ];
+    let wrong: Vec<String> = rows
+        .iter()
+        .filter_map(|&(text, blocks)| {
+            let report = with_line(text);
+            let interrupted = report
                 .blocks
                 .iter()
-                .any(|b| b.contains("could not read: a word interrupts the sum")),
-            "{text}: {:?}",
-            report.blocks
-        );
-    }
-    // A label with no amount and operator before it, a word before an
-    // operator that starts the line, and an earlier calculation's result
-    // are not an interrupted sum.
-    for text in [
-        "Total: $100 + $200 = $300",
-        "Fees - $100 + $50 = $150",
-        "Step 2: $100 + $50 = $150",
-        "1 + 1 = 2 and 3 + 4 = 7",
-        // An unspaced `/` in a date or fraction is not an operator.
-        "On 1/7/2025 the client paid $100 + $50 = $150",
-        "For the period 1/7/2025 to 30/6/2026, $100 + $50 = $150",
-        "GST is 1/11 of the price: $1,100 / 11 = $100",
-        "which is 10/11 of the GST-inclusive price, so 11000.00 / 11 = 1000.00",
-    ] {
-        let report = with_line(text);
-        assert_eq!(report.verdict().1, EXIT_PASS, "{text}: {:?}", report.blocks);
-    }
+                .any(|b| b.contains("could not read: a word interrupts the sum"));
+            let exit = report.verdict().1;
+            let right = if blocks {
+                exit == EXIT_BLOCK && interrupted
+            } else {
+                exit == EXIT_PASS
+            };
+            (!right).then(|| format!("{text} (blocks: {blocks}): {:?}", report.blocks))
+        })
+        .collect();
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
 
 #[test]
