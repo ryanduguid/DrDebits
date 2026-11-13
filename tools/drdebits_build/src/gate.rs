@@ -189,10 +189,11 @@ static CLAIM: LazyLock<regex::Regex> = LazyLock::new(|| {
     .expect("pattern")
 });
 /// An equation with no operator, `calc`, as `$50 = $600` is in
-/// `Wages $500 + super $50 = $600`. Its result may start a longer expression.
+/// `Wages $500 + super $50 = $600`, its amounts bracketed or not. Its result
+/// may start a longer expression.
 static EQUATION: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"{BEFORE}(?P<calc>[-−]?(?:{NUM})[ \t]*=[ \t]*\(?[ \t]*[-−]?(?:{NUM}))[,.]*(?:$|[^\d,.])"
+        r"{BEFORE}(?P<calc>\(*[ \t]*[-−]?(?:{NUM})[ \t]*\)*[ \t]*=[ \t]*\(?[ \t]*[-−]?(?:{NUM}))[,.]*(?:$|[^\d,.])"
     ))
     .expect("pattern")
 });
@@ -539,11 +540,6 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
         read.push(calc.range());
         let (whole, left, right) = (calc.as_str(), &m["left"], &m["right"]);
         let text = py::strip(whole).to_string();
-        // `\d` admits any decimal digit, such as Arabic-Indic `٥`.
-        if whole.chars().any(|c| c.is_numeric() && !c.is_ascii_digit()) {
-            out.push(unread(text, "could not read: a number has digits other than 0 to 9; write it with the digits 0 to 9"));
-            continue;
-        }
         if DATE.is_match(left) {
             // A date alone, bracketed or not, as in `1/7/2026 = 2026`, is
             // prose; a date with other operands, as in `1/7/2025 + 2 + 2 = 5`,
@@ -558,6 +554,11 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
             if !dates_only {
                 out.push(unread(text, "could not read: a date stands in the sum, so the gate cannot tell what it adds; write the calculation without the date"));
             }
+            continue;
+        }
+        // `\d` admits any decimal digit, such as Arabic-Indic `٥`.
+        if whole.chars().any(|c| c.is_numeric() && !c.is_ascii_digit()) {
+            out.push(unread(text, "could not read: a number has digits other than 0 to 9; write it with the digits 0 to 9"));
             continue;
         }
         if BRACKETED.is_match(whole) {

@@ -248,6 +248,7 @@ fn dates_years_bullets_and_prose_are_not_calculations() {
         "Lodged 1/7/2026 = on time",
         "Lodged 1/7/2026 = 2026",
         "Due (28/10/2026) = 28 days after the quarter",
+        "Lodged 1/7/2026 = ٢٠٢٦",
         "The 2026-27 year = the current year",
         "- 5 items were reviewed",
         "s 284-75(6) applies",
@@ -437,6 +438,7 @@ fn a_sum_a_word_interrupts_blocks() {
         ("Wages $500 + super $50 = $600", true),
         ("Wages $500 + super $50 = $550", true),
         ("Wages $500 + super $50 = $600 + $10 = $610", true),
+        ("Wages $500 + super ($50) = $600", true),
         ("Rent $2,000/month × 12 = $24,000", true),
         ("2,514 km × 0.88 = $2,212", true),
         (
@@ -489,6 +491,20 @@ fn a_sum_a_word_interrupts_blocks() {
         })
         .collect();
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+#[test]
+fn calculations_that_share_a_boundary_character_are_each_read() {
+    // The scan resumes at a result's last character, which may be the
+    // character before the next calculation.
+    for (text, ok) in [
+        ("2 + 3 = 5;4 + 5 = 10", [true, false]),
+        ("2 + 3 = 5%4 + 5 = 10", [true, false]),
+        ("(2 + 3 = 5)(4 + 5 = 10)", [true, false]),
+    ] {
+        let found: Vec<bool> = calculations(text).iter().map(|c| c.matches).collect();
+        assert_eq!(found, ok, "{text}");
+    }
 }
 
 #[test]
