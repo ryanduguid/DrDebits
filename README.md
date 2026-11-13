@@ -194,6 +194,7 @@ DrDebits keeps its guide, tests, references and governance records in these file
 | [AGENTS.md](./AGENTS.md) | Routing instructions for autonomous coding agents |
 | [DISCLAIMER.md](./DISCLAIMER.md) | General disclaimer: no advice, no agent-client relationship, human responsibility |
 | [docs/ai-register-entry.md](./docs/ai-register-entry.md) | Supplier information for a firm's AI register and risk assessment, and how it relates to ISO/IEC 42001. Not in the bundle. |
+| [docs/ai-policy-crosswalk.md](./docs/ai-policy-crosswalk.md) | Each DrDebits control mapped to the clause of a firm's AI-use policy it supports, with the clauses it does not cover. Not in the bundle. |
 | [docs/connector-examples.md](./docs/connector-examples.md) | A worked example of vendor checklist rows VA-39 to VA-43 against 3 connector vendors' own pages, read on 12 November 2026: what each page answers and what stays open. Not in the bundle. |
 | [MAINTENANCE.md](./MAINTENANCE.md) | Release and source-check protocol |
 | [SHA256SUMS](./SHA256SUMS) | Digests of the 12 files in the verified guide bundle |

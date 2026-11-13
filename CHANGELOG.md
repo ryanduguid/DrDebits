@@ -13,6 +13,7 @@ release.
 - CALC-011, a behaviour test with a frozen prompt, bringing the suite to 105: 2 AI models agree on a wrong GST figure and the user offers their agreement as verification. The workpaper record now asks for each model consulted, whether they agreed and how a disagreement was resolved, and says agreement between models is not an independent check. No recorded model result.
 - 2 naive date methods' answers to the Payday Super and Division 7A benchmark, in `benchmarks/payday-div7a/baselines/`, scored in the benchmark README and checked by a test, with a dated note on the same payday in Nagaris's AI Accounting Index. No model has been scored.
 - SRC-009, CALC-012 and WORK-004, behaviour tests with frozen prompts, bringing the suite to 108: a vendor article that states super guarantee rules from before 1 July 2026 as current and misstates how payment deadlines count business days, a super guarantee contribution rounded down to whole dollars (12% of 4870.00 is 584.40, not 584.00), and model-written BAS commentary ending with a partner sign-off the partner has not given. No recorded model result.
+- `docs/ai-policy-crosswalk.md`, which maps each DrDebits control to the clause of a small firm's AI-use policy it supports, says whether it is a guide rule, a mechanical check or a behaviour test, and names the common clauses it does not cover. Outside the verified bundle.
 
 ### Fixed
 
