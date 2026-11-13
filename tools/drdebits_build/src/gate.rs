@@ -30,8 +30,9 @@
 //! correct one: the gate sees only part of the sentence and cannot tell what
 //! the bracket encloses. For the same reason a calculation blocks, even a
 //! correct one, when an amount and, after it, an operator come before it on
-//! its line with text other than whitespace and no `=` or `$` between: a sum
-//! that a word interrupts, as in `$100 + wages $200 + $50 = $250` and
+//! its line with text other than whitespace and no `=` between, even another
+//! dollar amount: a sum that a word interrupts, as in
+//! `$100 + wages $200 + $50 = $250`, `$100 + $20 wages $200 + $50 = $250` and
 //! `$500 wages + $200 + $50 = $250`, and also a sum after such a label, as
 //! in `Item 3 - Deductions $100 + $50 = $150`. So does `amount = amount`
 //! after such text, as in `Wages $500 + super $50 = $600`, where a word
@@ -205,14 +206,15 @@ static NUMBER: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(NUM).
 static BRACKETED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(&format!(r"\([ \t]*(?:{NUM})[ \t]*\)")).expect("pattern"));
 /// When an amount and, after it, an operator stand before a calculation with
-/// no `=` or `$` between that amount and the calculation, the calculation may
-/// be the tail of a longer sum, as after `$100 + wages `, `$500 wages + ` and
-/// `$100 + ... `; `+`, `×`, `*` and `÷` are operators wherever they stand, and
-/// a minus, `x` and `/` only with whitespace round them, since they also mark
-/// hyphens, words, dates such as `1/7/2025` and rates such as `$2,000/month`.
+/// no `=` between that amount and the calculation, the calculation may be the
+/// tail of a longer sum, as after `$100 + wages `, `$100 + $20 wages `,
+/// `$500 wages + ` and `$100 + ... `; `+`, `×`, `*` and `÷` are operators
+/// wherever they stand, and a minus, `x` and `/` only with whitespace round
+/// them, since they also mark hyphens, words, dates such as `1/7/2025` and
+/// rates such as `$2,000/month`.
 static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:{NUM})[^=$]*(?:[+×*÷]|[ \t][-−x/](?:[ \t]|$))[^=$]*$"
+        r"(?:{NUM})[^=]*(?:[+×*÷]|[ \t][-−x/](?:[ \t]|$))[^=]*$"
     ))
     .expect("pattern")
 });

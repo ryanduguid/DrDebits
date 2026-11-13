@@ -262,12 +262,28 @@ fn dates_years_bullets_and_prose_are_not_calculations() {
 
 #[test]
 fn unparseable_operands_or_results_are_never_marked_correct() {
-    for text in ["2 + 3 = ٥", "2 + (3 = 5", "2 + (3) ) = 5"] {
+    // Each row is (text, finding): the gate reads one calculation, which does
+    // not match, and its finding says why.
+    let digits = "could not read: a number has digits other than 0 to 9";
+    let bracket = "could not read: a bracket does not pair";
+    for (text, finding) in [
+        ("2 + 3 = ٥", digits),
+        ("2 + 3 = ٤", digits),
+        ("2 + (3 = 5", bracket),
+    ] {
+        let read = calculations(text);
+        assert_eq!(read.len(), 1, "{text}");
+        assert!(!read[0].matches, "{text}");
         assert!(
-            calculations(text).iter().all(|claim| !claim.matches),
-            "{text}"
+            read[0].computed.starts_with(finding),
+            "{text}: {}",
+            read[0].computed
         );
     }
+    // Known gap: the gate reads no calculation in this line, so it passes the
+    // line unchecked. This pins that reading, so a change that starts to read
+    // the line has to decide what it finds.
+    assert!(calculations("2 + (3) ) = 5").is_empty());
 }
 
 #[test]
@@ -391,7 +407,7 @@ fn with_line(line: &str) -> gate::Report {
 #[test]
 fn a_sum_a_word_interrupts_blocks() {
     // An amount and, after it, an operator before a calculation, with no
-    // `=` or `$` between, mean the gate sees only the sum's tail, so the
+    // `=` between, mean the gate sees only the sum's tail, so the
     // line's real total is unknown to it: neither the tail's sum nor the
     // whole line's passes. Each row is (text, blocks).
     let rows = [
@@ -419,6 +435,10 @@ fn a_sum_a_word_interrupts_blocks() {
         ("$500 wages - $200 + $50 = $250", true),
         ("$500 FY2025 + $200 + $50 = $250", true),
         ("$500 ... + $200 + $50 = $250", true),
+        // A dollar amount between the operator and the tail: the line's terms
+        // total $370.
+        ("$100 + $20 wages $200 + $50 = $250", true),
+        ("$100 + $20 wages $200 + $50 = $370", true),
         // `*` is an operator with or without spaces.
         ("$100*wages $200 + $50 = $250", true),
         ("$100 *wages $200 + $50 = $250", true),
@@ -431,6 +451,10 @@ fn a_sum_a_word_interrupts_blocks() {
         ("1 x laptop $1,000 + $200 = $1,200", true),
         ("Interest at 5% + fees apply. Total $100 + $50 = $150", true),
         ("Note 2 *estimate* $100 + $50 = $150", true),
+        // A correct sum after an earlier amount and operator, with a dollar
+        // amount between.
+        ("Range $100 - $200 a week, so $100 + $50 = $150", true),
+        ("| Laptop | 2 x $1,000 | 2 x $1,000 = $2,000 |", true),
         // A tail with no operator left in it, `amount = amount`, after a word
         // between an operator and an amount, right or wrong, and after a rate
         // and an operator, a unit and an operator, or a sum with an
