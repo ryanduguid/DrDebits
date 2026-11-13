@@ -53,7 +53,8 @@ suite replays it on every platform.
   A correct sum after a label that follows an amount and an operator, as in
   `Item 3 - Deductions $100 + $50 = $150`, blocks for the same reason, as
   does any other text but whitespace on either side of the operator, as in
-  `FY2025 wages`, `2`, `...` or `$500 wages + `, and so does `amount = amount`
+  `FY2025 wages`, `2`, `...`, `$500 wages + ` or, with a dollar amount in it,
+  `$20 wages `, since only `=` ends the look-back, and so does `amount = amount`
   after such text, as in `Wages $500 + super $50 = $600` and
   `(95,000 + 20,000 - 10,000) / 480,000 = 105,000 / 480,000`. A minus, `x` or `/`
   counts as an operator only with spaces round it, so dates such as
