@@ -1,7 +1,7 @@
 ---
 title: DrDebits
 guide_version: 0.7.0
-status: candidate
+status: current
 jurisdiction: AU
 owner: Ryan Duguid
 canonical_repository: https://github.com/ryanduguid/DrDebits
@@ -41,14 +41,14 @@ guide_end_marker: DRDEBITS-END-v0.7.0
 >
 > Version: `0.7.0`
 >
-> Release status: unreleased candidate; proposed tag `v0.7.0`
+> Release status: published; signed tag `v0.7.0`
 >
 > Jurisdiction: Australia
 >
 > Sources last checked: `2026-10-14` (Australia/Sydney)
 
 The published evaluation records describe release 0.3.3; no confirmed model
-evaluation covers candidate 0.7.0 yet. Identify a committed revision by its
+evaluation covers release 0.7.0 yet. Identify a committed revision by its
 Git commit and guide version. For an uncommitted review, retain the base commit,
 complete diff and diff digest as well as the guide version; the base commit
 alone does not identify the changed guide.
@@ -635,7 +635,7 @@ Retrieve these files when a routing decision needs them. The `SHA256SUMS` file a
 
 | Version | Date | Status | Change |
 |---|---|---|---|
-| 0.7.0 | 2026-11-14 | Unreleased | Adds a workpaper record line for work where more than one model was asked: each model and its answer, whether they agreed and how any disagreement was resolved, and that agreement between models is not an independent check. Adds 4 behaviour tests (CALC-011, CALC-012, SRC-009 and WORK-004) on model agreement, Payday Super sources, super guarantee rounding and an unapproved sign-off, bringing the suite to 108 cases. No change to the control model, authority handling or human-decision boundaries; the builder's calculation check blocks more interrupted sums, dates and non-ASCII digits, and the repository gains an AI-use policy crosswalk and 2 naive benchmark baselines. Sources were not rechecked for this candidate: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this candidate yet. |
+| 0.7.0 | 2026-11-14 | Published | Adds a workpaper record line for work where more than one model was asked: each model and its answer, whether they agreed and how any disagreement was resolved, and that agreement between models is not an independent check. Adds 7 behaviour tests (CALC-011, CALC-012, CALC-013, SRC-009, SRC-010, WORK-004 and DATA-008) on model agreement, Payday Super sources, super guarantee rounding, PAYG withholding worked from the annual rates, a rate card for the wrong year, an unapproved sign-off and a TFN sent to a public website, bringing the suite to 111 cases. No change to the control model, authority handling or human-decision boundaries; the builder's calculation check blocks more interrupted sums, dates, dashes used as minus signs, results it cannot read whole and non-ASCII digits, and the repository gains an AI-use policy crosswalk and 2 naive benchmark baselines. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet. |
 | 0.6.0 | 2026-11-12 | Published | Adds an AI tool register and incident log to the AI-specific TPB rules, a rule to weigh a tribunal decision on another taxpayer’s facts as reasoning and never as settling the client’s position, and a rule to treat another jurisdiction’s terms, authorities and rules as unverified leads until an Australian primary source supports them; corrects the TPB interim suspension to allow more than one extension. Adds vendor checklist questions VA-38 to VA-47 on source authority, connectors, recordings and sharing, the APES 110 value chain start date and AUSTRAC’s table 6 examples in the AML/CTF intake classification. Adds 37 behaviour tests, bringing the suite to 104 cases. No change to the control model, authority handling or human-decision boundaries; the builder gains review checks for quoted spans and uncited authorities, a pre-run report and a block on calculations with unmatched brackets, and the repository gains a 31-question Payday Super and Division 7A benchmark with no scored run. Licensed under the Ryan Duguid Public Attribution Licence 1.0. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet. |
 | 0.5.0 | 2026-10-31 | Published | Adds a conditional automated-decision transparency check to the data and privacy gate for APP 1.7 to 1.9 of the Privacy Act 1988, which start on 10 December 2026, with vendor checklist question VA-37 and a matching row in the AI register entry; each leaves the legal conclusion to the firm. Adds 8 behaviour tests for output-side TFN and cross-client leaks and for assuming a flagged fact, bringing the suite to 67 cases, and a benchmark canary string in the evaluation files. No other model-facing guide control change; the builder gains a review check for untraced amounts (gate --facts) and a stricter prohibited-text screen. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet. |
 | 0.4.0 | 2026-10-28 | Published | Adds TPB sanctions controls and corrects the s 15 and s 45 rows for the Tax Agent Services Act and Code of Professional Conduct amendments that apply from 1 October 2026. Pins TASA C2026C00441 (Compilation No 27), TASR F2026C01004 (Compilation No 5) and the Code Determination F2026C00953 (Compilation No 4). Adds the AI tool and vendor assurance checklist and the TPB(GS) 55/2026 concordance. Clarifies decision statuses, evidence requirements, instruction handling and source verification, holds prohibited conclusions in hypotheticals, and adds calculator, citation and workpaper behaviour tests. Adds TPB Annual Report 2025-26 context to the source status. Relicenses the guide under FSL-1.1-ALv2; v0.3.3 and earlier stay CC BY 4.0. Sources checked 14 October 2026; review due 14 January 2027. No confirmed model evaluation covers this release yet. |
