@@ -1,4 +1,8 @@
 entries:
+  - version: "0.7.0"
+    date: "2026-11-14"
+    status: "Unreleased"
+    change: "Adds a workpaper record line for work where more than one model was asked: each model and its answer, whether they agreed and how any disagreement was resolved, and that agreement between models is not an independent check. Adds 4 behaviour tests (CALC-011, CALC-012, SRC-009 and WORK-004) on model agreement, Payday Super sources, super guarantee rounding and an unapproved sign-off, bringing the suite to 108 cases. No change to the control model, authority handling or human-decision boundaries; the builder's calculation check blocks more interrupted sums, dates and non-ASCII digits, and the repository gains an AI-use policy crosswalk and 2 naive benchmark baselines. Sources were not rechecked for this candidate: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this candidate yet."
   - version: "0.6.0"
     date: "2026-11-12"
     status: "Published"
