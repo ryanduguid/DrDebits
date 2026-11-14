@@ -8,6 +8,10 @@ release.
 
 ## [Unreleased]
 
+### Added
+
+- Model results for the Payday Super and Division 7A benchmark, in `benchmarks/payday-div7a/results-2026-11-14.md`: Opus 5.5 and 4 Codex models, each with and without the guide, 3 repeats, scored offline. Every Codex call with the guide abstained on all 31 questions.
+
 ## [v0.7.0] - 2026-11-14
 
 Changes released in `0.7.0`, merged since `v0.6.0` (12 November 2026). Sources were not rechecked: they stay as checked on 14 October 2026.
