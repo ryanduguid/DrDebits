@@ -683,19 +683,108 @@ fn a_number_before_a_slash_is_not_part_of_a_date() {
 }
 
 #[test]
-fn a_calculation_after_a_word_and_a_hyphen_is_reperformed() {
-    // Only a hyphen or dash after a digit joins a number, as in `2025-26`;
-    // after a word it starts the calculation, which is reperformed.
-    for (text, ok) in [
-        ("Quarterly-$12,000/4 = $3,500", false),
-        ("Quarterly-$12,000/4 = $3,000", true),
-        ("x-100/4 = 30", false),
-        ("x–100/4 = 25", true),
+fn a_calculation_after_a_word_and_a_hyphen_blocks() {
+    // A hyphen or dash joined to a word before the first amount may be a
+    // sign, as in `Net-150`, or a hyphen, as in `Quarterly-$12,000`, so the
+    // gate cannot tell what the sum is, right or wrong.
+    for text in [
+        "Quarterly-$12,000/4 = $3,500",
+        "Quarterly-$12,000/4 = $3,000",
+        "x-100/4 = 30",
+        "x–100/4 = 25",
     ] {
         let found = calculations(text);
         assert_eq!(found.len(), 1, "{text}");
-        assert_eq!(found[0].matches, ok, "{text}: {}", found[0].computed);
+        assert!(
+            !found[0].matches && found[0].computed.starts_with("could not read"),
+            "{text}: {}",
+            found[0].computed
+        );
     }
+}
+
+#[test]
+fn a_calculation_the_gate_cannot_read_whole_blocks() {
+    // A math symbol the gate does not read, text joined to the first amount
+    // that may be its sign or digit group, or text after the result that may
+    // change it means the gate cannot reperform the line, so it blocks, right
+    // or wrong. Each row is (text, blocks).
+    let rows = [
+        // Symbols the gate does not read, as an operator or as `=`.
+        ("5 · 3 = 16", true),
+        ("5 · 3 = 15", true),
+        ("5 ∗ 3 = 16", true),
+        ("10 ∕ 2 = 4", true),
+        ("5 ＋ 3 = 9", true),
+        ("2 + 3 ＝ 6", true),
+        ("2 + 3 ≈ 7", true),
+        ("2 + 3 ≈ 5", true),
+        ("2 + 3 = 5·2", true),
+        ("2 + 3 = 5^2", true),
+        ("2 + 3 = 5 ≈ 6", true),
+        // A dash joined to a word, or after `:`, before the first amount.
+        ("AUD-150 + 200 = 350", true),
+        ("AUD-150 + 200 = 50", true),
+        ("Net–150 + 200 = 350", true),
+        ("Net: – 150 + 200 = 350", true),
+        ("Net: - 150 + 200 = 350", true),
+        // A leading dash other than a list marker's hyphen.
+        ("– 150 + 200 = 350", true),
+        ("– 150 + 200 = 50", true),
+        ("- 150 + 200 = 350", false),
+        // After a word and a space, a dash separates.
+        ("Net — 150 + 200 = 350", false),
+        // A digit group, a sign or a scale word after the result.
+        ("$100 + $50 = $150 k", true),
+        ("2 + 3 = 5 k", true),
+        ("$100 + $50 = $150 million", true),
+        ("$100 + $50 = $150 000", true),
+        ("1 000 + 1 = 1 002", true),
+        ("2 + 3 = 5-1", true),
+        ("2 + 3 = 5 -1 = 3", true),
+        // A minus spaced on one side, or an operator joined to the next
+        // amount only, before an `=` no read calculation ends.
+        ("$1,000 -200 = $900", true),
+        ("$1,000- 200 = $900", true),
+        ("$12,000/4 = $3,000 per quarter, x4 = $13,000", true),
+        ("$1,000 -200 = $800", true),
+        ("$3,000 per quarter, x4 = $12,000", true),
+        // A result after a comma.
+        ("$100 + $50 = in all, $160", true),
+        // A read calculation after a word is still this `=`'s result.
+        ("$100 + $50 = about $160 + $16 = $176", true),
+        ("2 + 3 = roughly 6 × 1 = 6", true),
+        // Still read, or not a calculation.
+        ("$100 + $50 = $150 per week", false),
+        ("$100 + $50 = $150-ish", false),
+        ("$12,000/4 = $3,000 per quarter", false),
+        ("In 2026 $100 + $50 = $150", false),
+        ("Item 2 = $100", false),
+        ("Income ≤ $18,200", false),
+        ("2 + 3 = 5 < 6", false),
+        ("| 2 + 3 = 5 | $200 |", false),
+        ("2 + 3 = 5, and 1 + 1 = 2", false),
+    ];
+    let wrong: Vec<String> = rows
+        .iter()
+        .filter_map(|&(text, blocks)| {
+            let report = with_line(text);
+            let exit = report.verdict().1;
+            let unread = report.blocks.iter().any(|b| b.contains("could not read"));
+            let right = if blocks {
+                exit == EXIT_BLOCK && unread
+            } else {
+                exit == EXIT_PASS
+            };
+            (!right).then(|| {
+                format!(
+                    "{text} (blocks: {blocks}): exit {exit}, {:?}",
+                    report.blocks
+                )
+            })
+        })
+        .collect();
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
 
 #[test]
