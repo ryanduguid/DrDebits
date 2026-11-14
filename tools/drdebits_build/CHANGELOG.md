@@ -72,7 +72,8 @@ suite replays it on every platform.
   reperformed, and a spaced `X` multiplies as `x` does, so a spaced `X` that
   is a word, as in `2 + 3 = 5 X Factor`, blocks. A result the gate
   cannot read whole blocks, right or wrong: an `=` followed by a digit
-  before any `,` or `;`, after an amount and an operator, where no
+  before the next `=`, other than one starting a calculation the gate
+  reads after a `,` or `;`, after an amount and an operator, where no
   calculation the gate reads ends, as in `$100 + $50 = $ 150`,
   `$100 + $50 = A$150`, `$100 + $50 = approx. $150`, `$100 - $150 = $-50`,
   `2 + 3 == 5` and `$100 + $50 = $150k`, and other text with a digit, such as
@@ -85,7 +86,25 @@ suite replays it on every platform.
   numbers outside a date is one with or without spaces, and so is an
   unspaced minus before `$`, so `$12,000/4 bonus = $3,000`, `100/4 = 25 x 1`,
   `GST is 1/11 of the price = $100`, `2x3 = 6` and `$1,000-$200 = $800`
-  block. Write the calculation on a line of its own. A
+  block, and so do a minus spaced on one side only and a minus, `/`, `x` or
+  `X` joined to the next number but not to the text before it, as in
+  `$1,000 -200 = $800` and `per quarter, x4 = $12,000`. A math symbol the
+  gate does not read, any but `+`, `×`, `÷`, `=`, `−`, `|`, `<` and `>`, and
+  also `·` and `^`, counts as an operator and as an `=`, so `5 · 3 = 15`,
+  `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block. Text joined to a calculation that may
+  belong to it blocks it: a hyphen joined to a word, or a dash after `:`,
+  `=`, `(` or the start of the line, before the first amount, as in
+  `AUD-150 + 200 = 50`, `Quarterly-$12,000/4 = $3,000` and
+  `Net: – 150 + 200 = 50`, a number and a space before a first amount
+  without `$`, as in `1 000 + 1 = 1 001`, and, after the result, a space and
+  a digit, a minus and a digit, a scale word or such a symbol, as in
+  `$150 000`, `5-1`, `5 -1`, `$150 k`, `$150 million` and `5^2`. A dash and
+  a word after a result are prose, as in `$150—the total` and `$150-ish`,
+  and so is a dash after a word and a space, as in `Net — 150 + 200 = 350`.
+  Arrows are math symbols, so `FY2025 → FY2026: $500 × 2 = $1,000` blocks,
+  and `m` and `b` are scale words, so `5 × 20 = 100 m` and
+  `$100 + $50 = $150 b/f` block.
+  Write the calculation on a line of its own. A
   date among a sum's operands, as in `1/7/2025 + 2 + 2 = 5`, digits other
   than 0 to 9, such as Arabic-Indic `٥`, and a numeric character beside a
   calculation, such as `²` in `2 + 3 = 5²`, block too; a date alone before
