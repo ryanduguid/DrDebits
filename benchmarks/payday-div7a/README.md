@@ -1,6 +1,6 @@
 # Payday Super and Division 7A benchmark
 
-Thirty-one questions on Payday Super due dates and Division 7A, with published keys, derivations and a scorer. No model has been scored. The claim is that the keys are reproducible, not that the benchmark is independent.
+Thirty-one questions on Payday Super due dates and Division 7A, with published keys, derivations and a scorer. Two model rounds were scored on 14 November 2026: [results-2026-11-14.md](results-2026-11-14.md). The claim is that the keys are reproducible, not that the benchmark is independent.
 
 **Publisher conflict.** Ryan Duguid publishes this benchmark, and also publishes `payday-super-checker`, `div7a-loan-review` and `aus-accounting-mcp`, which it could score. The keys were checked against 2 of those products, and `business-days.json` is copied from one of them. Its table's sources were checked on 15 August 2026. The rule check and the engine check therefore share one calendar for all 14 date keys, and an ATO example stands apart from it for PDS-001 to PDS-007 alone. Read any score with that in mind.
 
@@ -63,7 +63,7 @@ No model ran for these. Each file in [baselines/](baselines/) answers the 14 key
 | Counts calendar days, not business days | [calendar-days.json](baselines/calendar-days.json) | 0 | 14 | 17 | 14 |
 | Skips weekends but not State or Territory public holidays | [weekdays-only.json](baselines/weekdays-only.json) | 7 | 7 | 17 | 14 |
 
-For PDS-002, wages paid on 30 July 2026, the key is 2026-08-11 because Picnic Day in the Northern Territory, 3 August 2026, is not a business day. The first method gives 2026-08-06 and the second 2026-08-10. Nagaris's [AI Accounting Index](https://nagaris.com/ai-accounting-index) (first edition, October 2026; read 13 November 2026) describes the same payday and deadline and reports that none of the 14 setups that answered it got the date right: most said 10 August, and 4 counted calendar days and said 6 August. The Index publishes its results and one example question, but no question set or answer keys. This benchmark publishes its questions, keys and scorer, and no model has been scored on it.
+For PDS-002, wages paid on 30 July 2026, the key is 2026-08-11 because Picnic Day in the Northern Territory, 3 August 2026, is not a business day. The first method gives 2026-08-06 and the second 2026-08-10. Nagaris's [AI Accounting Index](https://nagaris.com/ai-accounting-index) (first edition, October 2026; read 13 November 2026) describes the same payday and deadline and reports that none of the 14 setups that answered it got the date right: most said 10 August, and 4 counted calendar days and said 6 August. The Index publishes its results and one example question, but no question set or answer keys. This benchmark publishes its questions, keys and scorer, and its [model results](results-2026-11-14.md).
 
 ## Limits
 
