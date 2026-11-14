@@ -780,3 +780,171 @@ fn the_published_naive_baselines_score_as_the_readme_says() {
         assert!(readme.contains(pds_002), "README PDS-002 answer {pds_002}");
     }
 }
+
+/// Worked by hand from the binomial distribution with p = 1/2, ties left out.
+/// 6 to 1: 2 × (C(7,0) + C(7,1)) / 2^7 = 2 × (1 + 7) / 128 = 0.125.
+/// 0 to 7: 2 × C(7,0) / 2^7 = 2 / 128 = 0.015625, shown as 0.0156.
+/// 10 to 0: 2 × C(10,0) / 2^10 = 2 / 1,024 = 0.001953125, shown as 0.0020.
+/// 3 to 3: 2 × (1 + 6 + 15 + 20) / 2^6 = 84 / 64, more than 1, so 1.
+/// 0 to 0: no untied pair, so 1.
+#[test]
+fn the_sign_test_matches_the_binomial_tail_worked_by_hand() {
+    for ((a, b), p) in [
+        ((6, 1), "0.1250"),
+        ((1, 6), "0.1250"),
+        ((0, 7), "0.0156"),
+        ((10, 0), "0.0020"),
+        ((3, 3), "1.0000"),
+        ((0, 0), "1.0000"),
+    ] {
+        assert_eq!(bench::sign_test(a, b), p, "{a} to {b}");
+    }
+}
+
+/// An answers file giving the key's value, with no citation, for each
+/// question at the given positions in the key list.
+fn answering(keys: &[bench::Key], positions: std::ops::Range<usize>) -> Json {
+    let answers: Vec<String> = keys[positions]
+        .iter()
+        .map(|k| format!("\"{}\": {{\"value\": \"{}\"}}", k.id, k.value))
+        .collect();
+    pyjson::loads(&format!("{{\"answers\": {{{}}}}}", answers.join(", "))).unwrap()
+}
+
+/// Condition a answers questions 1 to 6 right in both repeats. Condition b
+/// answers questions 1 to 3 right in its first repeat and question 7 right in
+/// its second. So a has more right answers on 6 questions (1 to 6), b on 1
+/// (7), and the other 24 are tied at none: p = 0.1250 as worked above.
+/// Unanswered runs the other way, 1 to 6, with the same p. No answer is
+/// wrong and none cites a section, so those measures tie on all 31.
+#[test]
+fn a_paired_comparison_counts_each_question_once_and_keeps_the_ties() {
+    let keys = keys();
+    let a = [answering(&keys, 0..6), answering(&keys, 0..6)];
+    let b = [answering(&keys, 0..3), answering(&keys, 6..7)];
+    let paired = bench::compare(&keys, &a, &b).unwrap();
+    let row = |measure: &str| paired.iter().find(|p| p.measure == measure).unwrap();
+    let value = row("value correct");
+    assert_eq!(
+        (
+            value.a_total,
+            value.b_total,
+            value.a_higher,
+            value.b_higher,
+            value.ties
+        ),
+        (12, 4, 6, 1, 24)
+    );
+    assert_eq!(value.p, "0.1250");
+    let unanswered = row("unanswered");
+    assert_eq!(
+        (
+            unanswered.a_total,
+            unanswered.b_total,
+            unanswered.a_higher,
+            unanswered.b_higher
+        ),
+        (50, 58, 1, 6)
+    );
+    assert_eq!(unanswered.p, "0.1250");
+    for measure in [
+        "value wrong",
+        "authority right",
+        "correct value and authority",
+    ] {
+        let tied = row(measure);
+        assert_eq!(
+            (tied.a_higher, tied.b_higher, tied.ties),
+            (0, 0, 31),
+            "{measure}"
+        );
+        assert_eq!(tied.p, "1.0000", "{measure}");
+    }
+}
+
+#[test]
+fn a_comparison_without_a_file_on_each_side_or_with_unequal_repeats_is_refused() {
+    let keys = keys();
+    let one = answering(&keys, 0..1);
+    let error = bench::compare(&keys, &[], std::slice::from_ref(&one)).unwrap_err();
+    assert_eq!(error, "each condition needs at least one answers file");
+    let error = bench::compare(&keys, std::slice::from_ref(&one), &[]).unwrap_err();
+    assert_eq!(error, "each condition needs at least one answers file");
+    let error = bench::compare(
+        &keys,
+        &[one.clone(), one.clone()],
+        std::slice::from_ref(&one),
+    )
+    .unwrap_err();
+    assert_eq!(
+        error,
+        "the conditions are unpaired: a has 2 repeats and b has 1"
+    );
+    let unknown = pyjson::loads(r#"{"answers": {"XYZ-001": {"value": "1"}}}"#).unwrap();
+    let error = bench::compare(&keys, &[one], &[unknown]).unwrap_err();
+    assert!(error.contains("unknown question XYZ-001"), "{error}");
+}
+
+/// The 2 published naive baselines are a round already in the repository:
+/// compared as a against b, each with its one file, they give the README's
+/// totals.
+#[test]
+fn comparing_the_published_baselines_reproduces_the_readme_totals() {
+    let root = repo_root();
+    let file = |name: &str| format!("{DIR}/baselines/{name}");
+    let output = run_in(
+        &root,
+        &[
+            "bench",
+            "compare",
+            "--a",
+            &file("calendar-days.json"),
+            "--b",
+            &file("weekdays-only.json"),
+        ],
+        true,
+    );
+    assert_eq!(output.code, 0, "{}", output.stderr);
+    let readme = std::fs::read_to_string(root.join(DIR).join("README.md")).unwrap();
+    assert!(
+        readme.contains("[calendar-days.json](baselines/calendar-days.json) | 0 | 14 | 17 | 14 |")
+    );
+    assert!(
+        readme.contains("[weekdays-only.json](baselines/weekdays-only.json) | 7 | 7 | 17 | 14 |")
+    );
+    assert_eq!(
+        output.stdout,
+        "bench compare: 31 questions paired by question; answers files per condition: 1\n\
+         value correct: a 0 (mean 0.00), b 7 (mean 7.00); a higher on 0, b higher on 7, ties 24; two-sided sign test p = 0.0156\n\
+         value wrong: a 14 (mean 14.00), b 7 (mean 7.00); a higher on 7, b higher on 0, ties 24; two-sided sign test p = 0.0156\n\
+         unanswered: a 17 (mean 17.00), b 17 (mean 17.00); a higher on 0, b higher on 0, ties 31; two-sided sign test p = 1.0000\n\
+         authority right: a 14 (mean 14.00), b 14 (mean 14.00); a higher on 0, b higher on 0, ties 31; two-sided sign test p = 1.0000\n\
+         correct value and authority: a 0 (mean 0.00), b 7 (mean 7.00); a higher on 0, b higher on 7, ties 24; two-sided sign test p = 0.0156\n"
+    );
+
+    let unpaired = run_in(
+        &root,
+        &[
+            "bench",
+            "compare",
+            "--a",
+            &file("calendar-days.json"),
+            &file("weekdays-only.json"),
+            "--b",
+            &file("weekdays-only.json"),
+        ],
+        true,
+    );
+    assert_eq!(unpaired.code, 2);
+    assert_eq!(
+        unpaired.stderr,
+        "bench: the conditions are unpaired: a has 2 repeats and b has 1\n"
+    );
+    let missing = run_in(
+        &root,
+        &["bench", "compare", "--a", &file("calendar-days.json")],
+        true,
+    );
+    assert_eq!(missing.code, 2);
+    assert!(missing.stderr.contains("--b"), "{}", missing.stderr);
+}

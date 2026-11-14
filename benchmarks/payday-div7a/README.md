@@ -54,6 +54,14 @@ The scorer marks 2 things separately, because a right figure can rest on the wro
 
 `correct_value_wrong_authority` counts the right figure on the wrong section. Add `--json` for each question's marks.
 
+## Compare 2 conditions
+
+```bash
+cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- bench compare --a with-1.json with-2.json with-3.json --b without-1.json without-2.json without-3.json --root .
+```
+
+`bench compare` scores every answers file and pairs the 2 conditions question by question. For each measure (value correct, value wrong, unanswered, authority right, and correct value and authority) it prints each condition's total and mean per file, the number of questions on which each condition has the measure in more of its repeats, the ties, and an exact two-sided sign test on the untied questions. Each question is one pair, whatever the number of repeats, so repeats of one question are not counted as independent. It refuses a condition with no file and conditions with different numbers of files. A sign test says how often a split at least that uneven arises by chance; it is not a measure of size, and 31 questions can detect only a large difference. Run on the 2 files in [baselines/](baselines/), it gives the totals in the table below.
+
 ## What 2 naive date methods score
 
 No model ran for these. Each file in [baselines/](baselines/) answers the 14 keys that follow the business-day rule, citing s 6 of the *Superannuation Guarantee (Administration) Act 1992*, and leaves the other 17 unanswered. A test scores both files and checks these figures.
