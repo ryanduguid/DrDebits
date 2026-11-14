@@ -64,11 +64,28 @@ suite replays it on every platform.
   `Rent $500 × 52 weeks to 30/6/2026 = $26,001`; a label with a spaced hyphen
   after a number, as in `Year 1 - Depreciation = $2,000`, blocks too. A
   calculation does not start inside a hyphenated number, so
-  `Rent 2025-07-01 + 2 + 2 = 5` and `FY 2025-26 + 1 = 27` block as such sums.
-  A minus, `x` or `/`
-  counts as an operator only with spaces round it, so dates such as
-  `1/7/2025` are not read as one, and nor is `$100/wages`, which reads as a
-  rate such as `$2,000/month`. Write the calculation on a line of its own. A
+  `Rent 2025-07-01 + 2 + 2 = 5` and `FY 2025-26 + 1 = 27` block as such sums,
+  and nor after a sign written after `$`, so `$-150 + 200 = 350` blocks, and
+  so does the correct `$-150 + 200 = 50`. Every
+  dash, such as an en dash or em dash, reads as a hyphen and every space,
+  such as a no-break space, as a space, so `$1,000 – $200 = $800` is
+  reperformed, and a spaced `X` multiplies as `x` does, so a spaced `X` that
+  is a word, as in `2 + 3 = 5 X Factor`, blocks. A result the gate
+  cannot read whole blocks, right or wrong: an `=` followed by a digit
+  before any `,` or `;`, after an amount and an operator, where no
+  calculation the gate reads ends, as in `$100 + $50 = $ 150`,
+  `$100 + $50 = A$150`, `$100 + $50 = approx. $150`, `$100 - $150 = $-50`,
+  `2 + 3 == 5` and `$100 + $50 = $150k`, and other text with a digit, such as
+  the formula in `Price $100 + 10% GST; in Excel use =A1*1.1`. Before a
+  calculation the gate reads,
+  a minus, `x` or `/` counts as an operator only with spaces round it, so
+  dates such as `1/7/2025` and fractions such as `1/11` are not read as one,
+  and nor is `$100/wages`, which reads as a rate such as `$2,000/month`.
+  Before an `=` that no read calculation ends, a `/`, `x` or `X` between
+  numbers outside a date is one with or without spaces, and so is an
+  unspaced minus before `$`, so `$12,000/4 bonus = $3,000`, `100/4 = 25 x 1`,
+  `GST is 1/11 of the price = $100`, `2x3 = 6` and `$1,000-$200 = $800`
+  block. Write the calculation on a line of its own. A
   date among a sum's operands, as in `1/7/2025 + 2 + 2 = 5`, digits other
   than 0 to 9, such as Arabic-Indic `٥`, and a numeric character beside a
   calculation, such as `²` in `2 + 3 = 5²`, block too; a date alone before

@@ -228,6 +228,7 @@ fn reperformance_follows_precedence_percentages_and_rounding() {
         ("1,000 − 250 = 750", true),
         ("-5 + 2 = -3", true),
         ("8 / -2 = -4", true),
+        ("-$150 + 200 = 50", true),
         ("10 ÷ 4 = 2.5", true),
         ("1,100 / 11 = 101", false),
     ];
@@ -455,6 +456,56 @@ fn a_sum_a_word_interrupts_blocks() {
         ("Rent 2025-07-01 + 2 + 2 = 4", true),
         ("FY 2025-26 + 1 = 27", true),
         ("FY 2025–26 + 1 = 27", true),
+        ("FY 2025—26 + 1 = 27", true),
+        // A result the gate cannot read whole, right or wrong: an amount
+        // written with a space, a currency prefix or a sign after `$`, a
+        // doubled `=`, or an expression after an unspaced `/`.
+        ("$100 + $50 = $ 160", true),
+        ("$100 + $50 = $ 150", true),
+        ("$100 + $50 = A$160", true),
+        ("$100 + $50 = A$150", true),
+        ("$100 - $150 = $-60", true),
+        ("$100 - $150 = $-50", true),
+        ("2 + 3 == 6", true),
+        ("2 + 3 == 5", true),
+        ("100/4 = 30 x 2", true),
+        ("$12,000/4 bonus = $3,500", true),
+        ("$12,000/4 bonus = $3,000", true),
+        ("$100 + $50 = approx. $160", true),
+        ("$100 + $50 = AUD 160", true),
+        // A letter written onto a result: `$150k` is not `$150`.
+        ("$100 + $50 = $150k", true),
+        ("2 + 3 = 5h", true),
+        // So this correct line blocks too, as an unread sum before an `=`.
+        ("GST is 1/11 of the price = $100", true),
+        // A `/` spaced on one side, an unspaced `x` or `X` between numbers
+        // and an unspaced minus before `$` are operators there too, so the
+        // correct `2x3 = 6` and `$1,000-$200 = $800` block as well.
+        ("$12,000/ 4 bonus = $3,500", true),
+        ("$12,000 /4 bonus = $3,500", true),
+        ("$500x52 = $26,001", true),
+        ("Rent $500x52 weeks = $26,001", true),
+        ("2x3 = 7", true),
+        ("2X3 = 7", true),
+        ("2x3 = 6", true),
+        ("2x $1,000 = $3,000", true),
+        ("2 x$1,000 = $3,000", true),
+        ("$1,000-$200 = $900", true),
+        ("$1,000–$200 = $900", true),
+        ("$1,000-$200 = $800", true),
+        // A spaced `X` is an operator before an `=`, and after a result.
+        ("$500 X 52 weeks = $26,001", true),
+        ("2 + 3 = 5 X 2", true),
+        // Text after `=` with a digit in it, such as a spreadsheet formula,
+        // after an amount and an operator.
+        ("Price $100 + 10% GST; in Excel use =A1*1.1", true),
+        ("Wages $500 + super; tax = see note 3", true),
+        // A sign after `$` is not read, so the gate does not read the sum
+        // from the amount after it, as in `150 + 200 = 350`.
+        ("$-150 + 200 = 350", true),
+        ("$-150 + 200 = 50", true),
+        ("$−150 + 200 = 350", true),
+        ("$–150 + 200 = 350", true),
         // A date the gate reads as prose does not hide the sum before it.
         ("Rent $500 × 52 weeks to 30/6/2026 = $26,001", true),
         ("Rent $500 × 52 weeks to 30/6/2026 = $26,000", true),
@@ -529,6 +580,13 @@ fn a_sum_a_word_interrupts_blocks() {
         // calculation leaves it to be reperformed, and so does `$100/wages`.
         ("Rent is $2,000/month, so 12 × $2,000 = $24,000", false),
         ("$100/wages $200 + $50 = $250", false),
+        // Nor is a rate or a date before an `=` with no calculation, nor a
+        // `/` before an earlier `=`. A `,` or `;` before any digit ends a
+        // result.
+        ("Rent $2,000/month = $24,000 a year", false),
+        ("Paid 1/7/2026 = $500", false),
+        ("100/4 = 25, so total = $100", false),
+        ("1 + 1 = x; 2 + 2 = 4", false),
     ];
     let wrong: Vec<String> =
         rows.iter()
@@ -638,6 +696,44 @@ fn a_calculation_after_a_word_and_a_hyphen_is_reperformed() {
         assert_eq!(found.len(), 1, "{text}");
         assert_eq!(found[0].matches, ok, "{text}: {}", found[0].computed);
     }
+}
+
+#[test]
+fn a_spaced_dash_or_capital_x_is_an_operator() {
+    // An en dash, em dash or other dash with spaces round it is a minus, as
+    // a hyphen is, and so is one before a number; a spaced `X` multiplies,
+    // as `x` does. Each row is (text, reperforms).
+    let rows = [
+        ("$1,000 – $200 = $800", true),
+        ("$1,000 – $200 = $900", false),
+        ("5 – 3 = 2", true),
+        ("5 – 3 = 3", false),
+        ("2 - 3 = –1", true),
+        ("2 - 3 = –2", false),
+        ("5 — 3 = 3", false),
+        ("5 ‒ 3 = 3", false),
+        // A no-break or thin space is a space.
+        ("5\u{a0}–\u{a0}3 = 3", false),
+        ("5\u{2009}-\u{2009}3 = 2", true),
+        ("5 – 3 + 0 = 3", false),
+        ("2 X $1,000 = $2,000", true),
+        ("2 X $1,000 = $3,000", false),
+        ("2 X $1,000 + $0 = $1,000", false),
+    ];
+    let wrong: Vec<String> = rows
+        .iter()
+        .filter_map(|&(text, ok)| {
+            let found = calculations(text);
+            let right = found.len() == 1 && found[0].matches == ok;
+            let exit = with_line(text).verdict().1;
+            let exits = exit == if ok { EXIT_PASS } else { EXIT_BLOCK };
+            (!(right && exits)).then(|| {
+                let read: Vec<_> = found.iter().map(|c| (&c.text, &c.computed)).collect();
+                format!("{text} (reperforms: {ok}): exit {exit}, read {read:?}")
+            })
+        })
+        .collect();
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
 
 #[test]
