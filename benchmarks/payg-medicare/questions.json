@@ -61,7 +61,7 @@
     {
       "id": "PAYG-010",
       "topic": "PAYG withholding",
-      "question": "An employer pays an Australian-resident employee monthly earnings of $1,603.33 on 31 July 2026. The employee's tax file number declaration claims the tax-free threshold, and the employee has made no other declaration. How much must the employer withhold from the payment?",
+      "question": "An employer pays an Australian-resident employee monthly earnings of $2,331.33 on 31 July 2026. The employee's tax file number declaration claims the tax-free threshold, and the employee has made no other declaration. How much must the employer withhold from the payment?",
       "answer_format": "A whole-dollar amount, such as 123."
     },
     {

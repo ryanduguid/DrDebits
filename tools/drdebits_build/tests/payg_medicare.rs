@@ -170,7 +170,7 @@ fn other_published_sample_rows_reproduce_through_every_branch() {
             "\"earnings\": \"1551\"",
             "PAYG-014: the key says 19.00 and the rule gives 0.00",
         ),
-        // Monthly adjustment, $2,617.33, spouse only: 30.00 (33 cents gains a cent).
+        // Monthly adjustment, $2,617.33, spouse only: 30.00 (formula (1) from monthly earnings).
         (
             "keys.json",
             "\"earnings\": \"4238.00\"",
