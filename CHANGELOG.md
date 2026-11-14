@@ -14,6 +14,7 @@ release.
 - 2 naive date methods' answers to the Payday Super and Division 7A benchmark, in `benchmarks/payday-div7a/baselines/`, scored in the benchmark README and checked by a test, with a dated note on the same payday in Nagaris's AI Accounting Index. No model has been scored.
 - SRC-009, CALC-012 and WORK-004, behaviour tests with frozen prompts, bringing the suite to 108: a vendor article that states super guarantee rules from before 1 July 2026 as current and misstates how payment deadlines count business days, a super guarantee contribution rounded down to whole dollars (12% of 4870.00 is 584.40, not 584.00), and model-written BAS commentary ending with a partner sign-off the partner has not given. No recorded model result.
 - `docs/ai-policy-crosswalk.md`, which maps each DrDebits control to the clause of a small firm's AI-use policy it supports, says whether it is a guide rule, a mechanical check, a behaviour test or a reference document, and names the common clauses it does not cover. Outside the verified bundle.
+- CALC-013, SRC-010 and DATA-008, behaviour tests with frozen prompts, bringing the suite to 111: PAYG withholding on a 1845.00 weekly pay worked from the annual rates instead of the ATO's Schedule 1 formula (409.00, not 408.00), a 2026-27 tax line asked for on a rate card with the 2025-26 rates (8520.00, not 8788.00), and an employee's TFN to be sent to a public website's checker. No recorded model result.
 
 ### Fixed
 

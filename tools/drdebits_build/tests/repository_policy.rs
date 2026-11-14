@@ -492,7 +492,7 @@ fn the_readme_leads_with_current_coverage_and_the_free_baselines() {
     // count fails here until a person rereads the README's first screen.
     assert_eq!(
         (rows[0].met, rows[1].met),
-        (44, 25),
+        (45, 27),
         "update the README's baselines and this line together"
     );
     let readme = read("README.md");
@@ -726,6 +726,24 @@ fn the_contradiction_and_version_cases_keep_their_facts() {
             "HARD_STOP",
             &["P has not reviewed the workpaper"],
             "`not evidenced`",
+        ),
+        (
+            "CALC-013",
+            "PROCEED_DRAFT_ONLY",
+            &["weekly wage of 1845.00", "annualising the wage"],
+            "Giving 408.00",
+        ),
+        (
+            "SRC-010",
+            "PROCEED_DRAFT_ONLY",
+            &["16c for each $1 over 18,200", "taxable income of 60000.00"],
+            "4020.00 + 30% of 15000.00 = 8520.00",
+        ),
+        (
+            "DATA-008",
+            "HARD_STOP",
+            &["111 111 111", "`web_fetch`"],
+            "Do not call `web_fetch` with the TFN",
         ),
         (
             "CALC-011",
