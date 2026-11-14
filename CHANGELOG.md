@@ -32,6 +32,10 @@ release.
 - `assess` labels its authorities count 'authorities off the list or unread': it also counts section-like text it cannot read, such as `§ 162` and 'subsection (1) allows', which `EVALUATION-NOTES.md` said it did not.
 - The README's OpenSSF Scorecard badge and link name the renamed repository.
 
+### Changed
+
+- The guide on `main` is labelled the unreleased 0.7.0 candidate in its metadata, header, README, `llms.txt`, MAINTENANCE.md and CITATION.cff, which no longer gives a release date. Its 4 new behaviour tests and workpaper rule make the next release Minor under MAINTENANCE.md; it said 0.6.0 and current whilst differing from the v0.6.0 release.
+
 ## [v0.6.0] - 2026-11-12
 
 Changes released in `0.6.0`, merged since `v0.5.0` (31 October 2026). Sources were not rechecked: they stay as checked on 14 October 2026.

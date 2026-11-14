@@ -1,6 +1,6 @@
 # DrDebits maintenance protocol
 
-Part of [DrDebits](./drdebits.md) `0.6.0`.
+Part of the unreleased [DrDebits](./drdebits.md) `0.7.0` candidate.
 
 A source-check date does not guarantee continuing currency. Before professional reliance, retrieve the authority operative for the relevant historical event or period and the current duties governing action today.
 

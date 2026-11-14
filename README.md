@@ -33,9 +33,9 @@ The 108 cases are in [tests/behaviour-tests.md](./tests/behaviour-tests.md). The
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
 >
-> Version: `0.6.0` · Jurisdiction: Australia · Sources last checked: 2026-10-14
+> Version: `0.7.0` · Jurisdiction: Australia · Sources last checked: 2026-10-14
 >
-> Release status: published. The signed tag is `v0.6.0`.
+> Release status: unreleased candidate. The proposed tag is `v0.7.0`; `v0.6.0` is the latest published release.
 
 DrDebits converts the Tax Practitioners Board framework, [APES 110, APES 220](https://apesb.org.au/) and the sector's [AML/CTF obligations](https://www.austrac.gov.au/industry-and-business/your-industry/accountants) into practical controls for drafting, research, calculations and review.
 
