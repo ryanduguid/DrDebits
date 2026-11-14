@@ -40,6 +40,8 @@ cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- 
 
 Value and authority are marked separately, as in that benchmark. Amounts compare by value, so `27`, `27.00` and `$27` are the same. Each section listed under a key is enough alone: s 15-10 or s 15-25 of the *Taxation Administration Act 1953* for withholding, and for the levy the one section of the *Medicare Levy Act 1986* each key lists: s 6, s 7 or s 8.
 
+To compare 2 sets of runs question by question, use `bench compare --topic payg-medicare` as the [Payday Super and Division 7A benchmark](../payday-div7a/README.md#compare-2-conditions) describes.
+
 ## Limits
 
 - 20 cases is small, and the questions give the facts a payroll officer or practitioner would have to find, such as the payee's declarations.

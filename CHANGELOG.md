@@ -12,7 +12,7 @@ release.
 
 - Model results for the Payday Super and Division 7A benchmark, in `benchmarks/payday-div7a/results-2026-11-14.md`: Opus 5.5 and 4 Codex models, each with and without the guide, 3 repeats, scored offline. Every Codex call with the guide abstained on all 31 questions.
 - A PAYG withholding and Medicare levy benchmark in `benchmarks/payg-medicare/`: 20 questions, each key the figure a cited row of Schedule 1 to the Taxation Administration (Withholding Schedules) Instrument 2026 or an ATO Medicare levy example prints. `bench keys --topic payg-medicare` recomputes all 20 from the Schedule 1 coefficients or the Medicare Levy Act thresholds, and `bench score --topic payg-medicare` scores answers as before. `--topic` defaults to `payday-div7a`. No model has been run on these questions.
-- `bench compare --a <files> --b <files>`: pairs 2 conditions question by question across equal repeats and prints, for each measure, both totals and means, the questions each side leads on, the ties and an exact two-sided sign test. It refuses a side with no file and unequal repeats.
+- `bench compare --a <files> --b <files>`: pairs 2 conditions question by question across equal repeats and prints, for each measure, both totals and means, the questions each side leads on, the ties and an exact two-sided sign test. It refuses a side with no file and unequal repeats, and takes `--topic` like `bench keys` and `bench score`.
 
 ### Fixed
 

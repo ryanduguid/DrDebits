@@ -1152,8 +1152,8 @@ fn run_score(root: &PyPath, topic: &str, path: &str, json: bool) -> Result<u8, S
     Ok(EXIT_OK)
 }
 
-fn run_compare(root: &PyPath, a: &[String], b: &[String]) -> Result<u8, String> {
-    let keys = load_keys(root, DEFAULT_TOPIC)?;
+fn run_compare(root: &PyPath, topic: &str, a: &[String], b: &[String]) -> Result<u8, String> {
+    let keys = load_keys(root, topic)?;
     let read = |paths: &[String]| {
         paths
             .iter()
@@ -1190,7 +1190,7 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
         .and_then(|root| match args.command {
             Command::Keys => run_keys(&root, &args.topic),
             Command::Score { answers, json } => run_score(&root, &args.topic, &answers, json),
-            Command::Compare { a, b } => run_compare(&root, &a, &b),
+            Command::Compare { a, b } => run_compare(&root, &args.topic, &a, &b),
         });
     result.unwrap_or_else(|e| {
         errln!("bench: {e}");

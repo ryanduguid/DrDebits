@@ -383,6 +383,53 @@ fn the_commands_take_the_topic_and_refuse_an_unknown_one() {
     assert_eq!(unknown.stderr.trim(), "bench: unknown topic nope");
 }
 
+/// `bench compare` pairs the named topic's questions, and refuses a file
+/// that answers another topic's.
+#[test]
+fn compare_pairs_the_named_topics_questions() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = |name: &str, body: &str| {
+        let path = dir.path().join(name);
+        std::fs::write(&path, body).unwrap();
+        path.to_str().unwrap().to_string()
+    };
+    let right = file("right.json", r#"{"answers": {"PAYG-001": {"value": "27"}}}"#);
+    let wrong = file("wrong.json", r#"{"answers": {"PAYG-001": {"value": "26"}}}"#);
+    let payday = file("payday.json", r#"{"answers": {"PDS-001": {"value": "2026-08-07"}}}"#);
+    let root = repo_root();
+
+    let paired = run_in(
+        &root,
+        &["bench", "compare", "--topic", TOPIC, "--a", &right, "--b", &wrong],
+        true,
+    );
+    assert_eq!(paired.code, 0, "{}", paired.stderr);
+    let lines: Vec<&str> = paired.stdout.lines().collect();
+    assert_eq!(
+        lines[0],
+        "bench compare: 20 questions paired by question; answers files per condition: 1"
+    );
+    assert!(
+        lines[1].starts_with(
+            "value correct: a 1 (mean 1.00), b 0 (mean 0.00); a higher on 1, b higher on 0, ties 19;"
+        ),
+        "{}",
+        lines[1]
+    );
+
+    let refused = run_in(
+        &root,
+        &["bench", "--topic", TOPIC, "compare", "--a", &right, "--b", &payday],
+        true,
+    );
+    assert_eq!(refused.code, 2);
+    assert!(
+        refused.stderr.contains("unknown question PDS-001"),
+        "{}",
+        refused.stderr
+    );
+}
+
 /// The topic README counts what the keys hold and says no model has run.
 #[test]
 fn the_readme_counts_the_sources_and_says_no_model_has_run() {
