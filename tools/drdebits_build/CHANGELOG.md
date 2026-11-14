@@ -54,16 +54,27 @@ suite replays it on every platform.
   `Item 3 - Deductions $100 + $50 = $150`, blocks for the same reason, as
   does any other text but whitespace on either side of the operator, as in
   `FY2025 wages`, `2`, `...`, `$500 wages + ` or, with a dollar amount in it,
-  `$20 wages `, since only `=` ends the look-back, and so does `amount = amount`
-  after such text, as in `Wages $500 + super $50 = $600` and
-  `(95,000 + 20,000 - 10,000) / 480,000 = 105,000 / 480,000`. A minus, `x` or `/`
+  `$20 wages `, since only `=` ends the look-back, not even a table cell
+  boundary. So does an `=` followed by an amount after such text where no
+  calculation the gate reads ends, right or wrong, as in
+  `Wages $500 + super $50 = $600`, `Salary $80,000 + $5,000 bonus = $95,000`,
+  `$100 + $50 (GST) = $160`, `2 + (3) ) = 6`, `| Rent | $500 × 52 | = $26,000 |`
+  and `(95,000 + 20,000 - 10,000) / 480,000 = 105,000 / 480,000`, and a sum
+  before a date read as prose, as in
+  `Rent $500 × 52 weeks to 30/6/2026 = $26,001`; a label with a spaced hyphen
+  after a number, as in `Year 1 - Depreciation = $2,000`, blocks too. A
+  calculation does not start inside a hyphenated number, so
+  `Rent 2025-07-01 + 2 + 2 = 5` and `FY 2025-26 + 1 = 27` block as such sums.
+  A minus, `x` or `/`
   counts as an operator only with spaces round it, so dates such as
   `1/7/2025` are not read as one, and nor is `$100/wages`, which reads as a
   rate such as `$2,000/month`. Write the calculation on a line of its own. A
-  date among a sum's operands, as in `1/7/2025 + 2 + 2 = 5`, and digits other
-  than 0 to 9, such as Arabic-Indic `٥`, block too; a date alone before `=`,
-  bracketed or not, as in `1/7/2026 = 2026`, is prose. The scan runs in time linear in the
-  line. A mandatory section must have
+  date among a sum's operands, as in `1/7/2025 + 2 + 2 = 5`, digits other
+  than 0 to 9, such as Arabic-Indic `٥`, and a numeric character beside a
+  calculation, such as `²` in `2 + 3 = 5²`, block too; a date alone before
+  `=`, bracketed or not, as in `1/7/2026 = 2026`, is prose, and a number with a
+  digit or letter beside it, as in `123/4/2025`, is not a date. The scan runs
+  in time linear in the line. A mandatory section must have
   content. Exit 0 is a mechanical pass, 1 a contract or arithmetic breach, 2
   a gate that could not run and 3, for human review, a prohibited-conclusion
   screen match or a recorded state-changing action. An `ESCALATE` or
