@@ -790,12 +790,29 @@ fn the_published_naive_baselines_score_as_the_readme_says() {
 #[test]
 fn the_sign_test_matches_the_binomial_tail_worked_by_hand() {
     for ((a, b), p) in [
-        ((6, 1), "0.1250"),
-        ((1, 6), "0.1250"),
-        ((0, 7), "0.0156"),
-        ((10, 0), "0.0020"),
-        ((3, 3), "1.0000"),
-        ((0, 0), "1.0000"),
+        ((6, 1), "p = 0.1250"),
+        ((1, 6), "p = 0.1250"),
+        ((0, 7), "p = 0.0156"),
+        ((10, 0), "p = 0.0020"),
+        ((3, 3), "p = 1.0000"),
+        ((0, 0), "p = 1.0000"),
+    ] {
+        assert_eq!(bench::sign_test(a, b), p, "{a} to {b}");
+    }
+}
+
+/// A p that would show as 0.0000 is never printed as 0. 15 to 0:
+/// 2 / 2^15 = 0.000061, shown as 0.0001; 16 to 0: 2 / 2^16 = 0.0000305,
+/// below what 4 places show. 5 to 0 is the most uneven split of 5 and still
+/// gives 2 / 2^5 = 0.0625; 6 to 0 gives 0.03125, shown as 0.0313.
+#[test]
+fn a_tiny_p_is_shown_as_below_the_last_place_not_as_0() {
+    for ((a, b), p) in [
+        ((15, 0), "p = 0.0001"),
+        ((16, 0), "p < 0.0001"),
+        ((0, 31), "p < 0.0001"),
+        ((5, 0), "p = 0.0625"),
+        ((6, 0), "p = 0.0313"),
     ] {
         assert_eq!(bench::sign_test(a, b), p, "{a} to {b}");
     }
@@ -835,7 +852,7 @@ fn a_paired_comparison_counts_each_question_once_and_keeps_the_ties() {
         ),
         (12, 4, 6, 1, 24)
     );
-    assert_eq!(value.p, "0.1250");
+    assert_eq!(value.p, "p = 0.1250");
     let unanswered = row("unanswered");
     assert_eq!(
         (
@@ -846,7 +863,7 @@ fn a_paired_comparison_counts_each_question_once_and_keeps_the_ties() {
         ),
         (50, 58, 1, 6)
     );
-    assert_eq!(unanswered.p, "0.1250");
+    assert_eq!(unanswered.p, "p = 0.1250");
     for measure in [
         "value wrong",
         "authority right",
@@ -858,7 +875,7 @@ fn a_paired_comparison_counts_each_question_once_and_keeps_the_ties() {
             (0, 0, 31),
             "{measure}"
         );
-        assert_eq!(tied.p, "1.0000", "{measure}");
+        assert_eq!(tied.p, "p = 1.0000", "{measure}");
     }
 }
 
@@ -882,7 +899,10 @@ fn a_comparison_without_a_file_on_each_side_or_with_unequal_repeats_is_refused()
     );
     let unknown = pyjson::loads(r#"{"answers": {"XYZ-001": {"value": "1"}}}"#).unwrap();
     let error = bench::compare(&keys, &[one], &[unknown]).unwrap_err();
-    assert!(error.contains("unknown question XYZ-001"), "{error}");
+    assert_eq!(
+        error,
+        "answers file: unknown question XYZ-001 (condition b, file 1)"
+    );
 }
 
 /// The 2 published naive baselines are a round already in the repository:
@@ -917,11 +937,15 @@ fn comparing_the_published_baselines_reproduces_the_readme_totals() {
         "bench compare: 31 questions paired by question; answers files per condition: 1\n\
          value correct: a 0 (mean 0.00), b 7 (mean 7.00); a higher on 0, b higher on 7, ties 24; two-sided sign test p = 0.0156\n\
          value wrong: a 14 (mean 14.00), b 7 (mean 7.00); a higher on 7, b higher on 0, ties 24; two-sided sign test p = 0.0156\n\
-         unanswered: a 17 (mean 17.00), b 17 (mean 17.00); a higher on 0, b higher on 0, ties 31; two-sided sign test p = 1.0000\n\
-         authority right: a 14 (mean 14.00), b 14 (mean 14.00); a higher on 0, b higher on 0, ties 31; two-sided sign test p = 1.0000\n\
+         unanswered: a 17 (mean 17.00), b 17 (mean 17.00); a higher on 0, b higher on 0, ties 31; two-sided sign test p = 1.0000; too few untied questions for any split to give p below 0.05\n\
+         authority right: a 14 (mean 14.00), b 14 (mean 14.00); a higher on 0, b higher on 0, ties 31; two-sided sign test p = 1.0000; too few untied questions for any split to give p below 0.05\n\
          correct value and authority: a 0 (mean 0.00), b 7 (mean 7.00); a higher on 0, b higher on 7, ties 24; two-sided sign test p = 0.0156\n"
     );
 
+    // b's file is a copy, because one path given twice is refused first.
+    let dir = tempfile::tempdir().unwrap();
+    let copy = dir.path().join("weekdays-only.json");
+    std::fs::copy(root.join(file("weekdays-only.json")), &copy).unwrap();
     let unpaired = run_in(
         &root,
         &[
@@ -931,7 +955,7 @@ fn comparing_the_published_baselines_reproduces_the_readme_totals() {
             &file("calendar-days.json"),
             &file("weekdays-only.json"),
             "--b",
-            &file("weekdays-only.json"),
+            copy.to_str().unwrap(),
         ],
         true,
     );
@@ -947,4 +971,49 @@ fn comparing_the_published_baselines_reproduces_the_readme_totals() {
     );
     assert_eq!(missing.code, 2);
     assert!(missing.stderr.contains("--b"), "{}", missing.stderr);
+}
+
+/// A file given twice, a file that is not JSON and a file the scorer refuses
+/// each stop the comparison, and the message says which file.
+#[test]
+fn compare_names_the_file_it_refuses() {
+    let root = repo_root();
+    let calendar = format!("{DIR}/baselines/calendar-days.json");
+    let weekdays = format!("{DIR}/baselines/weekdays-only.json");
+    let dir = tempfile::tempdir().unwrap();
+    let write = |name: &str, body: &str| {
+        let path = dir.path().join(name);
+        std::fs::write(&path, body).unwrap();
+        path.to_str().unwrap().to_string()
+    };
+    let broken = write("broken.json", "{\"answers\": ");
+    let unknown = write("unknown.json", r#"{"answers": {"XYZ-001": {"value": "1"}}}"#);
+    let empty = write("empty.json", r#"{"answers": {}}"#);
+    for (a, b, expected) in [
+        (
+            vec![calendar.as_str(), weekdays.as_str()],
+            vec![weekdays.as_str(), calendar.as_str()],
+            format!(
+                "bench: {weekdays} is given more than once: each answers file is one repeat of one condition\n"
+            ),
+        ),
+        (
+            vec![calendar.as_str()],
+            vec![broken.as_str()],
+            format!("(condition b, {broken})\n"),
+        ),
+        (
+            vec![calendar.as_str(), weekdays.as_str()],
+            vec![empty.as_str(), unknown.as_str()],
+            "bench: answers file: unknown question XYZ-001 (condition b, file 2)\n".to_string(),
+        ),
+    ] {
+        let mut args = vec!["bench", "compare", "--a"];
+        args.extend(&a);
+        args.push("--b");
+        args.extend(&b);
+        let refused = run_in(&root, &args, true);
+        assert_eq!(refused.code, 2, "{}", refused.stdout);
+        assert!(refused.stderr.ends_with(&expected), "{}", refused.stderr);
+    }
 }

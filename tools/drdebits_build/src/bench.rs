@@ -985,9 +985,14 @@ pub struct Paired {
     pub a_higher: usize,
     pub b_higher: usize,
     pub ties: usize,
-    /// The exact two-sided sign test on the untied questions, to 4 places.
+    /// The exact two-sided sign test on the untied questions, to 4 places:
+    /// `p = 0.1250`, or `p < 0.0001` when that would show as 0.
     pub p: String,
 }
+
+/// The fewest untied questions whose most uneven split gives p below 0.05:
+/// 5 allow 2 / 2^5 = 0.0625 at best, 6 allow 2 / 2^6 = 0.03125.
+const UNTIED_FOR_P_BELOW_0_05: usize = 6;
 
 /// The exact two-sided sign test for `a` pairs one way and `b` the other,
 /// ties left out: twice the chance that `a + b` fair coin tosses split at
@@ -1002,12 +1007,16 @@ pub fn sign_test(a: usize, b: usize) -> String {
     let twice_tail: BigInt = (0..=a.min(b)).map(choose).sum::<BigInt>() * 2;
     let outcomes = BigInt::from(1) << n;
     let p = Q::new(twice_tail.clone().min(outcomes.clone()), outcomes);
-    gate::decimal(&p, 4)
+    match gate::decimal(&p, 4).as_str() {
+        "0.0000" => "p < 0.0001".into(),
+        shown => format!("p = {shown}"),
+    }
 }
 
 /// Score every repeat of 2 conditions and pair them question by question.
-/// Refuses a condition with no answers file, and conditions with different
-/// numbers of repeats, which cannot be paired.
+/// Refuses a condition with no answers file, conditions with different
+/// numbers of repeats, which cannot be paired, and any file the scorer
+/// refuses, naming its condition and place.
 pub fn compare(keys: &[Key], a: &[Json], b: &[Json]) -> Result<Vec<Paired>, String> {
     if a.is_empty() || b.is_empty() {
         return Err("each condition needs at least one answers file".into());
@@ -1019,13 +1028,16 @@ pub fn compare(keys: &[Key], a: &[Json], b: &[Json]) -> Result<Vec<Paired>, Stri
             b.len()
         ));
     }
-    let scored = |files: &[Json]| {
+    let scored = |side: &str, files: &[Json]| {
         files
             .iter()
-            .map(|f| score(keys, f))
+            .enumerate()
+            .map(|(i, f)| {
+                score(keys, f).map_err(|e| format!("{e} (condition {side}, file {})", i + 1))
+            })
             .collect::<Result<Vec<_>, _>>()
     };
-    let (a, b) = (scored(a)?, scored(b)?);
+    let (a, b) = (scored("a", a)?, scored("b", b)?);
     Ok(MEASURES
         .iter()
         .map(|&(measure, has)| {
@@ -1154,13 +1166,19 @@ fn run_score(root: &PyPath, topic: &str, path: &str, json: bool) -> Result<u8, S
 
 fn run_compare(root: &PyPath, topic: &str, a: &[String], b: &[String]) -> Result<u8, String> {
     let keys = load_keys(root, topic)?;
-    let read = |paths: &[String]| {
+    let mut seen = HashSet::new();
+    if let Some(twice) = a.iter().chain(b).find(|p| !seen.insert(p.as_str())) {
+        return Err(format!(
+            "{twice} is given more than once: each answers file is one repeat of one condition"
+        ));
+    }
+    let read = |side: &str, paths: &[String]| {
         paths
             .iter()
-            .map(|p| read_answers(p))
+            .map(|p| read_answers(p).map_err(|e| format!("{e} (condition {side}, {p})")))
             .collect::<Result<Vec<_>, _>>()
     };
-    let paired = compare(&keys, &read(a)?, &read(b)?)?;
+    let paired = compare(&keys, &read("a", a)?, &read("b", b)?)?;
     let repeats = a.len();
     let mean = |total: usize| gate::decimal(&Q::new(BigInt::from(total), BigInt::from(repeats)), 2);
     outln!(
@@ -1168,8 +1186,13 @@ fn run_compare(root: &PyPath, topic: &str, a: &[String], b: &[String]) -> Result
         keys.len()
     );
     for m in &paired {
+        let few = if m.a_higher + m.b_higher < UNTIED_FOR_P_BELOW_0_05 {
+            "; too few untied questions for any split to give p below 0.05"
+        } else {
+            ""
+        };
         outln!(
-            "{}: a {} (mean {}), b {} (mean {}); a higher on {}, b higher on {}, ties {}; two-sided sign test p = {}",
+            "{}: a {} (mean {}), b {} (mean {}); a higher on {}, b higher on {}, ties {}; two-sided sign test {}{few}",
             m.measure,
             m.a_total,
             mean(m.a_total),
