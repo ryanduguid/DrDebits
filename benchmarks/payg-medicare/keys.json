@@ -482,7 +482,7 @@
         "read_on": "2026-11-15",
         "where": "Example: Medicare levy reduction based on family taxable income"
       },
-      "derivation": "Entitled to the seniors and pensioners tax offset, he has a threshold amount of $44,268 and a phase-in limit of $55,335 (s 3(1)), so s 7(2) limits his levy to 10% of the excess. Family income of $71,400 exceeds the family income threshold of $61,623 (s 8(5) and (7)), so s 8(2) reduces the levy by 2% of that threshold less 0.08 of the excess. His spouse's taxable income does not exceed the spouse's own threshold amount, so the spouse would not be liable and s 8(3) does not scale the reduction down.",
+      "derivation": "Entitled to the seniors and pensioners tax offset, he has a threshold amount of $44,268 and a phase-in limit of $55,335 (s 3(1)), so s 7(2) limits his levy to 10% of the excess. Family income of $71,400 exceeds the family income threshold of $61,623 (s 8(5) and (7)), so s 8(2) reduces the levy by 2% of that threshold less 0.08 of the excess. His spouse's taxable income does not exceed the spouse's own threshold amount, so the spouse would not be liable and s 8(3) does not scale the reduction down. The ATO's couple live apart because of illness; the question has them living together, which leaves the figure unchanged and keeps out s 3(3)(a), under which people living separately and apart are not treated as married.",
       "check": {
         "rule": "medicare-levy",
         "taxable_income": "49700",
