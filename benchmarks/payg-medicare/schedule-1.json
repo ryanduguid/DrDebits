@@ -1,0 +1,85 @@
+{
+  "instrument": "Taxation Administration (Withholding Schedules) Instrument 2026, Schedule 1 (Statement of formulas for calculating amounts to be withheld)",
+  "register_id": "F2026L00716",
+  "url": "https://www.legislation.gov.au/F2026L00716/asmade/text",
+  "registered": "2026-06-12",
+  "applies_to_payments_from": "2026-07-01",
+  "read_on": "2026-11-15",
+  "note": "Copied from the instrument as made. A scale lists its rows in order; a row applies when x is less than its 'below' figure, and the last row has none. A row whose a and b are null is shown as a dash in the instrument: nothing is withheld.",
+  "scales": {
+    "1": [
+      {"below": "188", "a": "0.1500", "b": "0.1500"},
+      {"below": "371", "a": "0.2084", "b": "11.0185"},
+      {"below": "515", "a": "0.1790", "b": "0.1066"},
+      {"below": "932", "a": "0.3227", "b": "74.1674"},
+      {"below": "2246", "a": "0.3200", "b": "71.6508"},
+      {"below": "3303", "a": "0.3900", "b": "228.8816"},
+      {"below": null, "a": "0.4700", "b": "493.1893"}
+    ],
+    "2": [
+      {"below": "362", "a": null, "b": null},
+      {"below": "538", "a": "0.1500", "b": "54.3462"},
+      {"below": "673", "a": "0.2500", "b": "108.2135"},
+      {"below": "721", "a": "0.1700", "b": "54.3473"},
+      {"below": "865", "a": "0.1790", "b": "60.8377"},
+      {"below": "1282", "a": "0.3227", "b": "185.1935"},
+      {"below": "2596", "a": "0.3200", "b": "181.7319"},
+      {"below": "3653", "a": "0.3900", "b": "363.4627"},
+      {"below": null, "a": "0.4700", "b": "655.7704"}
+    ],
+    "3": [
+      {"below": "2596", "a": "0.3000", "b": "0.3000"},
+      {"below": "3653", "a": "0.3700", "b": "181.7308"},
+      {"below": null, "a": "0.4500", "b": "474.0385"}
+    ],
+    "5": [
+      {"below": "362", "a": null, "b": null},
+      {"below": "721", "a": "0.1500", "b": "54.3462"},
+      {"below": "865", "a": "0.1590", "b": "60.8365"},
+      {"below": "1282", "a": "0.3027", "b": "185.1923"},
+      {"below": "2596", "a": "0.3000", "b": "181.7308"},
+      {"below": "3653", "a": "0.3700", "b": "363.4615"},
+      {"below": null, "a": "0.4500", "b": "655.7692"}
+    ],
+    "6": [
+      {"below": "362", "a": null, "b": null},
+      {"below": "721", "a": "0.1500", "b": "54.3462"},
+      {"below": "865", "a": "0.1590", "b": "60.8365"},
+      {"below": "908", "a": "0.3027", "b": "185.1923"},
+      {"below": "1135", "a": "0.3527", "b": "230.6135"},
+      {"below": "1282", "a": "0.3127", "b": "185.1923"},
+      {"below": "2596", "a": "0.3100", "b": "181.7308"},
+      {"below": "3653", "a": "0.3800", "b": "363.4615"},
+      {"below": null, "a": "0.4600", "b": "655.7692"}
+    ]
+  },
+  "offset_rates": {
+    "weekly": "0.019",
+    "fortnightly": "0.038",
+    "monthly": "0.083"
+  },
+  "medicare_levy_parameters": {
+    "2": {
+      "weekly_earnings_threshold": "538",
+      "weekly_earnings_shade_in_threshold": "673",
+      "family_threshold": "47238",
+      "weekly_family_threshold_divisor": "52",
+      "additional_child": "4338",
+      "shading_out_point_multiplier": "0.1000",
+      "shading_out_point_divisor": "0.0800",
+      "weekly_levy_adjustment_factor": "538.6700",
+      "medicare_levy": "0.0200"
+    },
+    "6": {
+      "weekly_earnings_threshold": "908",
+      "weekly_earnings_shade_in_threshold": "1135",
+      "family_threshold": "47238",
+      "weekly_family_threshold_divisor": "52",
+      "additional_child": "4338",
+      "shading_out_point_multiplier": "0.0500",
+      "shading_out_point_divisor": "0.0400",
+      "weekly_levy_adjustment_factor": "908.4200",
+      "medicare_levy": "0.0100"
+    }
+  }
+}
