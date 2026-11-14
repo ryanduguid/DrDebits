@@ -869,7 +869,12 @@ fn a_comparison_without_a_file_on_each_side_or_with_unequal_repeats_is_refused()
     assert_eq!(error, "each condition needs at least one answers file");
     let error = bench::compare(&keys, std::slice::from_ref(&one), &[]).unwrap_err();
     assert_eq!(error, "each condition needs at least one answers file");
-    let error = bench::compare(&keys, &[one.clone(), one.clone()], &[one.clone()]).unwrap_err();
+    let error = bench::compare(
+        &keys,
+        &[one.clone(), one.clone()],
+        std::slice::from_ref(&one),
+    )
+    .unwrap_err();
     assert_eq!(
         error,
         "the conditions are unpaired: a has 2 repeats and b has 1"
