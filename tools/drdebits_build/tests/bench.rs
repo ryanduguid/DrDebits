@@ -12,6 +12,7 @@ use common::{py, repo_root, run_in};
 use drdebits::bench::{self, Cited, Scored, Value};
 use drdebits::pyjson::{self, Json};
 
+const TOPIC: &str = "payday-div7a";
 const DIR: &str = "benchmarks/payday-div7a";
 const FILES: [&str; 4] = [
     "questions.json",
@@ -39,7 +40,7 @@ fn edit(tree: &Path, file: &str, from: &str, to: &str) {
 }
 
 fn keys() -> Vec<bench::Key> {
-    bench::load_keys(&py(&repo_root())).unwrap()
+    bench::load_keys(&py(&repo_root()), TOPIC).unwrap()
 }
 
 fn mark(answers: &str) -> Result<Vec<Scored>, String> {
@@ -54,7 +55,7 @@ fn one(answers: &str, id: &str) -> (Value, Cited) {
 
 #[test]
 fn every_published_key_reproduces_and_agrees_with_the_engine_record() {
-    let report = bench::check_keys(&py(&repo_root())).unwrap();
+    let report = bench::check_keys(&py(&repo_root()), TOPIC).unwrap();
     assert_eq!(report.problems, Vec::<String>::new());
     assert_eq!((report.computed, report.not_recomputed), (21, 10));
     assert_eq!(report.engine_checked, 31);
@@ -69,7 +70,7 @@ fn a_key_changed_by_one_day_is_caught_by_the_rule_and_the_engine_record() {
         "\"value\": \"2026-08-11\"",
         "\"value\": \"2026-08-10\"",
     );
-    let report = bench::check_keys(&py(tree.path())).unwrap();
+    let report = bench::check_keys(&py(tree.path()), TOPIC).unwrap();
     assert_eq!(report.problems.len(), 2, "{:?}", report.problems);
     assert!(report.problems[0].starts_with("PDS-002: the key says"));
 }
@@ -83,7 +84,7 @@ fn dropping_picnic_day_from_the_calendar_moves_the_dates_that_cross_it() {
         "2026-08-03",
         "2026-08-02",
     );
-    let report = bench::check_keys(&py(tree.path())).unwrap();
+    let report = bench::check_keys(&py(tree.path()), TOPIC).unwrap();
     let moved: Vec<&str> = report.problems.iter().map(|p| &p[..7]).collect();
     assert_eq!(moved, ["PDS-001", "PDS-002", "PDS-007"]);
 }
@@ -97,7 +98,7 @@ fn a_key_with_no_engine_record_is_a_problem_not_a_pass() {
         "\"id\": \"D7A-016\"",
         "\"id\": \"D7A-999\"",
     );
-    let report = bench::check_keys(&py(tree.path())).unwrap();
+    let report = bench::check_keys(&py(tree.path()), TOPIC).unwrap();
     assert_eq!(
         report.problems,
         ["D7A-016: no engine output is recorded".to_string()]
@@ -113,7 +114,7 @@ fn a_rule_that_runs_past_the_calendar_stops_the_check() {
         "\"complete_until\": \"2027-08-31\"",
         "\"complete_until\": \"2026-07-31\"",
     );
-    let error = bench::check_keys(&py(tree.path())).unwrap_err();
+    let error = bench::check_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(error.contains("past the calendar"), "{error}");
 }
 
@@ -121,7 +122,7 @@ fn a_rule_that_runs_past_the_calendar_stops_the_check() {
 fn keys_that_do_not_answer_the_questions_one_for_one_are_refused() {
     let tree = copy();
     edit(tree.path(), "questions.json", "PDS-001", "PDS-000");
-    let error = bench::load_keys(&py(tree.path())).unwrap_err();
+    let error = bench::load_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(error.contains("do not match the questions"), "{error}");
 }
 
@@ -137,7 +138,7 @@ fn matching_duplicate_ids_are_refused() {
         );
     }
     assert_eq!(
-        bench::load_keys(&py(tree.path())).unwrap_err(),
+        bench::load_keys(&py(tree.path()), TOPIC).unwrap_err(),
         "a question id appears twice"
     );
 }
@@ -168,7 +169,7 @@ fn malformed_keys_are_refused_before_scoring() {
     ] {
         let tree = copy();
         edit(tree.path(), "keys.json", from, to);
-        let error = bench::load_keys(&py(tree.path())).unwrap_err();
+        let error = bench::load_keys(&py(tree.path()), TOPIC).unwrap_err();
         assert!(error.contains(expected), "{error}");
     }
 }
@@ -177,7 +178,7 @@ fn malformed_keys_are_refused_before_scoring() {
 fn a_changed_canary_is_refused() {
     let tree = copy();
     edit(tree.path(), "keys.json", "DRDEBITS-BENCHMARK", "BENCHMARK");
-    let error = bench::load_keys(&py(tree.path())).unwrap_err();
+    let error = bench::load_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(error.contains("benchmark_canary"), "{error}");
 }
 
@@ -185,7 +186,7 @@ fn a_changed_canary_is_refused() {
 fn a_key_needs_its_source_and_derivation() {
     let tree = copy();
     edit(tree.path(), "keys.json", "\"derivation\"", "\"working\"");
-    let error = bench::load_keys(&py(tree.path())).unwrap_err();
+    let error = bench::load_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert_eq!(error, "keys file PDS-001: derivation is missing");
 }
 
@@ -309,7 +310,7 @@ fn the_keys_must_state_how_several_authorities_work() {
         "is enough alone",
         "is required jointly",
     );
-    let error = bench::load_keys(&py(tree.path())).unwrap_err();
+    let error = bench::load_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(
         error.contains("authority_rule is missing or changed"),
         "{error}"
@@ -349,7 +350,7 @@ fn a_changed_output_alone_is_caught() {
     ] {
         let tree = copy();
         edit(tree.path(), "engine-check.json", from, to);
-        let report = bench::check_keys(&py(tree.path())).unwrap();
+        let report = bench::check_keys(&py(tree.path()), TOPIC).unwrap();
         assert_eq!(report.problems.len(), 2, "{id}: {:?}", report.problems);
         assert!(report.problems[0].contains("its output gives"), "{id}");
         assert!(report.problems[0].starts_with(id), "{:?}", report.problems);
@@ -365,7 +366,7 @@ fn a_changed_stated_value_alone_conflicts_with_its_output() {
         "\"value\": \"2026-08-07\"",
         "\"value\": \"2026-08-08\"",
     );
-    let report = bench::check_keys(&py(tree.path())).unwrap();
+    let report = bench::check_keys(&py(tree.path()), TOPIC).unwrap();
     assert_eq!(
         report.problems,
         ["PDS-001: the record states 2026-08-08 but its output gives 2026-08-07".to_string()]
@@ -382,7 +383,7 @@ fn a_duplicate_engine_record_is_refused() {
         "\"id\": \"PDS-002\"",
         "\"id\": \"PDS-001\"",
     );
-    let error = bench::check_keys(&py(tree.path())).unwrap_err();
+    let error = bench::check_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(error.ends_with("PDS-001 is recorded twice"), "{error}");
 }
 
@@ -395,7 +396,7 @@ fn an_engine_record_that_does_not_refuse_the_loan_year_is_refused() {
         "\"REFUSED_YEAR_IS_YEAR_OF_LOAN\"",
         "\"REFUSED_GATE_UNKNOWN\"",
     );
-    let error = bench::check_keys(&py(tree.path())).unwrap_err();
+    let error = bench::check_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(
         error.contains("does not refuse the year of the loan"),
         "{error}"
@@ -429,7 +430,7 @@ fn an_engine_record_with_a_bad_read_is_refused() {
     ] {
         let tree = copy();
         edit(tree.path(), "engine-check.json", from, to);
-        let found = bench::check_keys(&py(tree.path()));
+        let found = bench::check_keys(&py(tree.path()), TOPIC);
         let text = match found {
             Ok(report) => report.problems.join("; "),
             Err(error) => error,
@@ -739,7 +740,7 @@ fn a_rule_that_starts_before_the_calendar_stops_the_check() {
         "\"complete_from\": \"2026-07-01\"",
         "\"complete_from\": \"2026-07-02\"",
     );
-    let error = bench::check_keys(&py(tree.path())).unwrap_err();
+    let error = bench::check_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(
         error.contains("is before the calendar's first complete day"),
         "{error}"

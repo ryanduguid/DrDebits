@@ -1,13 +1,15 @@
 // Copyright 2026 Ryan Duguid
 // SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
 
-//! The Payday Super and Division 7A benchmark: published questions, documented
-//! keys and a scorer. Nothing here calls a model.
+//! The published benchmarks: questions, documented keys and a scorer, one
+//! folder per topic under `benchmarks/`. Nothing here calls a model.
 //!
 //! `bench keys` recomputes each key that follows from a rule, from the inputs
-//! the key records and a published table of non-business days. It does not read
-//! the sources of the other keys. It takes each engine value from the recorded
-//! output and compares it with the key. `bench score` marks a file of
+//! the key records and the published tables its topic copies: a calendar of
+//! non-business days, or the coefficients of the ATO's Schedule 1 withholding
+//! formulas. It does not read the sources of the other keys. For the Payday
+//! Super and Division 7A topic it also takes each engine value from the
+//! recorded output and compares it with the key. `bench score` marks a file of
 //! answers on 2 separate axes, because a right figure can rest on the wrong
 //! section: the value, and the authority cited for it. Authorities compare at
 //! section level, so `s 109E(6)` meets a key naming `s 109E`, and each section
@@ -19,7 +21,7 @@
 //!
 //! A key is what its documented source and the published derivation give. It
 //! is not advice, and a score is not a measure of anything outside these
-//! questions. See `benchmarks/payday-div7a/README.md`.
+//! questions. See each topic's `README.md`.
 
 use std::collections::HashSet;
 
@@ -32,14 +34,44 @@ use crate::py::{Date, PyPath};
 use crate::pyjson::{self, Json};
 use crate::templates::BENCHMARK_CANARY;
 
-pub const QUESTIONS_FILE: &str = "benchmarks/payday-div7a/questions.json";
-pub const KEYS_FILE: &str = "benchmarks/payday-div7a/keys.json";
-pub const CALENDAR_FILE: &str = "benchmarks/payday-div7a/business-days.json";
-pub const ENGINE_FILE: &str = "benchmarks/payday-div7a/engine-check.json";
+/// A published topic: its folder under `benchmarks/`, what its `keys.json`
+/// must say about several listed authorities (because the scorer applies
+/// exactly this), and whether each key is also compared with a recorded
+/// engine output in `engine-check.json`.
+struct Topic {
+    name: &'static str,
+    authority_rule: &'static str,
+    engine: bool,
+}
 
-/// What `keys.json` must say about several listed authorities, because the
-/// scorer applies exactly this.
-const AUTHORITY_RULE: &str = "Each section listed under a key is enough alone. For Payday Super keys either s 6 or s 18C counts as right, because each states the period relied on.";
+const TOPICS: [Topic; 2] = [
+    Topic {
+        name: "payday-div7a",
+        authority_rule: "Each section listed under a key is enough alone. For Payday Super keys either s 6 or s 18C counts as right, because each states the period relied on.",
+        engine: true,
+    },
+    Topic {
+        name: "payg-medicare",
+        authority_rule: "Each section listed under a key is enough alone.",
+        engine: false,
+    },
+];
+
+/// The topic `bench` uses when none is named.
+pub const DEFAULT_TOPIC: &str = "payday-div7a";
+
+impl Topic {
+    fn find(name: &str) -> Result<&'static Topic, String> {
+        TOPICS
+            .iter()
+            .find(|t| t.name == name)
+            .ok_or_else(|| format!("unknown topic {name}"))
+    }
+
+    fn file(&self, name: &str) -> String {
+        format!("benchmarks/{}/{name}", self.name)
+    }
+}
 
 pub const EXIT_OK: u8 = 0;
 pub const EXIT_MISMATCH: u8 = 1;
@@ -75,6 +107,66 @@ enum Rule {
         years: u32,
         paid: Q,
     },
+    /// Schedule 1's amount to withhold for a period, less any tax offsets
+    /// claimed and any Medicare levy adjustment for `children` (0 for a
+    /// spouse and no children).
+    Withholding {
+        scale: String,
+        period: Period,
+        earnings: Q,
+        offsets: Option<Q>,
+        children: Option<u32>,
+    },
+    /// Schedule 1's Medicare levy adjustment for a period.
+    LevyAdjustment {
+        scale: String,
+        period: Period,
+        earnings: Q,
+        children: u32,
+    },
+    /// The Medicare levy under ss 6, 7 and 8 of the Medicare Levy Act 1986.
+    MedicareLevy {
+        taxable_income: Q,
+        threshold_amount: Q,
+        phase_in_limit: Q,
+        family: Option<Family>,
+    },
+}
+
+/// How often Schedule 1 earnings are paid.
+#[derive(Clone, Copy, Debug)]
+enum Period {
+    Weekly,
+    Fortnightly,
+    Monthly,
+}
+
+impl Period {
+    fn read(item: &Json, at: &str) -> Result<Period, String> {
+        match text(item, "period", at)? {
+            "weekly" => Ok(Period::Weekly),
+            "fortnightly" => Ok(Period::Fortnightly),
+            "monthly" => Ok(Period::Monthly),
+            other => Err(format!("{at}: unknown period {other}")),
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Period::Weekly => "weekly",
+            Period::Fortnightly => "fortnightly",
+            Period::Monthly => "monthly",
+        }
+    }
+}
+
+/// A married person's s 8 facts: the family income threshold and the
+/// spouse's taxable income and own threshold amount.
+#[derive(Debug)]
+struct Family {
+    threshold: Q,
+    spouse_income: Q,
+    spouse_threshold: Q,
 }
 
 #[derive(Debug)]
@@ -144,8 +236,42 @@ fn read_rule(check: &Json, at: &str) -> Result<Rule, String> {
             years: whole(check, "years", at)?,
             paid: decimal_field(check, "paid", at)?,
         }),
+        "withholding" => Ok(Rule::Withholding {
+            scale: text(check, "scale", at)?.to_string(),
+            period: Period::read(check, at)?,
+            earnings: decimal_field(check, "earnings", at)?,
+            offsets: optional(check, "offsets", |_| decimal_field(check, "offsets", at))?,
+            children: optional(check, "adjustment", |a| whole(a, "children", at))?,
+        }),
+        "levy-adjustment" => Ok(Rule::LevyAdjustment {
+            scale: text(check, "scale", at)?.to_string(),
+            period: Period::read(check, at)?,
+            earnings: decimal_field(check, "earnings", at)?,
+            children: whole(check, "children", at)?,
+        }),
+        "medicare-levy" => Ok(Rule::MedicareLevy {
+            taxable_income: decimal_field(check, "taxable_income", at)?,
+            threshold_amount: decimal_field(check, "threshold_amount", at)?,
+            phase_in_limit: decimal_field(check, "phase_in_limit", at)?,
+            family: optional(check, "spouse", |spouse| {
+                Ok(Family {
+                    threshold: decimal_field(check, "family_income_threshold", at)?,
+                    spouse_income: decimal_field(spouse, "taxable_income", at)?,
+                    spouse_threshold: decimal_field(spouse, "threshold_amount", at)?,
+                })
+            })?,
+        }),
         other => Err(format!("{at}: unknown rule {other}")),
     }
+}
+
+/// `read` applied to `field` when the check has it.
+fn optional<T>(
+    check: &Json,
+    field: &str,
+    read: impl FnOnce(&Json) -> Result<T, String>,
+) -> Result<Option<T>, String> {
+    check.get(field).map(read).transpose()
 }
 
 fn read_key(item: &Json) -> Result<Key, String> {
@@ -194,18 +320,21 @@ fn with_canary(payload: Json, rel: &str) -> Result<Json, String> {
     }
 }
 
-/// Read the keys, refusing a set that does not answer the questions one for one.
-pub fn load_keys(root: &PyPath) -> Result<Vec<Key>, String> {
-    let questions = with_canary(read_json(root, QUESTIONS_FILE)?, QUESTIONS_FILE)?;
-    let keys = with_canary(read_json(root, KEYS_FILE)?, KEYS_FILE)?;
-    if keys.get("authority_rule").and_then(Json::as_str) != Some(AUTHORITY_RULE) {
-        return Err(format!("{KEYS_FILE}: authority_rule is missing or changed"));
+/// Read a topic's keys, refusing a set that does not answer the questions one
+/// for one.
+pub fn load_keys(root: &PyPath, topic: &str) -> Result<Vec<Key>, String> {
+    let topic = Topic::find(topic)?;
+    let (questions_file, keys_file) = (topic.file("questions.json"), topic.file("keys.json"));
+    let questions = with_canary(read_json(root, &questions_file)?, &questions_file)?;
+    let keys = with_canary(read_json(root, &keys_file)?, &keys_file)?;
+    if keys.get("authority_rule").and_then(Json::as_str) != Some(topic.authority_rule) {
+        return Err(format!("{keys_file}: authority_rule is missing or changed"));
     }
-    let asked = items(&questions, "questions", QUESTIONS_FILE)?
+    let asked = items(&questions, "questions", &questions_file)?
         .iter()
-        .map(|q| text(q, "id", QUESTIONS_FILE))
+        .map(|q| text(q, "id", &questions_file))
         .collect::<Result<Vec<_>, _>>()?;
-    let keys = items(&keys, "keys", KEYS_FILE)?
+    let keys = items(&keys, "keys", &keys_file)?
         .iter()
         .map(read_key)
         .collect::<Result<Vec<_>, _>>()?;
@@ -226,13 +355,13 @@ struct Calendar {
     until: Date,
 }
 
-fn load_calendar(root: &PyPath) -> Result<Calendar, String> {
-    let payload = read_json(root, CALENDAR_FILE)?;
-    let closed = items(&payload, "non_business_days", CALENDAR_FILE)?
+fn load_calendar(root: &PyPath, file: &str) -> Result<Calendar, String> {
+    let payload = read_json(root, file)?;
+    let closed = items(&payload, "non_business_days", file)?
         .iter()
-        .map(|d| date(text(d, "date", CALENDAR_FILE)?, CALENDAR_FILE))
+        .map(|d| date(text(d, "date", file)?, file))
         .collect::<Result<_, _>>()?;
-    let bound = |field| date(text(&payload, field, CALENDAR_FILE)?, CALENDAR_FILE);
+    let bound = |field| date(text(&payload, field, file)?, file);
     Ok(Calendar {
         closed,
         from: bound("complete_from")?,
@@ -262,12 +391,172 @@ fn myr(principal: &Q, rate: &Q, years: u32) -> Option<Q> {
     principal.mul(rate).div(&one.add(&one.div(&factor)?, -1))
 }
 
+fn ratio(n: u32, d: u32) -> Q {
+    Q::new(BigInt::from(n), BigInt::from(d))
+}
+
+/// `q` rounded to `places`, a half rounded up, as Schedule 1 and the levy
+/// round amounts that are never negative.
+fn rounded(q: &Q, places: u32) -> Option<Q> {
+    amount(&gate::decimal(q, places))
+}
+
+/// Schedule 1's `x`: the period's earnings as weekly earnings in whole dollars
+/// plus 99 cents. Monthly earnings ending in 33 cents gain a cent first.
+fn schedule_x(period: Period, earnings: &Q) -> Q {
+    let weekly = match period {
+        Period::Weekly => earnings.clone(),
+        Period::Fortnightly => earnings.mul(&ratio(1, 2)),
+        Period::Monthly => {
+            let cents = earnings.add(&earnings.floor(), -1).mul(&ratio(100, 1));
+            let thirds = if cents.equals(&ratio(33, 1)) {
+                earnings.add(&ratio(1, 100), 1)
+            } else {
+                earnings.clone()
+            };
+            thirds.mul(&ratio(3, 13))
+        }
+    };
+    weekly.floor().add(&ratio(99, 100), 1)
+}
+
+/// A rounded weekly amount as the period's amount: doubled for a fortnight,
+/// and for a month multiplied by 13, divided by 3 and rounded to the dollar.
+fn per_period(period: Period, weekly: &Q) -> Option<Q> {
+    match period {
+        Period::Weekly => Some(weekly.clone()),
+        Period::Fortnightly => Some(weekly.mul(&ratio(2, 1))),
+        Period::Monthly => rounded(&weekly.mul(&ratio(13, 3)), 0),
+    }
+}
+
+fn table<'a>(schedule: &'a Json, field: &str, entry: &str, at: &str) -> Result<&'a Json, String> {
+    schedule
+        .get(field)
+        .and_then(|t| t.get(entry))
+        .ok_or_else(|| format!("{at}: Schedule 1 has no {field} for {entry}"))
+}
+
+/// `y = ax − b` from the first row of the scale that `x` is below, rounded to
+/// the dollar. A row with no coefficients withholds nothing.
+fn weekly_withholding(schedule: &Json, scale: &str, x: &Q, at: &str) -> Result<Q, String> {
+    let Json::Array(rows) = table(schedule, "scales", scale, at)? else {
+        return Err(format!("{at}: scale {scale} must be a list"));
+    };
+    for row in rows {
+        let below = match row.get("below") {
+            Some(Json::Null) => None,
+            _ => Some(decimal_field(row, "below", at)?),
+        };
+        if below.is_some_and(|b| !x.less_than(&b)) {
+            continue;
+        }
+        if matches!(row.get("a"), Some(Json::Null)) {
+            return Ok(ratio(0, 1));
+        }
+        let (a, b) = (decimal_field(row, "a", at)?, decimal_field(row, "b", at)?);
+        return rounded(&a.mul(x).add(&b, -1), 0).ok_or(format!("{at}: y is negative"));
+    }
+    Err(format!(
+        "{at}: no row of scale {scale} covers {}",
+        gate::decimal(x, 2)
+    ))
+}
+
+/// Schedule 1's weekly Medicare levy adjustment (WLA) for `x`, from the
+/// scale's weekly family threshold (WFT) and shading out point (SOP).
+fn weekly_levy_adjustment(
+    schedule: &Json,
+    scale: &str,
+    x: &Q,
+    children: u32,
+    at: &str,
+) -> Result<Q, String> {
+    let parameters = table(schedule, "medicare_levy_parameters", scale, at)?;
+    let get = |field| decimal_field(parameters, field, at);
+    if x.less_than(&get("weekly_earnings_threshold")?) {
+        return Ok(ratio(0, 1));
+    }
+    let family =
+        get("family_threshold")?.add(&get("additional_child")?.mul(&ratio(children, 1)), 1);
+    let fail = || format!("{at}: the levy adjustment cannot be worked");
+    let wft = family
+        .div(&get("weekly_family_threshold_divisor")?)
+        .and_then(|w| rounded(&w, 2))
+        .ok_or_else(fail)?;
+    let (multiplier, divisor, levy) = (
+        get("shading_out_point_multiplier")?,
+        get("shading_out_point_divisor")?,
+        get("medicare_levy")?,
+    );
+    let sop = wft.mul(&multiplier).div(&divisor).ok_or_else(fail)?.floor();
+    let wla = if !x.less_than(&sop) {
+        ratio(0, 1)
+    } else if x.less_than(&get("weekly_earnings_shade_in_threshold")?) {
+        x.add(&get("weekly_levy_adjustment_factor")?, -1)
+            .mul(&multiplier)
+    } else if x.less_than(&wft) {
+        x.mul(&levy)
+    } else {
+        wft.mul(&levy).add(&x.add(&wft, -1).mul(&divisor), -1)
+    };
+    rounded(&wla, 0).ok_or_else(fail)
+}
+
+/// The levy on `income`: none up to the threshold amount (s 7(1)), at most 10%
+/// of the excess up to the phase-in limit (s 7(2)), otherwise 2% (s 6(1)),
+/// then reduced under s 8 for a married person.
+fn medicare_levy(income: &Q, threshold: &Q, phase_in: &Q, family: Option<&Family>) -> Option<Q> {
+    let two_percent = ratio(2, 100);
+    let full = income.mul(&two_percent);
+    let shaded = income.add(threshold, -1).mul(&ratio(1, 10));
+    let levy = if !threshold.less_than(income) {
+        ratio(0, 1)
+    } else if !phase_in.less_than(income) && shaded.less_than(&full) {
+        shaded
+    } else {
+        full
+    };
+    let Some(family) = family else {
+        return Some(levy);
+    };
+    let family_income = income.add(&family.spouse_income, 1);
+    if !family.threshold.less_than(&family_income) {
+        return Some(ratio(0, 1));
+    }
+    let excess = family_income.add(&family.threshold, -1);
+    let mut reduction = family
+        .threshold
+        .mul(&two_percent)
+        .add(&excess.mul(&ratio(8, 100)), -1);
+    if !ratio(0, 1).less_than(&reduction) {
+        return Some(levy);
+    }
+    // s 8(3): a spouse who would be liable takes a share of the reduction.
+    if family.spouse_threshold.less_than(&family.spouse_income) {
+        reduction = reduction.mul(income).div(&family_income)?;
+    }
+    Some(if reduction.less_than(&levy) {
+        levy.add(&reduction, -1)
+    } else {
+        ratio(0, 1)
+    })
+}
+
+/// The published tables a topic's rules read, loaded only when a rule needs one.
+struct Tables {
+    calendar: Option<Calendar>,
+    schedule: Option<Json>,
+}
+
 /// The value a key's rule gives, or `None` for a key not recomputed here.
-fn reproduce(key: &Key, calendar: &Calendar) -> Result<Option<String>, String> {
+fn reproduce(key: &Key, tables: &Tables) -> Result<Option<String>, String> {
     let fail = || format!("{}: the rule cannot be worked", key.id);
+    let schedule = || tables.schedule.as_ref().ok_or_else(fail);
     Ok(match &key.rule {
         Rule::Source => None,
         Rule::BusinessDays(terms) => {
+            let calendar = tables.calendar.as_ref().ok_or_else(fail)?;
             let mut latest = None;
             for (from, days) in terms {
                 if *from < calendar.from {
@@ -305,6 +594,57 @@ fn reproduce(key: &Key, calendar: &Calendar) -> Result<Option<String>, String> {
             let required = gate::decimal(&myr(principal, rate, *years).ok_or_else(fail)?, 2);
             let required = amount(&required).ok_or_else(fail)?;
             Some(gate::decimal(&required.add(paid, -1), 2))
+        }
+        Rule::Withholding {
+            scale,
+            period,
+            earnings,
+            offsets,
+            children,
+        } => {
+            let (schedule, x) = (schedule()?, schedule_x(*period, earnings));
+            let gross = weekly_withholding(schedule, scale, &x, &key.id)?;
+            let mut net = per_period(*period, &gross).ok_or_else(fail)?;
+            if let Some(offsets) = offsets {
+                let rate = table(schedule, "offset_rates", period.name(), &key.id)?;
+                let rate = rate.as_str().and_then(amount).ok_or_else(fail)?;
+                net = net.add(&rounded(&offsets.mul(&rate), 0).ok_or_else(fail)?, -1);
+            }
+            if let Some(children) = children {
+                let wla = weekly_levy_adjustment(schedule, scale, &x, *children, &key.id)?;
+                net = net.add(&per_period(*period, &wla).ok_or_else(fail)?, -1);
+            }
+            if net.less_than(&ratio(0, 1)) {
+                return Err(fail());
+            }
+            Some(gate::decimal(&net, 2))
+        }
+        Rule::LevyAdjustment {
+            scale,
+            period,
+            earnings,
+            children,
+        } => {
+            let x = schedule_x(*period, earnings);
+            let wla = weekly_levy_adjustment(schedule()?, scale, &x, *children, &key.id)?;
+            Some(gate::decimal(
+                &per_period(*period, &wla).ok_or_else(fail)?,
+                2,
+            ))
+        }
+        Rule::MedicareLevy {
+            taxable_income,
+            threshold_amount,
+            phase_in_limit,
+            family,
+        } => {
+            let levy = medicare_levy(
+                taxable_income,
+                threshold_amount,
+                phase_in_limit,
+                family.as_ref(),
+            );
+            Some(gate::decimal(&levy.ok_or_else(fail)?, 2))
         }
     })
 }
@@ -380,18 +720,35 @@ fn engine_value(check: &Json, at: &str) -> Result<String, String> {
     }
 }
 
-/// Recompute what can be recomputed and compare every key with the value taken
-/// from the recorded engine output. A duplicate record stops the check.
-pub fn check_keys(root: &PyPath) -> Result<KeyReport, String> {
-    let keys = load_keys(root)?;
-    let calendar = load_calendar(root)?;
-    let engine = read_json(root, ENGINE_FILE)?;
-    let checks = items(&engine, "checks", ENGINE_FILE)?;
+/// Recompute what can be recomputed and, for a topic with engine records,
+/// compare every key with the value taken from the recorded engine output. A
+/// duplicate record stops the check.
+pub fn check_keys(root: &PyPath, topic: &str) -> Result<KeyReport, String> {
+    let keys = load_keys(root, topic)?;
+    let topic = Topic::find(topic)?;
+    let needs = |rule: fn(&Rule) -> bool| keys.iter().any(|k| rule(&k.rule));
+    let tables = Tables {
+        calendar: needs(|r| matches!(r, Rule::BusinessDays(_)))
+            .then(|| load_calendar(root, &topic.file("business-days.json")))
+            .transpose()?,
+        schedule: needs(|r| matches!(r, Rule::Withholding { .. } | Rule::LevyAdjustment { .. }))
+            .then(|| read_json(root, &topic.file("schedule-1.json")))
+            .transpose()?,
+    };
+    let engine_file = topic.file("engine-check.json");
+    let engine = topic
+        .engine
+        .then(|| read_json(root, &engine_file))
+        .transpose()?;
+    let checks = match &engine {
+        Some(engine) => items(engine, "checks", &engine_file)?,
+        None => &[],
+    };
     let mut ids = HashSet::new();
     for check in checks {
-        let id = text(check, "id", ENGINE_FILE)?;
+        let id = text(check, "id", &engine_file)?;
         if !ids.insert(id) {
-            return Err(format!("{ENGINE_FILE}: {id} is recorded twice"));
+            return Err(format!("{engine_file}: {id} is recorded twice"));
         }
     }
     let mut report = KeyReport {
@@ -401,7 +758,7 @@ pub fn check_keys(root: &PyPath) -> Result<KeyReport, String> {
         problems: Vec::new(),
     };
     for key in &keys {
-        match reproduce(key, &calendar)? {
+        match reproduce(key, &tables)? {
             None => report.not_recomputed += 1,
             Some(value) => {
                 report.computed += 1;
@@ -413,6 +770,9 @@ pub fn check_keys(root: &PyPath) -> Result<KeyReport, String> {
                 }
             }
         }
+        if !topic.engine {
+            continue;
+        }
         let recorded = checks
             .iter()
             .find(|c| c.get("id").and_then(Json::as_str) == Some(key.id.as_str()));
@@ -422,7 +782,7 @@ pub fn check_keys(root: &PyPath) -> Result<KeyReport, String> {
                 .push(format!("{}: no engine output is recorded", key.id));
             continue;
         };
-        let at = format!("{ENGINE_FILE} {}", key.id);
+        let at = format!("{engine_file} {}", key.id);
         let value = engine_value(check, &at)?;
         let stated = text(check, "value", &at)?;
         if !matches(key.kind, stated, &value) {
@@ -599,13 +959,16 @@ fn tally(scored: &[Scored]) -> Vec<(&'static str, usize)> {
 
 #[derive(clap::Args)]
 pub struct Args {
+    /// The benchmark folder under `benchmarks/`: payday-div7a or payg-medicare.
+    #[arg(long, global = true, default_value = DEFAULT_TOPIC)]
+    topic: String,
     #[command(subcommand)]
     command: Command,
 }
 
 #[derive(clap::Subcommand)]
 enum Command {
-    /// Recompute the keys and compare them with the recorded engine output.
+    /// Recompute the keys and compare them with any recorded engine output.
     Keys,
     /// Mark a JSON answers file on value and authority.
     Score {
@@ -617,25 +980,32 @@ enum Command {
     },
 }
 
-fn run_keys(root: &PyPath) -> Result<u8, String> {
-    let report = check_keys(root)?;
+fn run_keys(root: &PyPath, topic: &str) -> Result<u8, String> {
+    let report = check_keys(root, topic)?;
     for problem in &report.problems {
         errln!("bench keys: {problem}");
     }
     if !report.problems.is_empty() {
         return Ok(EXIT_MISMATCH);
     }
+    let engine = if Topic::find(topic)?.engine {
+        format!(
+            ", {} agree with the recorded engine output",
+            report.engine_checked
+        )
+    } else {
+        String::new()
+    };
     outln!(
-        "bench keys: {} recomputed, {} source-derived keys not independently recomputed, {} agree with the recorded engine output",
+        "bench keys: {} recomputed, {} source-derived keys not independently recomputed{engine}",
         report.computed,
         report.not_recomputed,
-        report.engine_checked
     );
     Ok(EXIT_OK)
 }
 
-fn run_score(root: &PyPath, path: &str, json: bool) -> Result<u8, String> {
-    let keys = load_keys(root)?;
+fn run_score(root: &PyPath, topic: &str, path: &str, json: bool) -> Result<u8, String> {
+    let keys = load_keys(root, topic)?;
     let body = builder::read_text(&PyPath::new(path)).map_err(|e| format!("answers file: {e}"))?;
     let answers = pyjson::loads(&body).map_err(|e| format!("answers file: {e}"))?;
     let scored = score(&keys, &answers)?;
@@ -682,8 +1052,8 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
     let result = crate::root_for(root)
         .map_err(|e| e.to_string())
         .and_then(|root| match args.command {
-            Command::Keys => run_keys(&root),
-            Command::Score { answers, json } => run_score(&root, &answers, json),
+            Command::Keys => run_keys(&root, &args.topic),
+            Command::Score { answers, json } => run_score(&root, &args.topic, &answers, json),
         });
     result.unwrap_or_else(|e| {
         errln!("bench: {e}");
