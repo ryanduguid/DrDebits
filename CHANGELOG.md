@@ -46,6 +46,32 @@ Changes released in `0.7.0`, merged since `v0.6.0` (12 November 2026). Sources w
 - Between releases, `main` was labelled the unreleased 0.7.0 candidate in its metadata, header, README, `llms.txt`, MAINTENANCE.md and CITATION.cff, where it had said 0.6.0 and current whilst differing from the v0.6.0 release (#276). This release publishes it: its 7 new behaviour tests and workpaper rule make it Minor under MAINTENANCE.md.
 - A later merge to `main` no longer cancels an earlier merge's `Verify` and CodeQL runs, so each merged commit is tested; a pull request's superseded run is still cancelled (#271).
 
+### Known issues
+
+A `gate` pass does not show the arithmetic is right. Reperform every figure, as the guide requires. These wrong sums exit 0:
+
+- An operator or equals sign the gate does not know is not read, so `5 · 3 = 16`, `5 ∗ 3 = 16`, `10 ∕ 2 = 4`, `5 ＋ 3 = 9`, `2 + 3 ＝ 6` and `2 + 3 ≈ 7` pass unchecked.
+- A hyphen or dash straight after a word is read as joining the word, not as a minus sign, so `AUD-150 + 200 = 350` and `Net–150 + 200 = 350` are checked as `150 + 200 = 350` and pass.
+- Text after a result is ignored, so `$100 + $50 = $150 k` passes, as do results written `$150 000`, `5-1`, `5^2` or `$150-ish`, and `2 + 3 = 5 -1 = 3`; `1 000 + 1 = 1 002` is read as `000 + 1 = 1`.
+- A minus spaced on one side only, a dash after a colon, or words between `=` and the result, as in `$1,000 -200 = $900`, `$1,000- 200 = $900`, `Net: – 150 + 200 = 350`, `$100 + $50 = in all, $160` and `... per quarter, x4 = $13,000`, pass.
+
+Builder and repository:
+
+- The builder parses `behaviour-tests.yaml` twice on every run, `gate` included. It is slower, not wrong.
+- The secret and client-identifier scan misses camelCase keys such as `clientTfn`, a label in a CSV header row, 'Acct no' and 'A.B.N.', and its TFN allowlist entry never matches.
+- No test feeds the custom scan rules a synthetic positive, so nothing shows they fire.
+- On a pull request the secrets job scans only the branch, so commits merged into it are scanned after they reach `main`.
+- CI runs no `cargo audit` on the builder's lockfile.
+- CI lints workflows with actionlint but not zizmor, and CONTRIBUTING.md says the Windows job runs tests without coverage, though it runs the coverage floor too.
+- The repository's About link points at the old name, `llm-tax-guardrails`, which redirects.
+
+Limitations:
+
+- No confirmed model evaluation covers this release, and no run of the same model without the guide shows its effect.
+- `gate --facts` notes an amount equal to a supplied fact; it does not show the amount was derived from it.
+- The fee-quote cases (APES 110 section 330) and the reasonable-care cases are not yet confirmed against their source text.
+- The source watch omits the ISM agent controls, ASD's agentic AI guidance, APESB's pending APES 215 and 225 AI guidance and the IESBA technology and AI material, and the GS 55 concordance does not map the TPB's AI questions and answers.
+
 ## [v0.6.0] - 2026-11-12
 
 Changes released in `0.6.0`, merged since `v0.5.0` (31 October 2026). Sources were not rechecked: they stay as checked on 14 October 2026.
