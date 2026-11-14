@@ -987,7 +987,10 @@ fn compare_names_the_file_it_refuses() {
         path.to_str().unwrap().to_string()
     };
     let broken = write("broken.json", "{\"answers\": ");
-    let unknown = write("unknown.json", r#"{"answers": {"XYZ-001": {"value": "1"}}}"#);
+    let unknown = write(
+        "unknown.json",
+        r#"{"answers": {"XYZ-001": {"value": "1"}}}"#,
+    );
     let empty = write("empty.json", r#"{"answers": {}}"#);
     for (a, b, expected) in [
         (

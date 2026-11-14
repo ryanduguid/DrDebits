@@ -393,14 +393,25 @@ fn compare_pairs_the_named_topics_questions() {
         std::fs::write(&path, body).unwrap();
         path.to_str().unwrap().to_string()
     };
-    let right = file("right.json", r#"{"answers": {"PAYG-001": {"value": "27"}}}"#);
-    let wrong = file("wrong.json", r#"{"answers": {"PAYG-001": {"value": "26"}}}"#);
-    let payday = file("payday.json", r#"{"answers": {"PDS-001": {"value": "2026-08-07"}}}"#);
+    let right = file(
+        "right.json",
+        r#"{"answers": {"PAYG-001": {"value": "27"}}}"#,
+    );
+    let wrong = file(
+        "wrong.json",
+        r#"{"answers": {"PAYG-001": {"value": "26"}}}"#,
+    );
+    let payday = file(
+        "payday.json",
+        r#"{"answers": {"PDS-001": {"value": "2026-08-07"}}}"#,
+    );
     let root = repo_root();
 
     let paired = run_in(
         &root,
-        &["bench", "compare", "--topic", TOPIC, "--a", &right, "--b", &wrong],
+        &[
+            "bench", "compare", "--topic", TOPIC, "--a", &right, "--b", &wrong,
+        ],
         true,
     );
     assert_eq!(paired.code, 0, "{}", paired.stderr);
@@ -419,7 +430,9 @@ fn compare_pairs_the_named_topics_questions() {
 
     let refused = run_in(
         &root,
-        &["bench", "--topic", TOPIC, "compare", "--a", &right, "--b", &payday],
+        &[
+            "bench", "--topic", TOPIC, "compare", "--a", &right, "--b", &payday,
+        ],
         true,
     );
     assert_eq!(refused.code, 2);
