@@ -280,6 +280,13 @@ fn a_rule_that_cannot_be_worked_stops_the_check() {
             "\"offsets\": \"136500\"",
             "PAYG-011: the rule cannot be worked",
         ),
+        // A row whose b exceeds ax gives a negative y.
+        (
+            "schedule-1.json",
+            "\"b\": \"108.2135\"",
+            "\"b\": \"999\"",
+            "PAYG-001: y is negative",
+        ),
         (
             "keys.json",
             "\"period\": \"monthly\"",

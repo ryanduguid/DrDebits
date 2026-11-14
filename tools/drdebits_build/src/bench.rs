@@ -455,7 +455,9 @@ fn weekly_withholding(schedule: &Json, scale: &str, x: &Q, at: &str) -> Result<Q
             return Ok(ratio(0, 1));
         }
         let (a, b) = (decimal_field(row, "a", at)?, decimal_field(row, "b", at)?);
-        return rounded(&a.mul(x).add(&b, -1), 0).ok_or(format!("{at}: y is negative"));
+        return rounded(&a.mul(x).add(&b, -1), 0)
+            .filter(|y| !y.less_than(&ratio(0, 1)))
+            .ok_or(format!("{at}: y is negative"));
     }
     Err(format!(
         "{at}: no row of scale {scale} covers {}",
