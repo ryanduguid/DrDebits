@@ -728,6 +728,10 @@ fn a_calculation_the_gate_cannot_read_whole_blocks() {
         ("Net–150 + 200 = 350", true),
         ("Net: – 150 + 200 = 350", true),
         ("Net: - 150 + 200 = 350", true),
+        // A leading dash other than a list marker's hyphen.
+        ("– 150 + 200 = 350", true),
+        ("– 150 + 200 = 50", true),
+        ("- 150 + 200 = 350", false),
         // After a word and a space, a dash separates.
         ("Net — 150 + 200 = 350", false),
         // A digit group, a sign or a scale word after the result.
@@ -743,6 +747,8 @@ fn a_calculation_the_gate_cannot_read_whole_blocks() {
         ("$1,000 -200 = $900", true),
         ("$1,000- 200 = $900", true),
         ("$12,000/4 = $3,000 per quarter, x4 = $13,000", true),
+        ("$1,000 -200 = $800", true),
+        ("$3,000 per quarter, x4 = $12,000", true),
         // A result after a comma.
         ("$100 + $50 = in all, $160", true),
         // A read calculation after a word is still this `=`'s result.

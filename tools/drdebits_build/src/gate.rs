@@ -621,13 +621,11 @@ const UNREAD_SUM: &str = "could not read: an amount and an operator stand before
 pub fn calculations(text: &str) -> Vec<Calculation> {
     let mut out = Vec::new();
     // Each dash reads as a hyphen and each whitespace character as a space,
-    // so `5 – 3` is `5 - 3`.
+    // so `5 – 3` is `5 - 3`, once list markers are gone, so a leading `–`,
+    // as in `– 150 + 200 = 350`, is a dash before the sum, not a bullet.
     let lines = py::splitlines(text).into_iter().map(|line| {
-        normalise(
-            &DASH
-                .replace_all(line, "-")
-                .replace(char::is_whitespace, " "),
-        )
+        DASH.replace_all(&normalise(line), "-")
+            .replace(char::is_whitespace, " ")
     });
     for line in lines {
         let read = calculations_on(&line, &mut out);

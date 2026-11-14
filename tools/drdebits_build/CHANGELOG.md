@@ -95,7 +95,7 @@ suite replays it on every platform.
   belong to it blocks it: a hyphen joined to a word, or a dash after `:`,
   `=`, `(` or the start of the line, before the first amount, as in
   `AUD-150 + 200 = 50`, `Quarterly-$12,000/4 = $3,000` and
-  `Net: – 150 + 200 = 50`, a number and a space before a first amount
+  `Net: – 150 + 200 = 50` (a list marker's `- ` aside), a number and a space before a first amount
   without `$`, as in `1 000 + 1 = 1 001`, and, after the result, a space and
   a digit, a minus and a digit, a scale word or such a symbol, as in
   `$150 000`, `5-1`, `5 -1`, `$150 k`, `$150 million` and `5^2`. A dash and
