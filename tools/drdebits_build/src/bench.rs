@@ -597,6 +597,95 @@ fn tally(scored: &[Scored]) -> Vec<(&'static str, usize)> {
     ]
 }
 
+/// What `bench compare` counts for each answer, with the scorer's meanings:
+/// authority is right only on an answered question, as in `tally`.
+type Measure = (&'static str, fn(&Scored) -> bool);
+const MEASURES: [Measure; 5] = [
+    ("value correct", |s| s.value == Value::Correct),
+    ("value wrong", |s| s.value == Value::Wrong),
+    ("unanswered", |s| s.value == Value::Unanswered),
+    ("authority right", |s| {
+        s.value != Value::Unanswered && s.cited == Cited::Right
+    }),
+    ("correct value and authority", |s| {
+        s.value == Value::Correct && s.cited == Cited::Right
+    }),
+];
+
+/// One measure compared between conditions a and b. Each question is one
+/// pair: the number of repeats in which a's answer has the measure against
+/// the number in which b's does.
+#[derive(Debug, PartialEq)]
+pub struct Paired {
+    pub measure: &'static str,
+    pub a_total: usize,
+    pub b_total: usize,
+    pub a_higher: usize,
+    pub b_higher: usize,
+    pub ties: usize,
+    /// The exact two-sided sign test on the untied questions, to 4 places.
+    pub p: String,
+}
+
+/// The exact two-sided sign test for `a` pairs one way and `b` the other,
+/// ties left out: twice the chance that `a + b` fair coin tosses split at
+/// least as unevenly, and never more than 1. With no untied pair it is 1.
+pub fn sign_test(a: usize, b: usize) -> String {
+    let n = a + b;
+    let choose = |k: usize| {
+        (0..k).fold(BigInt::from(1), |c, i| {
+            c * BigInt::from(n - i) / BigInt::from(i + 1)
+        })
+    };
+    let twice_tail: BigInt = (0..=a.min(b)).map(choose).sum::<BigInt>() * 2;
+    let outcomes = BigInt::from(1) << n;
+    let p = Q::new(twice_tail.clone().min(outcomes.clone()), outcomes);
+    gate::decimal(&p, 4)
+}
+
+/// Score every repeat of 2 conditions and pair them question by question.
+/// Refuses a condition with no answers file, and conditions with different
+/// numbers of repeats, which cannot be paired.
+pub fn compare(keys: &[Key], a: &[Json], b: &[Json]) -> Result<Vec<Paired>, String> {
+    if a.is_empty() || b.is_empty() {
+        return Err("each condition needs at least one answers file".into());
+    }
+    if a.len() != b.len() {
+        return Err(format!(
+            "the conditions are unpaired: a has {} repeats and b has {}",
+            a.len(),
+            b.len()
+        ));
+    }
+    let scored = |files: &[Json]| {
+        files
+            .iter()
+            .map(|f| score(keys, f))
+            .collect::<Result<Vec<_>, _>>()
+    };
+    let (a, b) = (scored(a)?, scored(b)?);
+    Ok(MEASURES
+        .iter()
+        .map(|&(measure, has)| {
+            let count = |runs: &[Vec<Scored>], q: usize| runs.iter().filter(|r| has(&r[q])).count();
+            let pairs: Vec<(usize, usize)> = (0..keys.len())
+                .map(|q| (count(&a, q), count(&b, q)))
+                .collect();
+            let a_higher = pairs.iter().filter(|(x, y)| x > y).count();
+            let b_higher = pairs.iter().filter(|(x, y)| x < y).count();
+            Paired {
+                measure,
+                a_total: pairs.iter().map(|p| p.0).sum(),
+                b_total: pairs.iter().map(|p| p.1).sum(),
+                a_higher,
+                b_higher,
+                ties: pairs.len() - a_higher - b_higher,
+                p: sign_test(a_higher, b_higher),
+            }
+        })
+        .collect())
+}
+
 #[derive(clap::Args)]
 pub struct Args {
     #[command(subcommand)]
@@ -614,6 +703,16 @@ enum Command {
         /// Print each question's marks and the totals as JSON.
         #[arg(long)]
         json: bool,
+    },
+    /// Compare 2 conditions question by question across equal repeats, with
+    /// an exact two-sided sign test on each measure.
+    Compare {
+        /// Condition a's answers files, one per repeat.
+        #[arg(long = "a", num_args = 1.., required = true)]
+        a: Vec<String>,
+        /// Condition b's answers files, one per repeat, as many as a's.
+        #[arg(long = "b", num_args = 1.., required = true)]
+        b: Vec<String>,
     },
 }
 
@@ -634,11 +733,14 @@ fn run_keys(root: &PyPath) -> Result<u8, String> {
     Ok(EXIT_OK)
 }
 
+fn read_answers(path: &str) -> Result<Json, String> {
+    let body = builder::read_text(&PyPath::new(path)).map_err(|e| format!("answers file: {e}"))?;
+    pyjson::loads(&body).map_err(|e| format!("answers file: {e}"))
+}
+
 fn run_score(root: &PyPath, path: &str, json: bool) -> Result<u8, String> {
     let keys = load_keys(root)?;
-    let body = builder::read_text(&PyPath::new(path)).map_err(|e| format!("answers file: {e}"))?;
-    let answers = pyjson::loads(&body).map_err(|e| format!("answers file: {e}"))?;
-    let scored = score(&keys, &answers)?;
+    let scored = score(&keys, &read_answers(path)?)?;
     let totals = tally(&scored);
     if json {
         let int = |n: usize| Json::Int(BigInt::from(n));
@@ -678,12 +780,45 @@ fn run_score(root: &PyPath, path: &str, json: bool) -> Result<u8, String> {
     Ok(EXIT_OK)
 }
 
+fn run_compare(root: &PyPath, a: &[String], b: &[String]) -> Result<u8, String> {
+    let keys = load_keys(root)?;
+    let read = |paths: &[String]| {
+        paths
+            .iter()
+            .map(|p| read_answers(p))
+            .collect::<Result<Vec<_>, _>>()
+    };
+    let paired = compare(&keys, &read(a)?, &read(b)?)?;
+    let repeats = a.len();
+    let mean = |total: usize| gate::decimal(&Q::new(BigInt::from(total), BigInt::from(repeats)), 2);
+    outln!(
+        "bench compare: {} questions paired by question; answers files per condition: {repeats}",
+        keys.len()
+    );
+    for m in &paired {
+        outln!(
+            "{}: a {} (mean {}), b {} (mean {}); a higher on {}, b higher on {}, ties {}; two-sided sign test p = {}",
+            m.measure,
+            m.a_total,
+            mean(m.a_total),
+            m.b_total,
+            mean(m.b_total),
+            m.a_higher,
+            m.b_higher,
+            m.ties,
+            m.p
+        );
+    }
+    Ok(EXIT_OK)
+}
+
 pub fn main(root: Option<&str>, args: Args) -> u8 {
     let result = crate::root_for(root)
         .map_err(|e| e.to_string())
         .and_then(|root| match args.command {
             Command::Keys => run_keys(&root),
             Command::Score { answers, json } => run_score(&root, &answers, json),
+            Command::Compare { a, b } => run_compare(&root, &a, &b),
         });
     result.unwrap_or_else(|e| {
         errln!("bench: {e}");

@@ -11,6 +11,7 @@ release.
 ### Added
 
 - Model results for the Payday Super and Division 7A benchmark, in `benchmarks/payday-div7a/results-2026-11-14.md`: Opus 5.5 and 4 Codex models, each with and without the guide, 3 repeats, scored offline. Every Codex call with the guide abstained on all 31 questions.
+- `bench compare --a <files> --b <files>`: pairs 2 conditions question by question across equal repeats and prints, for each measure, both totals and means, the questions each side leads on, the ties and an exact two-sided sign test. It refuses a side with no file and unequal repeats.
 
 ### Fixed
 
