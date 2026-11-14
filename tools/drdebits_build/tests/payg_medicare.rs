@@ -81,7 +81,8 @@ fn every_key_cites_a_source_row_read_on_the_day() {
 }
 
 /// A wrong coefficient, a wrong key and a wrong threshold are each caught by
-/// the key whose row uses them, and only by that key.
+/// the keys whose rows use them, and only by those keys. PAYG-001 and PAYG-010
+/// (whose x is 538.99) share the scale 2 row below $673.
 #[test]
 fn a_changed_row_moves_only_the_keys_that_use_it() {
     let tree = copy();
@@ -93,7 +94,10 @@ fn a_changed_row_moves_only_the_keys_that_use_it() {
     );
     assert_eq!(
         problems(tree.path()),
-        ["PAYG-001: the key says 27.00 and the rule gives 26.00"]
+        [
+            "PAYG-001: the key says 27.00 and the rule gives 26.00",
+            "PAYG-010: the key says 117.00 and the rule gives 113.00",
+        ]
     );
 
     let tree = copy();
