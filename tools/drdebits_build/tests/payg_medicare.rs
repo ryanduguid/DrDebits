@@ -191,7 +191,8 @@ fn other_published_sample_rows_reproduce_through_every_branch() {
 /// The levy's branches under the Act: no levy at the threshold amount
 /// (s 7(1)); no levy where family income does not exceed the family income
 /// threshold (s 8(1)); no reduction where the s 8(2) formula is negative; and
-/// a reduction shared with a liable spouse (s 8(3)).
+/// a liable spouse refused, because ss 8(3) and 8(4) need facts the key does
+/// not hold.
 #[test]
 fn the_levy_follows_each_limb_of_ss_7_and_8() {
     let tree = copy();
@@ -219,14 +220,15 @@ fn the_levy_follows_each_limb_of_ss_7_and_8() {
         ["ML-003: the key says 92.90 and the rule gives 0.00"]
     );
 
-    // Family income 99,700: 2% of 61,623 less 0.08 of 38,077 is negative, so
-    // the s 7(2) levy stands: 10% of (49,700 − 44,268) = 543.20.
+    // Family income 89,700, the spouse's 40,000 still within 44,268: 2% of
+    // 61,623 less 0.08 of 28,077 is negative, so the s 7(2) levy stands:
+    // 10% of (49,700 − 44,268) = 543.20.
     let tree = copy();
     edit(
         tree.path(),
         "keys.json",
         "\"taxable_income\": \"21700\"",
-        "\"taxable_income\": \"50000\"",
+        "\"taxable_income\": \"40000\"",
     );
     assert_eq!(
         problems(tree.path()),
@@ -234,11 +236,12 @@ fn the_levy_follows_each_limb_of_ss_7_and_8() {
     );
 
     // Taxable income 30,000 and a spouse's 29,000, both over 28,011, against a
-    // family income threshold of 47,238. The s 7(2) levy is 10% of 1,989 =
-    // 198.90 (below 2% of 30,000 = 600). The s 8(2) reduction is
-    // 2% × 47,238 − 0.08 × (59,000 − 47,238) = 944.76 − 940.96 = 3.80, and
-    // s 8(3) keeps his share, 3.80 × 30,000 ÷ 59,000 = 1.9322..., so the levy
-    // is 198.90 − 1.9322... = 196.9678..., or 196.97.
+    // family income threshold of 47,238. The spouse would be liable, so
+    // s 8(3) shares the reduction and s 8(4) can pass the spouse's unused
+    // share back, which needs the spouse's own levy and family income
+    // threshold. The key does not hold them, so the rule refuses the case.
+    // With 28,012 for the spouse, s 8(3) alone would give 156.06 and s 8(4)
+    // takes it to 116.16: working s 8(3) without s 8(4) is wrong.
     let tree = copy();
     for (from, to) in [
         (
@@ -268,9 +271,10 @@ fn the_levy_follows_each_limb_of_ss_7_and_8() {
     ] {
         edit(tree.path(), "keys.json", from, to);
     }
+    let error = bench::check_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert_eq!(
-        problems(tree.path()),
-        ["ML-003: the key says 92.90 and the rule gives 196.97"]
+        error,
+        "ML-003: the spouse would be liable, so ss 8(3) and 8(4) apply, which this rule does not work"
     );
 }
 
@@ -308,6 +312,13 @@ fn a_rule_that_cannot_be_worked_stops_the_check() {
             "\"scale\": \"2\"",
             "\"scale\": \"9\"",
             "Schedule 1 has no scales for 9",
+        ),
+        // Scale 1 (no tax-free threshold) allows no tax offsets.
+        (
+            "keys.json",
+            "\"earnings\": \"721\"",
+            "\"earnings\": \"721\", \"offsets\": \"1000\"",
+            "PAYG-004: Schedule 1 allows tax offsets only on scales 2, 5 and 6",
         ),
     ] {
         let tree = copy();

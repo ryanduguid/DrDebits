@@ -507,8 +507,17 @@ fn weekly_levy_adjustment(
 
 /// The levy on `income`: none up to the threshold amount (s 7(1)), at most 10%
 /// of the excess up to the phase-in limit (s 7(2)), otherwise 2% (s 6(1)),
-/// then reduced under s 8 for a married person.
-fn medicare_levy(income: &Q, threshold: &Q, phase_in: &Q, family: Option<&Family>) -> Option<Q> {
+/// then reduced under s 8(1) and (2) for a married person whose spouse would
+/// not be liable. A liable spouse brings in ss 8(3) and 8(4), which share the
+/// reduction and pass any excess between the spouses using the spouse's own
+/// levy and family income threshold; the key does not record those, so that
+/// case is refused rather than worked in part.
+fn medicare_levy(
+    income: &Q,
+    threshold: &Q,
+    phase_in: &Q,
+    family: Option<&Family>,
+) -> Result<Q, &'static str> {
     let two_percent = ratio(2, 100);
     let full = income.mul(&two_percent);
     let shaded = income.add(threshold, -1).mul(&ratio(1, 10));
@@ -520,25 +529,23 @@ fn medicare_levy(income: &Q, threshold: &Q, phase_in: &Q, family: Option<&Family
         full
     };
     let Some(family) = family else {
-        return Some(levy);
+        return Ok(levy);
     };
     let family_income = income.add(&family.spouse_income, 1);
     if !family.threshold.less_than(&family_income) {
-        return Some(ratio(0, 1));
+        return Ok(ratio(0, 1));
+    }
+    if family.spouse_threshold.less_than(&family.spouse_income) {
+        return Err("the spouse would be liable, so ss 8(3) and 8(4) apply, which this rule does not work");
     }
     let excess = family_income.add(&family.threshold, -1);
-    let mut reduction = family
+    let reduction = family
         .threshold
         .mul(&two_percent)
         .add(&excess.mul(&ratio(8, 100)), -1);
-    if !ratio(0, 1).less_than(&reduction) {
-        return Some(levy);
-    }
-    // s 8(3): a spouse who would be liable takes a share of the reduction.
-    if family.spouse_threshold.less_than(&family.spouse_income) {
-        reduction = reduction.mul(income).div(&family_income)?;
-    }
-    Some(if reduction.less_than(&levy) {
+    Ok(if !ratio(0, 1).less_than(&reduction) {
+        levy
+    } else if reduction.less_than(&levy) {
         levy.add(&reduction, -1)
     } else {
         ratio(0, 1)
@@ -608,6 +615,12 @@ fn reproduce(key: &Key, tables: &Tables) -> Result<Option<String>, String> {
             let gross = weekly_withholding(schedule, scale, &x, &key.id)?;
             let mut net = per_period(*period, &gross).ok_or_else(fail)?;
             if let Some(offsets) = offsets {
+                if !["2", "5", "6"].contains(&scale.as_str()) {
+                    return Err(format!(
+                        "{}: Schedule 1 allows tax offsets only on scales 2, 5 and 6",
+                        key.id
+                    ));
+                }
                 let rate = table(schedule, "offset_rates", period.name(), &key.id)?;
                 let rate = rate.as_str().and_then(amount).ok_or_else(fail)?;
                 net = net.add(&rounded(&offsets.mul(&rate), 0).ok_or_else(fail)?, -1);
@@ -645,8 +658,9 @@ fn reproduce(key: &Key, tables: &Tables) -> Result<Option<String>, String> {
                 threshold_amount,
                 phase_in_limit,
                 family.as_ref(),
-            );
-            Some(gate::decimal(&levy.ok_or_else(fail)?, 2))
+            )
+            .map_err(|why| format!("{}: {why}", key.id))?;
+            Some(gate::decimal(&levy, 2))
         }
     })
 }
@@ -1166,8 +1180,11 @@ fn run_score(root: &PyPath, topic: &str, path: &str, json: bool) -> Result<u8, S
 
 fn run_compare(root: &PyPath, topic: &str, a: &[String], b: &[String]) -> Result<u8, String> {
     let keys = load_keys(root, topic)?;
+    // The same file under 2 spellings, such as `x.json` and `./x.json`, is
+    // still one file; a path that does not resolve fails when it is read.
     let mut seen = HashSet::new();
-    if let Some(twice) = a.iter().chain(b).find(|p| !seen.insert(p.as_str())) {
+    let file = |p: &String| std::fs::canonicalize(p).unwrap_or_else(|_| p.into());
+    if let Some(twice) = a.iter().chain(b).find(|p| !seen.insert(file(p))) {
         return Err(format!(
             "{twice} is given more than once: each answers file is one repeat of one condition"
         ));

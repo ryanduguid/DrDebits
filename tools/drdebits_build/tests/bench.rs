@@ -992,7 +992,16 @@ fn compare_names_the_file_it_refuses() {
         r#"{"answers": {"XYZ-001": {"value": "1"}}}"#,
     );
     let empty = write("empty.json", r#"{"answers": {}}"#);
+    let also_calendar = format!("./{calendar}");
     for (a, b, expected) in [
+        // One file spelt 2 ways is still one file.
+        (
+            vec![calendar.as_str()],
+            vec![also_calendar.as_str()],
+            format!(
+                "bench: {also_calendar} is given more than once: each answers file is one repeat of one condition\n"
+            ),
+        ),
         (
             vec![calendar.as_str(), weekdays.as_str()],
             vec![weekdays.as_str(), calendar.as_str()],
