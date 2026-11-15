@@ -157,8 +157,8 @@ jobs:
           GITLEAKS_CONFIG: .gitleaks.toml
 
   # The upload runs apart from the tests so the OIDC token is never available
-  # while test code runs. It is exempt from verify-gates: a Codecov outage must not
-  # block merges.
+  # while test code runs. It is exempt from verify-gates: main requires
+  # Codecov's own project check, which codecov.yml holds at 100%.
   codecov:
     name: upload coverage to Codecov
     needs: verify
