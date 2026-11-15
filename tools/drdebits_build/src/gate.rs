@@ -363,6 +363,19 @@ impl Q {
     pub(crate) fn equals(&self, o: &Q) -> bool {
         &self.n * &o.d == &o.n * &self.d
     }
+    pub(crate) fn less_than(&self, o: &Q) -> bool {
+        &self.n * &o.d < &o.n * &self.d
+    }
+    /// The largest whole number not above this one.
+    pub(crate) fn floor(&self) -> Q {
+        let whole = &self.n / &self.d;
+        let whole = if &whole * &self.d > self.n {
+            whole - 1
+        } else {
+            whole
+        };
+        Q::new(whole, BigInt::from(1))
+    }
 }
 
 /// A number as written: `$1,100.50`, `10%`, `−3`. Returns its value and the
@@ -1774,5 +1787,16 @@ mod tests {
     fn a_ruling_has_no_subsection_to_strip() {
         let authority = Authority::read("TR 2020/1").unwrap();
         assert_eq!(authority.section(), "TR 2020/1");
+    }
+
+    /// Integer division truncates towards zero, so a negative fraction needs
+    /// the step down that a positive one does not.
+    #[test]
+    fn floor_rounds_down_on_both_sides_of_zero() {
+        let q = |n: i64, d: i64| Q::new(BigInt::from(n), BigInt::from(d));
+        for ((n, d), floor) in [((7, 2), 3), ((-7, 2), -4), ((-6, 2), -3), ((6, 2), 3)] {
+            assert!(q(n, d).floor().equals(&q(floor, 1)), "{n}/{d}");
+        }
+        assert!(q(1, 3).less_than(&q(1, 2)) && !q(1, 2).less_than(&q(1, 2)));
     }
 }
