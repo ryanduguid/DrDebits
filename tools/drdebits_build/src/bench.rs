@@ -536,7 +536,9 @@ fn medicare_levy(
         return Ok(ratio(0, 1));
     }
     if family.spouse_threshold.less_than(&family.spouse_income) {
-        return Err("the spouse would be liable, so ss 8(3) and 8(4) apply, which this rule does not work");
+        return Err(
+            "the spouse would be liable, so ss 8(3) and 8(4) apply, which this rule does not work",
+        );
     }
     let excess = family_income.add(&family.threshold, -1);
     let reduction = family
