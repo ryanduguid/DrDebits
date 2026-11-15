@@ -167,7 +167,8 @@ fn other_published_sample_rows_reproduce_through_every_branch() {
             "\"earnings\": \"706\"",
             "PAYG-014: the key says 19.00 and the rule gives 14.00",
         ),
-        // Weekly adjustment, $1,551, 4 children: 0.00 (at or past the SOP).
+        // Weekly adjustment, $1,551, 4 children: 0.00 (formula (3), just
+        // below the SOP of 1,552).
         (
             "keys.json",
             "\"earnings\": \"1319.21\"",
@@ -188,9 +189,35 @@ fn other_published_sample_rows_reproduce_through_every_branch() {
     }
 }
 
+/// Weekly tax offsets use the weekly rate, and earnings past the shading out
+/// point take no adjustment, where formula (3) would go negative.
+#[test]
+fn weekly_offsets_and_earnings_past_the_shading_out_point() {
+    for (from, to, expected) in [
+        // x = 538.99 on scale 2: 27.00 less 1.9% of 1,000 = 8.00.
+        (
+            "\"earnings\": \"538\"",
+            "\"earnings\": \"538\", \"offsets\": \"1000\"",
+            "PAYG-001: the key says 27.00 and the rule gives 8.00",
+        ),
+        // x = 2,000.99 with 4 children: SOP 1,552, so 0.00; formula (3) would
+        // give 24.84 − 0.08 × 758.87, about −35.87.
+        (
+            "\"earnings\": \"1319.21\"",
+            "\"earnings\": \"2000\"",
+            "PAYG-014: the key says 19.00 and the rule gives 0.00",
+        ),
+    ] {
+        let tree = copy();
+        edit(tree.path(), "keys.json", from, to);
+        assert_eq!(problems(tree.path()), [expected], "{to}");
+    }
+}
+
 /// The levy's branches under the Act: no levy at the threshold amount
 /// (s 7(1)); no levy where family income does not exceed the family income
-/// threshold (s 8(1)); no reduction where the s 8(2) formula is negative; and
+/// threshold (s 8(1)); no reduction where the s 8(2) formula is negative; no
+/// levy where the reduction is at least the levy; and
 /// a liable spouse refused, because ss 8(3) and 8(4) need facts the key does
 /// not hold.
 #[test]
@@ -233,6 +260,20 @@ fn the_levy_follows_each_limb_of_ss_7_and_8() {
     assert_eq!(
         problems(tree.path()),
         ["ML-003: the key says 92.90 and the rule gives 543.20"]
+    );
+
+    // Family income 64,700: 2% of 61,623 less 0.08 of 3,077 is 986.30, more
+    // than the s 7(2) levy of 543.20, so no levy is payable.
+    let tree = copy();
+    edit(
+        tree.path(),
+        "keys.json",
+        "\"taxable_income\": \"21700\"",
+        "\"taxable_income\": \"15000\"",
+    );
+    assert_eq!(
+        problems(tree.path()),
+        ["ML-003: the key says 92.90 and the rule gives 0.00"]
     );
 
     // Taxable income 30,000 and a spouse's 29,000, both over 28,011, against a
