@@ -1,6 +1,6 @@
 # Secret and client-identifier scanning.
 #
-# The default gitleaks rules cover credentials. The client-identifier rules
+# The default betterleaks rules cover credentials. The client-identifier rules
 # below are copied from ryanduguid/australian-accounting-skills, as are those
 # of 5 other ryanduguid repositories: this guide forbids real client data in
 # its own DISCLAIMER, and an example carrying a TFN would breach that without
