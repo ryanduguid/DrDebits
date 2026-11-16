@@ -145,16 +145,54 @@ jobs:
       - name: Check out full history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # gitleaks scans commits, so a shallow checkout would leave every
+          # betterleaks scans commits, so a shallow checkout would leave every
           # earlier commit unscanned.
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Gitleaks
-        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+      - name: Install betterleaks
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: .gitleaks.toml
+          # The release .gitleaks.toml was tested with, and the SHA-256 that
+          # release's checksums.txt gives for its Linux x64 archive.
+          BETTERLEAKS_VERSION: 1.10.1
+          BETTERLEAKS_SHA256: c174b42d7aa60caf58c0c3e555c0e4bed01fe6b0d99a412bce777b5af4ce913e
+        run: |
+          archive="betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --proto '=https' --proto-redir '=https' --fail --silent --show-error --location --retry 3 \
+            --output "${RUNNER_TEMP:?}/$archive" \
+            "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/$archive"
+          echo "${BETTERLEAKS_SHA256}  ${RUNNER_TEMP}/$archive" | sha256sum --check --strict -
+          mkdir "$RUNNER_TEMP/betterleaks"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP/betterleaks" betterleaks
+          echo "$RUNNER_TEMP/betterleaks" >> "$GITHUB_PATH"
+
+      - name: Betterleaks
+        # A push scans the commits it adds, a pull request the commits between
+        # its base and its head, and a scheduled or manual run the full
+        # history. Each uses this revision's own .gitleaks.toml, named outright
+        # because betterleaks does not load a repository's config by itself.
+        # Git shows nothing for a merge of three or more parents, so a push or
+        # pull request holding one fails.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          case "$EVENT_NAME" in
+            push | pull_request)
+              range="${BASE_SHA:?}..${HEAD_SHA:?}"
+              octopus="$(git rev-list --min-parents=3 "$range")"
+              if [ -n "$octopus" ]; then
+                echo "::error::A merge of three or more parents cannot be scanned for what it adds: ${octopus//$'\n'/ }"
+                exit 1
+              fi
+              betterleaks git . --config .gitleaks.toml --redact --verbose --no-banner \
+                --log-opts="--diff-merges=remerge $range"
+              ;;
+            *)
+              betterleaks git . --config .gitleaks.toml --redact --verbose --no-banner
+              ;;
+          esac
 
   # The upload runs apart from the tests so the OIDC token is never available
   # while test code runs. It is exempt from verify-gates: main requires

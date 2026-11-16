@@ -14,6 +14,10 @@ release.
 - A PAYG withholding and Medicare levy benchmark in `benchmarks/payg-medicare/`: 20 questions, each key the figure a cited row of Schedule 1 to the Taxation Administration (Withholding Schedules) Instrument 2026 or an ATO Medicare levy example prints. `bench keys --topic payg-medicare` recomputes all 20 from the Schedule 1 coefficients or the Medicare Levy Act thresholds, and `bench score --topic payg-medicare` scores answers as before. `--topic` defaults to `payday-div7a`. No model has been run on these questions.
 - `bench compare --a <files> --b <files>`: pairs 2 conditions question by question across equal repeats and prints, for each measure, both totals and means, the questions each side leads on, the ties and an exact two-sided sign test, and says when too few questions are untied for any split to give p below 0.05. It refuses a side with no file, unequal repeats and a file named twice, names any file it refuses, and takes `--topic` like `bench keys` and `bench score`.
 
+### Changed
+
+- The secrets and client-identifier gate runs betterleaks 1.10.1 in place of gitleaks, in CI and in the pre-commit hook, with the same `.gitleaks.toml`. CI installs the release binary pinned by version and SHA-256, as betterleaks publishes no action, and every scan names `--config .gitleaks.toml`, as betterleaks does not load it by itself. Both scanners report nothing on `main`'s full history under this config.
+
 ### Fixed
 
 - The first Opus 5.5 comparison in `benchmarks/payday-div7a/results-2026-11-14.md` is withdrawn: all 6 of its calls used the questions without the guide, including the 3 labelled with it. A validated rerun of 10 calls a condition replaces it, with a mean of 0 answers right on both value and authority out of 31 with the guide and 9.7 without. The Codex results stand.

@@ -1,6 +1,6 @@
 # Secret and client-identifier scanning.
 #
-# The default gitleaks rules cover credentials. The client-identifier rules
+# The default betterleaks rules cover credentials. The client-identifier rules
 # below are copied from ryanduguid/australian-accounting-skills, as are those
 # of 5 other ryanduguid repositories: this guide forbids real client data in
 # its own DISCLAIMER, and an example carrying a TFN would breach that without
@@ -46,6 +46,38 @@ id = "au-medicare-number"
 description = "Medicare number beside its label"
 regex = '''(?i)(?:\b|_)medicare[\s_-]*(?:number|no\.?|card)(?:\b|_)[^0-9\n]{0,20}(\d{4}[ -]?\d{5}[ -]?\d{1,2})\b'''
 tags = ["client-data", "australia"]
+
+# betterleaks reports each credential below only beside its companion value:
+# an AWS key ID within 5 lines of its secret key, say, or an Azure client
+# secret near its tenant and client IDs. gitleaks reported each by itself.
+# Clearing the components keeps that, so one committed alone still fails.
+[[rules]]
+id = "algolia-api-key"
+components = []
+
+[[rules]]
+id = "artifactory-api-key"
+components = []
+
+[[rules]]
+id = "artifactory-reference-token"
+components = []
+
+[[rules]]
+id = "aws-access-token"
+components = []
+
+[[rules]]
+id = "azure-ad-client-secret"
+components = []
+
+[[rules]]
+id = "clickhouse-cloud-api-secret-key"
+components = []
+
+[[rules]]
+id = "planetscale-api-token"
+components = []
 
 [allowlist]
 description = "Provenance digests and placeholder identifiers"
