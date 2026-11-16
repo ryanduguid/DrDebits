@@ -158,7 +158,7 @@ jobs:
           BETTERLEAKS_SHA256: c174b42d7aa60caf58c0c3e555c0e4bed01fe6b0d99a412bce777b5af4ce913e
         run: |
           archive="betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz"
-          curl --fail --silent --show-error --location --retry 3 \
+          curl --proto '=https' --proto-redir '=https' --fail --silent --show-error --location --retry 3 \
             --output "${RUNNER_TEMP:?}/$archive" \
             "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/$archive"
           echo "${BETTERLEAKS_SHA256}  ${RUNNER_TEMP}/$archive" | sha256sum --check --strict -
