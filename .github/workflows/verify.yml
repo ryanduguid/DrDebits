@@ -171,6 +171,8 @@ jobs:
         # its base and its head, and a scheduled or manual run the full
         # history. Each uses this revision's own .gitleaks.toml, named outright
         # because betterleaks does not load a repository's config by itself.
+        # Git shows nothing for a merge of three or more parents, so a push or
+        # pull request holding one fails.
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -178,8 +180,14 @@ jobs:
         run: |
           case "$EVENT_NAME" in
             push | pull_request)
+              range="${BASE_SHA:?}..${HEAD_SHA:?}"
+              octopus="$(git rev-list --min-parents=3 "$range")"
+              if [ -n "$octopus" ]; then
+                echo "::error::A merge of three or more parents cannot be scanned for what it adds: ${octopus//$'\n'/ }"
+                exit 1
+              fi
               betterleaks git . --config .gitleaks.toml --redact --verbose --no-banner \
-                --log-opts="--diff-merges=remerge ${BASE_SHA:?}..${HEAD_SHA:?}"
+                --log-opts="--diff-merges=remerge $range"
               ;;
             *)
               betterleaks git . --config .gitleaks.toml --redact --verbose --no-banner
