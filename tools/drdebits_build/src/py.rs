@@ -972,12 +972,11 @@ impl Date {
 
     /// `date.today()`, in the machine's local time zone.
     pub fn today() -> Date {
-        use chrono::Datelike;
-        let now = chrono::Local::now().date_naive();
+        let now = jiff::ZonedDateTime::now().date();
         Date {
-            year: now.year(),
-            month: now.month(),
-            day: now.day(),
+            year: now.year().into(),
+            month: now.month().unsigned_abs().into(),
+            day: now.day().unsigned_abs().into(),
         }
     }
 }
@@ -985,6 +984,39 @@ impl Date {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `Date::today` in a child process whose time zone is set by `TZ`.
+    #[cfg(unix)]
+    fn today_in(zone: &str) -> Date {
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "py::tests::today_follows_the_local_time_zone", "--nocapture"])
+            .env("TZ", zone)
+            .env("DRDEBITS_TODAY_CHILD", "1")
+            .output()
+            .unwrap();
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(output.status.success(), "{stdout}");
+        let line = stdout.lines().find_map(|l| l.strip_prefix("today=")).unwrap();
+        let ymd: Vec<i64> = line.split('-').map(|p| p.parse().unwrap()).collect();
+        Date::new(ymd[0], ymd[1], ymd[2]).unwrap()
+    }
+
+    /// Local time 14 hours ahead of UTC is always 1 or 2 days ahead of local time 12 hours
+    /// behind it, so `today` reads the machine's time zone rather than UTC.
+    #[test]
+    fn today_follows_the_local_time_zone() {
+        let today = Date::today();
+        if std::env::var_os("DRDEBITS_TODAY_CHILD").is_some() {
+            println!("today={:04}-{:02}-{:02}", today.year, today.month, today.day);
+            return;
+        }
+        assert!((1..=9999).contains(&today.year), "{today:?}");
+        #[cfg(unix)]
+        {
+            let gap = today_in("<+14>-14").ordinal() - today_in("<-12>12").ordinal();
+            assert!((1..=2).contains(&gap), "{gap}");
+        }
+    }
 
     #[test]
     fn repr_matches_python() {
