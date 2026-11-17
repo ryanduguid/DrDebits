@@ -989,14 +989,21 @@ mod tests {
     #[cfg(unix)]
     fn today_in(zone: &str) -> Date {
         let output = std::process::Command::new(std::env::current_exe().unwrap())
-            .args(["--exact", "py::tests::today_follows_the_local_time_zone", "--nocapture"])
+            .args([
+                "--exact",
+                "py::tests::today_follows_the_local_time_zone",
+                "--nocapture",
+            ])
             .env("TZ", zone)
             .env("DRDEBITS_TODAY_CHILD", "1")
             .output()
             .unwrap();
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(output.status.success(), "{stdout}");
-        let line = stdout.lines().find_map(|l| l.strip_prefix("today=")).unwrap();
+        let line = stdout
+            .lines()
+            .find_map(|l| l.strip_prefix("today="))
+            .unwrap();
         let ymd: Vec<i64> = line.split('-').map(|p| p.parse().unwrap()).collect();
         Date::new(ymd[0], ymd[1], ymd[2]).unwrap()
     }
@@ -1007,7 +1014,10 @@ mod tests {
     fn today_follows_the_local_time_zone() {
         let today = Date::today();
         if std::env::var_os("DRDEBITS_TODAY_CHILD").is_some() {
-            println!("today={:04}-{:02}-{:02}", today.year, today.month, today.day);
+            println!(
+                "today={:04}-{:02}-{:02}",
+                today.year, today.month, today.day
+            );
             return;
         }
         assert!((1..=9999).contains(&today.year), "{today:?}");
