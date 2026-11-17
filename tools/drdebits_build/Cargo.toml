@@ -17,10 +17,11 @@ path = "src/main.rs"
 
 [dependencies]
 anstream = "1.0.0"
-chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
 clap = { version = "4.6.7", features = ["derive"] }
 dns-lookup = "4"
 fancy-regex = "0.20.0"
+# The system time zone, read from the zoneinfo files or, on Windows, a bundled copy.
+jiff = { version = "1.0.0", default-features = false, features = ["std", "tz-system", "tzdb-bundle-platform", "tzdb-zoneinfo"] }
 num-bigint = "0.5.1"
 num-traits = "0.2.19"
 regex = "1.13.1"
