@@ -1,85 +1,21 @@
-# Secret and client-identifier scanning.
+# Secret and client-identifier scanning, run by .github/workflows/verify.yml.
 #
-# The default betterleaks rules cover credentials. The client-identifier rules
-# below are copied from ryanduguid/australian-accounting-skills, as are those
-# of 5 other ryanduguid repositories: this guide forbids real client data in
-# its own DISCLAIMER, and an example carrying a TFN would breach that without
-# tripping a credential scanner. Keep every copy in step.
+# The rules are shared: .github/secrets-rules.toml adds 4 client-identifier
+# rules (a tax file number, ABN, bank detail or Medicare number beside its
+# label) to the default betterleaks credential rules. That file is a copy of
+# rules.toml in ryanduguid/release-policy's secrets-scan action, which the
+# workflow runs; the action fails when the copy differs. This file holds only
+# this repository's allowlists.
 #
-# Each rule anchors on the label rather than the digits. An unanchored
-# 11-digit pattern would match compilation numbers, section references and
-# dates throughout the guide and the gate would be turned off within a week.
-#
-# A label may be abbreviated or spelled out ('TFN' or 'tax file number') and
-# may be joined with underscores, as in a client_tfn or account_number key.
-# Keys in camelCase, such as clientTfn or tfnNumber, are not matched.
+# Run a local scan from the repository root, where the path below resolves:
+# betterleaks git . --config .gitleaks.toml
 
 title = "DrDebits"
 
 [extend]
-useDefault = true
+path = ".github/secrets-rules.toml"
 
-[[rules]]
-id = "au-tax-file-number"
-description = "Tax file number beside its label"
-# 8 or 9 digits, commonly grouped 3-3-3. AGENTS.md excludes TFNs from this
-# repository outright, including from fabricated fixtures.
-regex = '''(?i)(?:\b|_)(?:tfns?|tax[ _-]?file[ _-]?(?:number|no\.?))(?:\b|_)[^0-9\n]{0,20}(\d{3}[ -]?\d{3}[ -]?\d{2,3})\b'''
-tags = ["client-data", "australia"]
-
-[[rules]]
-id = "au-business-number"
-description = "ABN beside its label"
-# 11 digits, commonly grouped 2-3-3-3. A fabricated ABN is still forbidden
-# here: the validation pack bans realistic identifiers, not just real ones.
-regex = '''(?i)(?:\b|_)(?:ab\.?n\.?|australian[ _-]?business[ _-]?number)(?:\b|_)[^0-9\n]{0,20}(\d{2}[ -]?\d{3}[ -]?\d{3}[ -]?\d{3})\b'''
-tags = ["client-data", "australia"]
-
-[[rules]]
-id = "au-bank-account"
-description = "BSB or account number beside its label"
-regex = '''(?i)(?:\b|_)(?:bsb|account[\s_-]*(?:number|no\.?))(?:\b|_)[^0-9\n]{0,20}(\d{3}[ -]?\d{3}\b|\d{6,10}\b)'''
-tags = ["client-data", "australia"]
-
-[[rules]]
-id = "au-medicare-number"
-description = "Medicare number beside its label"
-regex = '''(?i)(?:\b|_)medicare[\s_-]*(?:number|no\.?|card)(?:\b|_)[^0-9\n]{0,20}(\d{4}[ -]?\d{5}[ -]?\d{1,2})\b'''
-tags = ["client-data", "australia"]
-
-# betterleaks reports each credential below only beside its companion value:
-# an AWS key ID within 5 lines of its secret key, say, or an Azure client
-# secret near its tenant and client IDs. gitleaks reported each by itself.
-# Clearing the components keeps that, so one committed alone still fails.
-[[rules]]
-id = "algolia-api-key"
-components = []
-
-[[rules]]
-id = "artifactory-api-key"
-components = []
-
-[[rules]]
-id = "artifactory-reference-token"
-components = []
-
-[[rules]]
-id = "aws-access-token"
-components = []
-
-[[rules]]
-id = "azure-ad-client-secret"
-components = []
-
-[[rules]]
-id = "clickhouse-cloud-api-secret-key"
-components = []
-
-[[rules]]
-id = "planetscale-api-token"
-components = []
-
-[allowlist]
+[[allowlists]]
 description = "Provenance digests and placeholder identifiers"
 paths = [
   # The scanner's own rules quote the patterns they match.
