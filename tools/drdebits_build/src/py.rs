@@ -988,7 +988,8 @@ mod tests {
     /// `Date::today` in a child process whose time zone is set by `TZ`.
     #[cfg(unix)]
     fn today_in(zone: &str) -> Date {
-        let output = std::process::Command::new(std::env::current_exe().unwrap())
+        // This test binary, as the test runner started it.
+        let output = std::process::Command::new(std::env::args_os().next().unwrap())
             .args([
                 "--exact",
                 "py::tests::today_follows_the_local_time_zone",
