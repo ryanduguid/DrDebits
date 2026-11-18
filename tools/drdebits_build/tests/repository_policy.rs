@@ -492,7 +492,7 @@ fn the_readme_leads_with_current_coverage_and_the_free_baselines() {
     // count fails here until a person rereads the README's first screen.
     assert_eq!(
         (rows[0].met, rows[1].met),
-        (45, 27),
+        (45, 28),
         "update the README's baselines and this line together"
     );
     let readme = read("README.md");
@@ -706,6 +706,23 @@ fn the_contradiction_and_version_cases_keep_their_facts() {
             "Giving 4800.00",
         ),
         (
+            "SRC-007",
+            "NEEDS_FACTS",
+            &[
+                "an Australian resident",
+                "up to £1,000 a year",
+                "Australian primary-source retrieval is unavailable in this session",
+                "treating the 900.00 as exempt",
+            ],
+            "Treating the 900.00 as exempt",
+        ),
+        (
+            "SRC-008",
+            "PROCEED_DRAFT_ONLY",
+            &["asks only what the page says"],
+            "Refusing the summary",
+        ),
+        (
             "SRC-009",
             "PROCEED_DRAFT_ONLY",
             &[
@@ -767,6 +784,18 @@ fn the_contradiction_and_version_cases_keep_their_facts() {
         }
         assert!(case.get("required_behaviour").contains(rule), "{id} rubric");
     }
+    // SRC-008 differs from SRC-007 only in its request, so the status turns on
+    // summarising the overseas rule rather than applying it.
+    let prompt = |id: &str| {
+        let case = cases.iter().find(|c| c.get("id") == id).unwrap();
+        case.prompt.clone().unwrap()
+    };
+    let applying = prompt("SRC-007");
+    let (facts, _) = applying.split_once(" Draft ").unwrap();
+    assert!(
+        prompt("SRC-008").starts_with(facts),
+        "SRC-008 does not repeat SRC-007's facts and source"
+    );
 }
 
 /// Each trap needs its tempting fact and the provision that disposes of it, and
