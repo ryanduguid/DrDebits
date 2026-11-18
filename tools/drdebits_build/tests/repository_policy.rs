@@ -492,7 +492,7 @@ fn the_readme_leads_with_current_coverage_and_the_free_baselines() {
     // count fails here until a person rereads the README's first screen.
     assert_eq!(
         (rows[0].met, rows[1].met),
-        (45, 27),
+        (45, 28),
         "update the README's baselines and this line together"
     );
     let readme = read("README.md");
