@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[3]
 # tests/test_repository_baseline.sh pins the same digest (SHA-256 after CRLF to LF).
 POLICY_DIGEST = "8d48fa32c92d15bb476e28f2ad34400660f62ee337c527c1d9fd9b7f6230f62a"
 
-NEEDS = "    needs: [changes, verify, secrets]\n"
+NEEDS = "    needs: [changes, verify]\n"
 SPEC = importlib.util.spec_from_file_location("check_gates", ROOT / ".github/ci/check_gates.py")
 assert SPEC is not None and SPEC.loader is not None
 checker = importlib.util.module_from_spec(SPEC)
@@ -333,7 +333,7 @@ class GateCliTests(unittest.TestCase):
             self.assertEqual(self.git_command("rev-parse", f"{parent}^{{tree}}").stdout,
                              self.git_command("rev-parse", "HEAD^{tree}").stdout)
         for filename, gate, needs, flags in (
-            ("verify.yml", "verify-gates", ("changes", "verify", "secrets"),
+            ("verify.yml", "verify-gates", ("changes", "verify"),
              ("--exempt", "codecov", "--exempt", "fuzzing")),
             ("codeql.yml", "codeql-gates", ("analyze",), ()),
         ):
@@ -423,7 +423,7 @@ class GateCliTests(unittest.TestCase):
 
     def test_cli_accepts_declared_removals_from_a_git_quoted_path(self):
         result = self.run_cli_fixture(quoted_path=True,
-            declaration="verify-gates, changes, codecov, fuzzing, secrets, verify")
+            declaration="verify-gates, changes, codecov, fuzzing, verify")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_cli_accepts_an_unrelated_new_context(self):
@@ -432,7 +432,7 @@ class GateCliTests(unittest.TestCase):
 
     def test_cli_deduplicates_an_existing_path(self):
         result = self.run_cli_fixture(filename="verify.yml",
-            declaration="verify-gates, changes, codecov, fuzzing, secrets, verify")
+            declaration="verify-gates, changes, codecov, fuzzing, verify")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     @unittest.skipIf(os.name == "nt", "CR/LF filenames require a POSIX working tree")
@@ -444,7 +444,7 @@ class GateCliTests(unittest.TestCase):
     @unittest.skipIf(os.name == "nt", "CR/LF filenames require a POSIX working tree")
     def test_distinct_cr_lf_paths_accept_declared_removals(self):
         result = self.run_cli_fixture(control_paths=True,
-            declaration="verify-gates, changes, codecov, fuzzing, secrets, verify")
+            declaration="verify-gates, changes, codecov, fuzzing, verify")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     @unittest.skipIf(os.name == "nt", "CR/LF filenames require a POSIX working tree")
