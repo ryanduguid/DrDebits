@@ -22,8 +22,9 @@ documented builder. Historical human-recorded evaluation results stay unchanged.
 Before handoff, run the builder tests and generated-output verification defined
 in [verify.yml](.github/workflows/verify.yml). `pre-commit install` runs the
 same commands through the same pinned toolchain before a commit lands, and adds
-a betterleaks scan against [.gitleaks.toml](.gitleaks.toml), which carries
-client-identifier rules on top of the default credential rules.
+a betterleaks scan against [.gitleaks.toml](.gitleaks.toml), which extends
+`.github/secrets-rules.toml`: the client-identifier rules shared with the CI
+scan, on top of the default credential rules.
 
 For source currency, run
 `cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- sources --root .`.

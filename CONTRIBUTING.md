@@ -38,7 +38,10 @@ cargo run --locked --release -- verify --root ../..
 `cargo llvm-cov` runs the tests with line coverage; `cargo test --locked` runs
 them without it, as the Windows job does. CI also scans the commits each push or
 pull request adds, and the full history weekly, for secrets and client
-identifiers with betterleaks and [.gitleaks.toml](.gitleaks.toml).
+identifiers with the shared secrets scan from `ryanduguid/release-policy`
+(betterleaks) and [.gitleaks.toml](.gitleaks.toml). It scans a pull request a
+second time with the base branch's `.gitleaks.toml`, so add an allowlist entry
+in its own pull request, before the change that needs it.
 `pre-commit install` runs formatting, lint, tests, `verify` and betterleaks before
 each commit, through the same pinned toolchain.
 
