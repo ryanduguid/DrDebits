@@ -228,6 +228,7 @@ fn reperformance_follows_precedence_percentages_and_rounding() {
         ("1,000 − 250 = 750", true),
         ("-5 + 2 = -3", true),
         ("8 / -2 = -4", true),
+        ("-$150 + 200 = 50", true),
         ("10 ÷ 4 = 2.5", true),
         ("1,100 / 11 = 101", false),
     ];
@@ -247,12 +248,16 @@ fn dates_years_bullets_and_prose_are_not_calculations() {
     for text in [
         "Lodged 1/7/2026 = on time",
         "Lodged 1/7/2026 = 2026",
+        "Due (28/10/2026) = 28 days after the quarter",
+        "Lodged 1/7/2026 = ٢٠٢٦",
         "The 2026-27 year = the current year",
         "- 5 items were reviewed",
         "s 284-75(6) applies",
         "Total = 100",
         "x = 5",
         "Rate 10% applies; 5 = five",
+        "Lodged 2026-07-01 = 2026",
+        "1 + 1 = x",
     ] {
         assert!(calculations(text).is_empty(), "{text}");
     }
@@ -260,10 +265,28 @@ fn dates_years_bullets_and_prose_are_not_calculations() {
 
 #[test]
 fn unparseable_operands_or_results_are_never_marked_correct() {
-    for text in ["2 + 3 = ٥", "2 + (3 = 5", "2 + (3) ) = 5"] {
+    // Each row is (text, finding): the gate reads one calculation, which does
+    // not match, and its finding says why.
+    let digits = "could not read: a number has digits other than 0 to 9";
+    let bracket = "could not read: a bracket does not pair";
+    let unread = "could not read: an amount and an operator stand before this `=`";
+    for (text, finding) in [
+        ("2 + 3 = ٥", digits),
+        ("2 + 3 = ٤", digits),
+        ("2 + 3 = 5²", digits),
+        ("2 + (3 = 5", bracket),
+        // A bracket that closes outside every operand leaves no calculation
+        // the gate can read, so the `=` after an amount and an operator blocks.
+        ("2 + (3) ) = 6", unread),
+        ("2 + (3) ) = 5", unread),
+    ] {
+        let read = calculations(text);
+        assert_eq!(read.len(), 1, "{text}");
+        assert!(!read[0].matches, "{text}");
         assert!(
-            calculations(text).iter().all(|claim| !claim.matches),
-            "{text}"
+            read[0].computed.starts_with(finding),
+            "{text}: {}",
+            read[0].computed
         );
     }
 }
@@ -334,6 +357,504 @@ fn every_link_of_a_chain_is_checked() {
         calculations("Item 2 = $500 + $300 = $800")[0].text,
         "$500 + $300 = $800"
     );
+}
+
+#[test]
+fn a_bracket_the_gate_cannot_pair_blocks() {
+    // The gate sees only part of a sentence and cannot tell where a bracket
+    // closed inside a calculation opened, so it blocks, even a correct sum.
+    for text in [
+        // The line's total is $350; the gate sees only `$200 + $50) = $250`.
+        "$100 + (wages $200 + $50) = $250",
+        "$100 + (wages $200 + $50) = $350",
+        "Net income (salary $1,000 - $200) = $900",
+        "Net income (salary $1,000 - $200) = $800",
+        "Net (salary $1,000 - $200) = $800 - $100 = $700",
+        "Net (salary $1,000 - $200) × 2 = $1,600",
+        // A label inside the bracket.
+        "Rent (weekly $500 × 52) = $26,000",
+        // An aside ending in a digit: the gate sees `1) + $50 = $150`.
+        "$100 (note 1) + $50 = $150",
+        "$100 (s 8-1) + $50 = $150",
+    ] {
+        let found = calculations(text);
+        assert_eq!(found.len(), 1, "{text}");
+        assert!(!found[0].matches, "{text}: {}", found[0].computed);
+        assert!(
+            found[0].computed.starts_with("could not read"),
+            "{text}: {}",
+            found[0].computed
+        );
+    }
+    // A bracket opened before the calculation, a paired one and a bracket
+    // outside the calculation are read.
+    for text in [
+        "(2 + 3 = 5)",
+        "(1,000 - 200) × 2 = 1,600",
+        "a) $100 + $50 = $150",
+        "(see s 8-1) $100 + $50 = $150",
+        "$100 + $50 = $150 (1)",
+    ] {
+        let found = calculations(text);
+        assert_eq!(found.len(), 1, "{text}");
+        assert!(found[0].matches, "{text}: {}", found[0].computed);
+    }
+}
+
+/// The fixture draft with one more line under its flags.
+fn with_line(line: &str) -> gate::Report {
+    check(
+        &DRAFT.replace("- None identified.", &format!("- {line}")),
+        &conclusions(),
+    )
+}
+
+#[test]
+fn a_sum_a_word_interrupts_blocks() {
+    // An amount and, after it, an operator before a calculation, with no
+    // `=` between, mean the gate sees only the sum's tail, so the
+    // line's real total is unknown to it: neither the tail's sum nor the
+    // whole line's passes. Each row is (text, blocks).
+    let rows = [
+        // Words.
+        ("$100 + wages $200 + $50 = $250", true),
+        ("$100 + wages $200 + $50 = $350", true),
+        ("$100 + wages + $200 + $50 = $250", true),
+        ("$100 + (wages) $200 + $50 = $250", true),
+        ("$1,000 - rent $200 - $50 = $750", true),
+        ("5 x hours at 3 + 4 = 7", true),
+        // A word holding or following digits, and digits alone.
+        ("$100 + wages2 $200 + $50 = $250", true),
+        ("$100 + FY2025 wages $200 + $50 = $250", true),
+        ("$100 + 2025 wages $200 + $50 = $250", true),
+        ("$100 + 2 $200 + $50 = $250", true),
+        // Punctuation alone.
+        ("$100 + ... + $200 + $50 = $250", true),
+        ("$100 + … $200 + $50 = $250", true),
+        ("$100 + — $200 + $50 = $250", true),
+        ("$100 + ??? $200 + $50 = $250", true),
+        // Text between the amount and the operator: a word, a number in a
+        // word, punctuation.
+        ("$500 wages + $200 + $50 = $250", true),
+        ("$100 + $20 wages + $200 + $50 = $250", true),
+        ("$500 wages - $200 + $50 = $250", true),
+        ("$500 FY2025 + $200 + $50 = $250", true),
+        ("$500 ... + $200 + $50 = $250", true),
+        // A dollar amount between the operator and the tail: the line's terms
+        // total $370.
+        ("$100 + $20 wages $200 + $50 = $250", true),
+        ("$100 + $20 wages $200 + $50 = $370", true),
+        // A word or bracketed word after the last amount, so no calculation is
+        // read at all, right or wrong.
+        ("Salary $80,000 + $5,000 bonus = $95,000", true),
+        ("Salary $80,000 + $5,000 bonus = $85,000", true),
+        ("$100 + $50 (GST) = $160", true),
+        ("$100 + $50 (GST) = $150", true),
+        // A hyphenated number before the sum, such as an ISO date or a
+        // financial year: the gate read only the part after the last hyphen.
+        ("Rent 2025-07-01 + 2 + 2 = 5", true),
+        ("Rent 2025-07-01 + 2 + 2 = 4", true),
+        ("FY 2025-26 + 1 = 27", true),
+        ("FY 2025–26 + 1 = 27", true),
+        ("FY 2025—26 + 1 = 27", true),
+        // A result the gate cannot read whole, right or wrong: an amount
+        // written with a space, a currency prefix or a sign after `$`, a
+        // doubled `=`, or an expression after an unspaced `/`.
+        ("$100 + $50 = $ 160", true),
+        ("$100 + $50 = $ 150", true),
+        ("$100 + $50 = A$160", true),
+        ("$100 + $50 = A$150", true),
+        ("$100 - $150 = $-60", true),
+        ("$100 - $150 = $-50", true),
+        ("2 + 3 == 6", true),
+        ("2 + 3 == 5", true),
+        ("100/4 = 30 x 2", true),
+        ("$12,000/4 bonus = $3,500", true),
+        ("$12,000/4 bonus = $3,000", true),
+        ("$100 + $50 = approx. $160", true),
+        ("$100 + $50 = AUD 160", true),
+        // A letter written onto a result: `$150k` is not `$150`.
+        ("$100 + $50 = $150k", true),
+        ("2 + 3 = 5h", true),
+        // So this correct line blocks too, as an unread sum before an `=`.
+        ("GST is 1/11 of the price = $100", true),
+        // A `/` spaced on one side, an unspaced `x` or `X` between numbers
+        // and an unspaced minus before `$` are operators there too, so the
+        // correct `2x3 = 6` and `$1,000-$200 = $800` block as well.
+        ("$12,000/ 4 bonus = $3,500", true),
+        ("$12,000 /4 bonus = $3,500", true),
+        ("$500x52 = $26,001", true),
+        ("Rent $500x52 weeks = $26,001", true),
+        ("2x3 = 7", true),
+        ("2X3 = 7", true),
+        ("2x3 = 6", true),
+        ("2x $1,000 = $3,000", true),
+        ("2 x$1,000 = $3,000", true),
+        ("$1,000-$200 = $900", true),
+        ("$1,000–$200 = $900", true),
+        ("$1,000-$200 = $800", true),
+        // A spaced `X` is an operator before an `=`, and after a result.
+        ("$500 X 52 weeks = $26,001", true),
+        ("2 + 3 = 5 X 2", true),
+        // Text after `=` with a digit in it, such as a spreadsheet formula,
+        // after an amount and an operator.
+        ("Price $100 + 10% GST; in Excel use =A1*1.1", true),
+        ("Wages $500 + super; tax = see note 3", true),
+        // A sign after `$` is not read, so the gate does not read the sum
+        // from the amount after it, as in `150 + 200 = 350`.
+        ("$-150 + 200 = 350", true),
+        ("$-150 + 200 = 50", true),
+        ("$−150 + 200 = 350", true),
+        ("$–150 + 200 = 350", true),
+        // A date the gate reads as prose does not hide the sum before it.
+        ("Rent $500 × 52 weeks to 30/6/2026 = $26,001", true),
+        ("Rent $500 × 52 weeks to 30/6/2026 = $26,000", true),
+        // A label with a spaced hyphen after a number reads the same way, so
+        // this correct line blocks: write `Year 1 depreciation: $2,000`.
+        ("Year 1 - Depreciation = $2,000", true),
+        // `*` is an operator with or without spaces.
+        ("$100*wages $200 + $50 = $250", true),
+        ("$100 *wages $200 + $50 = $250", true),
+        ("$100* wages $200 + $50 = $250", true),
+        // A label after an amount and an operator reads the same way, so
+        // these correct sums block too: each needs a line of its own. So does
+        // italic text after a number.
+        ("Item 3 - Deductions $100 + $50 = $150", true),
+        ("FY 2025 - Australia: $100 + $50 = $150", true),
+        ("1 x laptop $1,000 + $200 = $1,200", true),
+        ("Interest at 5% + fees apply. Total $100 + $50 = $150", true),
+        ("Note 2 *estimate* $100 + $50 = $150", true),
+        // A correct sum after an earlier amount and operator, with a dollar
+        // amount between.
+        ("Range $100 - $200 a week, so $100 + $50 = $150", true),
+        // A table cell boundary does not end the look-back: `|` does not
+        // reliably mark a cell, and a calculation can span cells, as in the
+        // wrong `| Rent | $500 × 52 | = $26,001 |`, which would otherwise pass
+        // unchecked. So a row that repeats its amounts blocks; a row with each
+        // amount in a cell of its own, as in `| Laptop | 2 | $1,000 | ...`,
+        // passes.
+        ("| Laptop | 2 x $1,000 | 2 x $1,000 = $2,000 |", true),
+        ("| Rent | $500 × 52 | = $26,001 |", true),
+        ("| Rent | $500 × 52 | = $26,000 |", true),
+        // A tail with no operator left in it, `amount = amount`, after a word
+        // between an operator and an amount, right or wrong, and after a rate
+        // and an operator, a unit and an operator, or a sum with an
+        // expression for its result.
+        ("Wages $500 + super $50 = $600", true),
+        ("Wages $500 + super $50 = $550", true),
+        ("Wages $500 + super $50 = $600 + $10 = $610", true),
+        ("Wages $500 + super ($50) = $600", true),
+        ("Rent $2,000/month × 12 = $24,000", true),
+        ("2,514 km × 0.88 = $2,212", true),
+        (
+            "(95,000 + 20,000 - 10,000) / 480,000 = 105,000 / 480,000",
+            true,
+        ),
+        // Whitespace alone, a label with no amount and operator before it, a
+        // word before an operator that starts the line, and an earlier
+        // calculation's result are not an interrupted sum.
+        ("$100 +   $200 + $50 = $350", false),
+        // An earlier amount with no operator after it, and bold marks, which
+        // the gate strips before it reads the line.
+        ("You paid $500 in wages, so $200 + $50 = $250", false),
+        ("Paid on 2026-07-01, $100 + $50 = $150", false),
+        ("| Laptop | 2 | $1,000 | 2 x $1,000 = $2,000 |", false),
+        ("1. **Total:** $100 + $50 = $150", false),
+        ("3. **GST**: $1,100 / 11 = $100", false),
+        ("Total: $100 + $200 = $300", false),
+        ("Fees - $100 + $50 = $150", false),
+        ("Step 2: $100 + $50 = $150", false),
+        ("1 + 1 = 2 and 3 + 4 = 7", false),
+        // An unspaced `/` in a date or fraction is not an operator.
+        ("On 1/7/2025 the client paid $100 + $50 = $150", false),
+        (
+            "For the period 1/7/2025 to 30/6/2026, $100 + $50 = $150",
+            false,
+        ),
+        ("GST is 1/11 of the price: $1,100 / 11 = $100", false),
+        (
+            "which is 10/11 of the GST-inclusive price, so 11000.00 / 11 = 1000.00",
+            false,
+        ),
+        // Nor is one before a word: it reads as a rate, so a rate before a
+        // calculation leaves it to be reperformed, and so does `$100/wages`.
+        ("Rent is $2,000/month, so 12 × $2,000 = $24,000", false),
+        ("$100/wages $200 + $50 = $250", false),
+        // Nor is a rate or a date before an `=` with no calculation, nor a
+        // `/` before an earlier `=`. A `,` or `;` before any digit ends a
+        // result.
+        ("Rent $2,000/month = $24,000 a year", false),
+        ("Paid 1/7/2026 = $500", false),
+        ("100/4 = 25, so total = $100", false),
+        ("1 + 1 = x; 2 + 2 = 4", false),
+    ];
+    let wrong: Vec<String> =
+        rows.iter()
+            .filter_map(|&(text, blocks)| {
+                let report = with_line(text);
+                let interrupted = report.blocks.iter().any(|b| {
+                    b.contains("could not read: an amount and an operator stand before this")
+                });
+                let exit = report.verdict().1;
+                let right = if blocks {
+                    exit == EXIT_BLOCK && interrupted
+                } else {
+                    exit == EXIT_PASS
+                };
+                (!right).then(|| format!("{text} (blocks: {blocks}): {:?}", report.blocks))
+            })
+            .collect();
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+#[test]
+fn calculations_that_share_a_boundary_character_are_each_read() {
+    // The scan resumes at a result's last character, which may be the
+    // character before the next calculation.
+    for (text, ok) in [
+        ("2 + 3 = 5;4 + 5 = 10", [true, false]),
+        ("2 + 3 = 5%4 + 5 = 10", [true, false]),
+        ("(2 + 3 = 5)(4 + 5 = 10)", [true, false]),
+    ] {
+        let found: Vec<bool> = calculations(text).iter().map(|c| c.matches).collect();
+        assert_eq!(found, ok, "{text}");
+    }
+}
+
+#[test]
+fn a_long_line_is_scanned_whole() {
+    // A sum with no number after `=`, of 9 terms or of 20,000, took a
+    // backtracking scan past its limit, so it gave up on the line. The scan
+    // now runs in linear time and reads the wrong sum after it.
+    let report = with_line("1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 = x, and 2 + 2 = 5");
+    assert_eq!(
+        report.blocks,
+        ["calculation does not reperform: 2 + 2 = 5 (computes to 4.00)"]
+    );
+    assert!(report.reviews.is_empty(), "{:?}", report.reviews);
+    let long = format!("{}1 = x, and 2 + 2 = 5", "1 + ".repeat(20_000));
+    let started = std::time::Instant::now();
+    let found = calculations(&long);
+    // Linear time is the `regex` crate's guarantee; the clock only catches
+    // a return to backtracking, so its bound is loose.
+    let elapsed = started.elapsed();
+    assert_eq!(found.len(), 1);
+    assert_eq!(
+        (found[0].text.as_str(), found[0].matches),
+        ("2 + 2 = 5", false)
+    );
+    assert!(elapsed < std::time::Duration::from_secs(30), "{elapsed:?}");
+}
+
+#[test]
+fn a_date_among_a_sums_operands_blocks() {
+    // A date alone before `=` is prose, as in `Lodged 1/7/2026 = 2026`; with
+    // other operands the gate cannot tell what the sum adds, right or wrong.
+    for line in [
+        "Rent 1/7/2025 + 2 + 2 = 5",
+        "Rent 1/7/2025 + 2 + 2 = 4",
+        "Lodged 1/7/2026 = 2026 + 1 = 2028",
+    ] {
+        let report = with_line(line);
+        assert_eq!(
+            report.verdict().1,
+            EXIT_BLOCK,
+            "{line}: {:?}",
+            report.blocks
+        );
+        assert!(
+            report
+                .blocks
+                .iter()
+                .any(|b| b.contains("a date stands in the sum")),
+            "{line}: {:?}",
+            report.blocks
+        );
+    }
+}
+
+#[test]
+fn a_number_before_a_slash_is_not_part_of_a_date() {
+    // `DATE` needs a boundary on each side, so `123/4/2025` is a quotient.
+    let found = calculations("123/4/2025 * 4 * 2025 = 123");
+    assert_eq!(found.len(), 1);
+    assert!(found[0].matches, "{}", found[0].computed);
+    assert!(with_line("123/4/2025 * 4 * 2025 = 123").blocks.is_empty());
+}
+
+#[test]
+fn a_calculation_after_a_word_and_a_hyphen_blocks() {
+    // A hyphen or dash joined to a word before the first amount may be a
+    // sign, as in `Net-150`, or a hyphen, as in `Quarterly-$12,000`, so the
+    // gate cannot tell what the sum is, right or wrong.
+    for text in [
+        "Quarterly-$12,000/4 = $3,500",
+        "Quarterly-$12,000/4 = $3,000",
+        "x-100/4 = 30",
+        "x–100/4 = 25",
+    ] {
+        let found = calculations(text);
+        assert_eq!(found.len(), 1, "{text}");
+        assert!(
+            !found[0].matches && found[0].computed.starts_with("could not read"),
+            "{text}: {}",
+            found[0].computed
+        );
+    }
+}
+
+#[test]
+fn a_calculation_the_gate_cannot_read_whole_blocks() {
+    // A math symbol the gate does not read, text joined to the first amount
+    // that may be its sign or digit group, or text after the result that may
+    // change it means the gate cannot reperform the line, so it blocks, right
+    // or wrong. Each row is (text, blocks).
+    let rows = [
+        // Symbols the gate does not read, as an operator or as `=`.
+        ("5 · 3 = 16", true),
+        ("5 · 3 = 15", true),
+        ("5 ∗ 3 = 16", true),
+        ("10 ∕ 2 = 4", true),
+        ("5 ＋ 3 = 9", true),
+        ("2 + 3 ＝ 6", true),
+        ("2 + 3 ≈ 7", true),
+        ("2 + 3 ≈ 5", true),
+        ("2 + 3 = 5·2", true),
+        ("2 + 3 = 5^2", true),
+        ("2 + 3 = 5 ≈ 6", true),
+        // A dash joined to a word, or after `:`, before the first amount.
+        ("AUD-150 + 200 = 350", true),
+        ("AUD-150 + 200 = 50", true),
+        ("Net–150 + 200 = 350", true),
+        ("Net: – 150 + 200 = 350", true),
+        ("Net: - 150 + 200 = 350", true),
+        // A leading dash other than a list marker's hyphen.
+        ("– 150 + 200 = 350", true),
+        ("– 150 + 200 = 50", true),
+        ("- 150 + 200 = 350", false),
+        // After a word and a space, a dash separates.
+        ("Net — 150 + 200 = 350", false),
+        // A digit group, a sign or a scale word after the result.
+        ("$100 + $50 = $150 k", true),
+        ("2 + 3 = 5 k", true),
+        ("$100 + $50 = $150 million", true),
+        ("$100 + $50 = $150 000", true),
+        ("1 000 + 1 = 1 002", true),
+        ("2 + 3 = 5-1", true),
+        ("2 + 3 = 5 -1 = 3", true),
+        // A minus spaced on one side, or an operator joined to the next
+        // amount only, before an `=` no read calculation ends.
+        ("$1,000 -200 = $900", true),
+        ("$1,000- 200 = $900", true),
+        ("$12,000/4 = $3,000 per quarter, x4 = $13,000", true),
+        ("$1,000 -200 = $800", true),
+        ("$3,000 per quarter, x4 = $12,000", true),
+        // A result after a comma.
+        ("$100 + $50 = in all, $160", true),
+        // A read calculation after a word is still this `=`'s result.
+        ("$100 + $50 = about $160 + $16 = $176", true),
+        ("2 + 3 = roughly 6 × 1 = 6", true),
+        // Still read, or not a calculation.
+        ("$100 + $50 = $150 per week", false),
+        ("$100 + $50 = $150-ish", false),
+        ("$12,000/4 = $3,000 per quarter", false),
+        ("In 2026 $100 + $50 = $150", false),
+        ("Item 2 = $100", false),
+        ("Income ≤ $18,200", false),
+        ("2 + 3 = 5 < 6", false),
+        ("| 2 + 3 = 5 | $200 |", false),
+        ("2 + 3 = 5, and 1 + 1 = 2", false),
+    ];
+    let wrong: Vec<String> = rows
+        .iter()
+        .filter_map(|&(text, blocks)| {
+            let report = with_line(text);
+            let exit = report.verdict().1;
+            let unread = report.blocks.iter().any(|b| b.contains("could not read"));
+            let right = if blocks {
+                exit == EXIT_BLOCK && unread
+            } else {
+                exit == EXIT_PASS
+            };
+            (!right).then(|| {
+                format!(
+                    "{text} (blocks: {blocks}): exit {exit}, {:?}",
+                    report.blocks
+                )
+            })
+        })
+        .collect();
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+#[test]
+fn a_spaced_dash_or_capital_x_is_an_operator() {
+    // An en dash, em dash or other dash with spaces round it is a minus, as
+    // a hyphen is, and so is one before a number; a spaced `X` multiplies,
+    // as `x` does. Each row is (text, reperforms).
+    let rows = [
+        ("$1,000 – $200 = $800", true),
+        ("$1,000 – $200 = $900", false),
+        ("5 – 3 = 2", true),
+        ("5 – 3 = 3", false),
+        ("2 - 3 = –1", true),
+        ("2 - 3 = –2", false),
+        ("5 — 3 = 3", false),
+        ("5 ‒ 3 = 3", false),
+        // A no-break or thin space is a space.
+        ("5\u{a0}–\u{a0}3 = 3", false),
+        ("5\u{2009}-\u{2009}3 = 2", true),
+        ("5 – 3 + 0 = 3", false),
+        ("2 X $1,000 = $2,000", true),
+        ("2 X $1,000 = $3,000", false),
+        ("2 X $1,000 + $0 = $1,000", false),
+    ];
+    let wrong: Vec<String> = rows
+        .iter()
+        .filter_map(|&(text, ok)| {
+            let found = calculations(text);
+            let right = found.len() == 1 && found[0].matches == ok;
+            let exit = with_line(text).verdict().1;
+            let exits = exit == if ok { EXIT_PASS } else { EXIT_BLOCK };
+            (!(right && exits)).then(|| {
+                let read: Vec<_> = found.iter().map(|c| (&c.text, &c.computed)).collect();
+                format!("{text} (reperforms: {ok}): exit {exit}, read {read:?}")
+            })
+        })
+        .collect();
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+#[test]
+fn a_digit_other_than_0_to_9_blocks() {
+    // The scan reads any decimal digit, such as Arabic-Indic `٥`, and the
+    // gate reads only 0 to 9, so it blocks such a calculation, right or wrong.
+    // So does a numeric character beside the calculation, such as `²` or `½`
+    // after its result, which the gate's scan does not read as a digit.
+    for line in [
+        "2 + 3 = ٥",
+        "2 + 3 = ٤",
+        "٢ + 3 = 5",
+        "2 + 3 = 5²",
+        "2 + 3 = 5½",
+        "2 + 3 = 5 ½",
+    ] {
+        let report = with_line(line);
+        assert_eq!(
+            report.verdict().1,
+            EXIT_BLOCK,
+            "{line}: {:?}",
+            report.blocks
+        );
+        assert!(
+            report
+                .blocks
+                .iter()
+                .any(|b| b.contains("digits other than 0 to 9")),
+            "{line}: {:?}",
+            report.blocks
+        );
+    }
 }
 
 #[test]
@@ -611,6 +1132,22 @@ fn an_amount_without_a_fact_or_calculation_asks_for_review() {
     let report = with_facts(&text, FACTS);
     assert_eq!(report.verdict().1, EXIT_REVIEW);
     assert!(facts_reviews(&report)[0].starts_with("facts check: $100.00, $100 not"));
+}
+
+#[test]
+fn part_of_a_bracketed_sum_is_neither_reperformed_nor_traced() {
+    // Every amount is a fact, but `$250` is not the line's total of $350.
+    let facts = r#"{"facts": {"invoice total": "$1,100", "a": "$100", "b": "$200", "c": "$50"}}"#;
+    let text = DRAFT.replace("- None identified.", "- $100 + (wages $200 + $50) = $250");
+    let report = with_facts(&text, facts);
+    assert_eq!(report.verdict().1, EXIT_BLOCK, "{:?}", report.reviews);
+    assert!(
+        facts_reviews(&report)
+            .first()
+            .is_some_and(|r| r.starts_with("facts check: $250 not")),
+        "{:?}",
+        report.reviews
+    );
 }
 
 #[test]

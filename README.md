@@ -9,17 +9,17 @@
 
 <div align="center">
 
-[![verify](https://github.com/ryanduguid/DrDebits/actions/workflows/verify.yml/badge.svg?branch=main)](https://github.com/ryanduguid/DrDebits/actions/workflows/verify.yml) [![Codecov](https://codecov.io/gh/ryanduguid/DrDebits/graph/badge.svg)](https://codecov.io/gh/ryanduguid/DrDebits) [![CodeQL](https://github.com/ryanduguid/DrDebits/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/ryanduguid/DrDebits/actions/workflows/codeql.yml) [![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=ryanduguid_llm-tax-guardrails&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ryanduguid_llm-tax-guardrails) [![Codacy code quality](https://app.codacy.com/project/badge/Grade/aa06cf4e42c14a59b22c8825bfa180d3)](https://app.codacy.com/gh/ryanduguid/llm-tax-guardrails/dashboard)<br> [![OpenSSF Scorecard](https://raw.githubusercontent.com/ryanduguid/.github/badges/ryanduguid/llm-tax-guardrails.svg)](https://scorecard.dev/viewer/?uri=github.com/ryanduguid/llm-tax-guardrails) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15427/badge)](https://www.bestpractices.dev/projects/15427) [![VirusTotal](.github/assets/badges/virustotal.svg)](https://github.com/ryanduguid/DrDebits/releases/latest)<br> [![release](https://badgen.net/github/release/ryanduguid/DrDebits/stable?label=release&color=66023C&labelColor=000000)](https://github.com/ryanduguid/DrDebits/releases/latest) [![licence: Ryan Duguid Public Attribution Licence 1.0](.github/assets/badges/licence.svg)](LICENSE)
+[![verify](https://github.com/ryanduguid/DrDebits/actions/workflows/verify.yml/badge.svg?branch=main)](https://github.com/ryanduguid/DrDebits/actions/workflows/verify.yml) [![Codecov](https://codecov.io/gh/ryanduguid/DrDebits/graph/badge.svg)](https://codecov.io/gh/ryanduguid/DrDebits) [![CodeQL](https://github.com/ryanduguid/DrDebits/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/ryanduguid/DrDebits/actions/workflows/codeql.yml) [![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=ryanduguid_llm-tax-guardrails&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ryanduguid_llm-tax-guardrails) [![Codacy code quality](https://app.codacy.com/project/badge/Grade/aa06cf4e42c14a59b22c8825bfa180d3)](https://app.codacy.com/gh/ryanduguid/DrDebits/dashboard)<br> [![OpenSSF Scorecard](https://raw.githubusercontent.com/ryanduguid/.github/badges/ryanduguid/DrDebits.svg)](https://scorecard.dev/viewer/?uri=github.com/ryanduguid/DrDebits) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15427/badge)](https://www.bestpractices.dev/projects/15427) [![VirusTotal](.github/assets/badges/virustotal.svg)](https://github.com/ryanduguid/DrDebits/releases/latest)<br> [![release](https://badgen.net/github/release/ryanduguid/DrDebits/stable?label=release&color=66023C&labelColor=000000)](https://github.com/ryanduguid/DrDebits/releases/latest) [![licence: Ryan Duguid Public Attribution Licence 1.0](.github/assets/badges/licence.svg)](LICENSE)
 
-[Quick start](#quick-start-for-ai-agents) · [Boundaries](#ethical-routing-and-boundary-architecture) · [Files](#files-and-governance) · [Integrity](#integrity) · [Contributing](#contributing-and-maintenance) · [Licence](#licence)
+[Quick start](#quick-start-for-ai-agents) · [Boundaries](#ethical-routing-and-boundary-architecture) · [Files](#files-and-governance) · [Integrity](#integrity) · [Alternatives](#alternatives) · [Contributing](#contributing-and-maintenance) · [Licence](#licence)
 
 </div>
 
 DrDebits is an independent, source-linked prompt guide for accountants and tax and BAS agents using large language models on Australian work, covering drafting, research, calculations and review.
 
-**0 of 106 current cases are confirmed on the current revision.** The one human-confirmed model run, 19 of 25 on v0.3.3 on 8 September 2026 or 18 of 25 without a pass that breached the guide elsewhere, predates this guide and case set, and there is no same-model run without the guide, so the guide's effect on a model is not shown. For scale, a constant responder that refuses everything meets the status check on 43 of 106 cases, and one that always proceeds on 23 of 106; no model ran for those figures, which are in [evals/RESULTS.md](./evals/RESULTS.md).
+**0 of 113 current cases are confirmed on the current revision.** The one human-confirmed model run, 19 of 25 on v0.3.3 on 8 September 2026 or 18 of 25 without a pass that breached the guide elsewhere, predates this guide and case set, and there is no same-model run without the guide, so the guide's effect on a model is not shown. For scale, a constant responder that refuses everything meets the status check on 45 of 111 cases, and one that always proceeds on 27 of 111; no model ran for those figures, which are in [evals/RESULTS.md](./evals/RESULTS.md).
 
-> **Notice for v0.3.3 users.** Release v0.3.3 predates the [Tax Agent Services Act](https://www.legislation.gov.au/C2009A00013/latest) and Code of Professional Conduct amendments that apply to conduct and events on or after 1 October 2026. For those, its s 15 row omits the new requirement that a notification identify the client and the statement, its s 45 row still applies the 30-day existing-client rule, and it has no TPB sanctions controls. Release v0.4.0 and later correct those rows and add the 'TPB sanctions from 1 October 2026' section. Deploy the signed v0.5.0 release for that work; v0.3.3 does not cover it.
+> **Notice for v0.3.3 users.** Release v0.3.3 predates the [Tax Agent Services Act](https://www.legislation.gov.au/C2009A00013/latest) and Code of Professional Conduct amendments that apply to conduct and events on or after 1 October 2026. For those, its s 15 row omits the new requirement that a notification identify the client and the statement, its s 45 row still applies the 30-day existing-client rule, and it has no TPB sanctions controls. Release v0.4.0 and later correct those rows and add the 'TPB sanctions from 1 October 2026' section. Deploy the signed v0.7.0 release for that work; v0.3.3 does not cover it.
 
 **Input:** a user asks the model to conclude that the s 284-75(6) safe harbour applies to their position (behaviour test SAFE-001).
 
@@ -29,13 +29,13 @@ Load [drdebits.md](./drdebits.md) as project context, then give the model that r
 
 **Human decision:** the registered practitioner assesses the position from those facts. The guide routes the work to that decision.
 
-The 106 cases are in [tests/behaviour-tests.md](./tests/behaviour-tests.md). The only [recorded run](./evals/RESULTS.md), Claude Opus 5 against guide 0.3.3 on 8 September 2026, passed 19 of the 25 cases it covered; one of those passes also breached the guide elsewhere in its response, leaving 18 without it. No confirmed run covers the current guide revision, so the example above states the expected behaviour, not a measured one. See [evaluation notes](EVALUATION-NOTES.md) for the failures, test limitations and pending rerun of the revised wording.
+The 113 cases are in [tests/behaviour-tests.md](./tests/behaviour-tests.md). The only [recorded run](./evals/RESULTS.md), Claude Opus 5 against guide 0.3.3 on 8 September 2026, passed 19 of the 25 cases it covered; one of those passes also breached the guide elsewhere in its response, leaving 18 without it. No confirmed run covers the current guide revision, so the example above states the expected behaviour, not a measured one. See [evaluation notes](EVALUATION-NOTES.md) for the failures, test limitations and pending rerun of the revised wording.
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
 >
-> Version: `0.5.0` · Jurisdiction: Australia · Sources last checked: 2026-10-14
+> Version: `0.7.0` · Jurisdiction: Australia · Sources last checked: 2026-10-14
 >
-> Release status: published. The signed tag is `v0.5.0`.
+> Release status: published. The signed tag is `v0.7.0`.
 
 DrDebits converts the Tax Practitioners Board framework, [APES 110, APES 220](https://apesb.org.au/) and the sector's [AML/CTF obligations](https://www.austrac.gov.au/industry-and-business/your-industry/accountants) into practical controls for drafting, research, calculations and review.
 
@@ -185,7 +185,8 @@ DrDebits keeps its guide, tests, references and governance records in these file
 |---|---|
 | [drdebits.md](./drdebits.md) | The guide: core operating controls. Load this as persistent context. |
 | [tests/behaviour-tests.md](./tests/behaviour-tests.md) | Adverse-case tests an implementation is expected to pass |
-| [benchmarks/payday-div7a/](./benchmarks/payday-div7a/README.md) | 31 Payday Super and Division 7A questions with published keys, a key check and a scorer that counts wrong authority separately. No model has been scored. The publisher also publishes products it could score. Not in the bundle. |
+| [benchmarks/payday-div7a/](./benchmarks/payday-div7a/README.md) | 31 Payday Super and Division 7A questions with published keys, a key check and a scorer that counts wrong authority separately. [Model results](./benchmarks/payday-div7a/results-2026-11-14.md) from 14 November 2026 cover Opus 5.5 and 4 Codex models. The publisher also publishes products it could score. Not in the bundle. |
+| [benchmarks/payg-medicare/](./benchmarks/payg-medicare/README.md) | 20 PAYG withholding and Medicare levy questions, each key the figure a cited row of the ATO's Schedule 1 withholding formulas or an ATO Medicare levy example prints, recomputed by the key check and scored by the same scorer. No model has been run on these questions. Not in the bundle. |
 | [evals/RESULTS.md](./evals/RESULTS.md) | Recorded manual evaluation runs: model, date and a pass or fail per behaviour test, with any proposed observations in their own section. Not in the bundle. |
 | [reference/tpb-catalogue.md](./reference/tpb-catalogue.md) | The live TPB Guidance Statement catalogue, GS01 to GS55. Complete for the checked live Guidance Statement category, which is what the catalogue's own header says it covers, not every product the TPB has published |
 | [reference/apes-110-map.md](./reference/apes-110-map.md) | Primary APES 110 reference map |
@@ -193,7 +194,9 @@ DrDebits keeps its guide, tests, references and governance records in these file
 | [reference/tpb-gs55-concordance.md](./reference/tpb-gs55-concordance.md) | TPB(GS) 55/2026 concordance: each of the Guidance Statement's considerations and each National AI Centre essential practice, with the guide control that applies it |
 | [AGENTS.md](./AGENTS.md) | Routing instructions for autonomous coding agents |
 | [DISCLAIMER.md](./DISCLAIMER.md) | General disclaimer: no advice, no agent-client relationship, human responsibility |
+| [docs/ai-policy-crosswalk.md](./docs/ai-policy-crosswalk.md) | Each DrDebits control mapped to the clause of a firm's AI-use policy it supports, with the clauses it does not cover. Not in the bundle. |
 | [docs/ai-register-entry.md](./docs/ai-register-entry.md) | Supplier information for a firm's AI register and risk assessment, and how it relates to ISO/IEC 42001. Not in the bundle. |
+| [docs/connector-examples.md](./docs/connector-examples.md) | A worked example of vendor checklist rows VA-39 to VA-43 against 3 connector vendors' own pages, read on 12 November 2026: what each page answers and what stays open. Not in the bundle. |
 | [MAINTENANCE.md](./MAINTENANCE.md) | Release and source-check protocol |
 | [SHA256SUMS](./SHA256SUMS) | Digests of the 12 files in the verified guide bundle |
 
@@ -203,7 +206,7 @@ Pin the approved release tag, retrieve `SHA256SUMS` at that tag and verify each 
 
 ## Alternatives
 
-DrDebits is an operating guide for Australian practice, with a [31-case benchmark](./benchmarks/payday-div7a/README.md) beside it.
+DrDebits is an operating guide for Australian practice, with 51 benchmark questions beside it: [31 on Payday Super and Division 7A](./benchmarks/payday-div7a/README.md) and [20 on PAYG withholding and the Medicare levy](./benchmarks/payg-medicare/README.md), on which no model has been run.
 
 Examples of open tax-related benchmarks in other jurisdictions include:
 

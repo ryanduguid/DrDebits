@@ -45,11 +45,75 @@ suite replays it on every platform.
   calculation in exact decimal arithmetic. A claimed result passes when it is
   within one unit of its last decimal place; each link of a chain must equal
   the next expression or, as in a running total, its leading number; division
-  by zero and a lone bracketed amount such as `(120)`, which may be an
-  accounting negative, block. A mandatory section must have content. Exit 0 is a
-  mechanical pass, 1 a contract or arithmetic breach, 2 a gate that could not
-  run and 3, for human review, a prohibited-conclusion screen match or a
-  recorded state-changing action. An `ESCALATE` or
+  by zero, a lone bracketed amount such as `(120)`, which may be an
+  accounting negative, a bracket that does not pair within its step, whose
+  extent the gate cannot tell, and a sum that a word interrupts, such as
+  `$100 + wages $200 + $50 = $250`, block, the last 2 even in a correct sum
+  such as `(salary $1,000 - $200) = $800` or `$100 + wages $200 + $50 = $350`.
+  A correct sum after a label that follows an amount and an operator, as in
+  `Item 3 - Deductions $100 + $50 = $150`, blocks for the same reason, as
+  does any other text but whitespace on either side of the operator, as in
+  `FY2025 wages`, `2`, `...`, `$500 wages + ` or, with a dollar amount in it,
+  `$20 wages `, since only `=` ends the look-back, not even a table cell
+  boundary. So does an `=` followed by an amount after such text where no
+  calculation the gate reads ends, right or wrong, as in
+  `Wages $500 + super $50 = $600`, `Salary $80,000 + $5,000 bonus = $95,000`,
+  `$100 + $50 (GST) = $160`, `2 + (3) ) = 6`, `| Rent | $500 × 52 | = $26,000 |`
+  and `(95,000 + 20,000 - 10,000) / 480,000 = 105,000 / 480,000`, and a sum
+  before a date read as prose, as in
+  `Rent $500 × 52 weeks to 30/6/2026 = $26,001`; a label with a spaced hyphen
+  after a number, as in `Year 1 - Depreciation = $2,000`, blocks too. A
+  calculation does not start inside a hyphenated number, so
+  `Rent 2025-07-01 + 2 + 2 = 5` and `FY 2025-26 + 1 = 27` block as such sums,
+  and nor after a sign written after `$`, so `$-150 + 200 = 350` blocks, and
+  so does the correct `$-150 + 200 = 50`. Every
+  dash, such as an en dash or em dash, reads as a hyphen and every space,
+  such as a no-break space, as a space, so `$1,000 – $200 = $800` is
+  reperformed, and a spaced `X` multiplies as `x` does, so a spaced `X` that
+  is a word, as in `2 + 3 = 5 X Factor`, blocks. A result the gate
+  cannot read whole blocks, right or wrong: an `=` followed by a digit
+  before the next `=`, other than one starting a calculation the gate
+  reads after a `,` or `;`, after an amount and an operator, where no
+  calculation the gate reads ends, as in `$100 + $50 = $ 150`,
+  `$100 + $50 = A$150`, `$100 + $50 = approx. $150`, `$100 - $150 = $-50`,
+  `2 + 3 == 5` and `$100 + $50 = $150k`, and other text with a digit, such as
+  the formula in `Price $100 + 10% GST; in Excel use =A1*1.1`. Before a
+  calculation the gate reads,
+  a minus, `x` or `/` counts as an operator only with spaces round it, so
+  dates such as `1/7/2025` and fractions such as `1/11` are not read as one,
+  and nor is `$100/wages`, which reads as a rate such as `$2,000/month`.
+  Before an `=` that no read calculation ends, a `/`, `x` or `X` between
+  numbers outside a date is one with or without spaces, and so is an
+  unspaced minus before `$`, so `$12,000/4 bonus = $3,000`, `100/4 = 25 x 1`,
+  `GST is 1/11 of the price = $100`, `2x3 = 6` and `$1,000-$200 = $800`
+  block, and so do a minus spaced on one side only and a minus, `/`, `x` or
+  `X` joined to the next number but not to the text before it, as in
+  `$1,000 -200 = $800` and `per quarter, x4 = $12,000`. A math symbol the
+  gate does not read, any but `+`, `×`, `÷`, `=`, `−`, `|`, `<` and `>`, and
+  also `·` and `^`, counts as an operator and as an `=`, so `5 · 3 = 15`,
+  `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block. Text joined to a calculation that may
+  belong to it blocks it: a hyphen joined to a word, or a dash after `:`,
+  `=`, `(` or the start of the line, before the first amount, as in
+  `AUD-150 + 200 = 50`, `Quarterly-$12,000/4 = $3,000` and
+  `Net: – 150 + 200 = 50` (a list marker's `- ` aside), a number and a space before a first amount
+  without `$`, as in `1 000 + 1 = 1 001`, and, after the result, a space and
+  a digit, a minus and a digit, a scale word or such a symbol, as in
+  `$150 000`, `5-1`, `5 -1`, `$150 k`, `$150 million` and `5^2`. A dash and
+  a word after a result are prose, as in `$150—the total` and `$150-ish`,
+  and so is a dash after a word and a space, as in `Net — 150 + 200 = 350`.
+  Arrows are math symbols, so `FY2025 → FY2026: $500 × 2 = $1,000` blocks,
+  and `m` and `b` are scale words, so `5 × 20 = 100 m` and
+  `$100 + $50 = $150 b/f` block.
+  Write the calculation on a line of its own. A
+  date among a sum's operands, as in `1/7/2025 + 2 + 2 = 5`, digits other
+  than 0 to 9, such as Arabic-Indic `٥`, and a numeric character beside a
+  calculation, such as `²` in `2 + 3 = 5²`, block too; a date alone before
+  `=`, bracketed or not, as in `1/7/2026 = 2026`, is prose, and a number with a
+  digit or letter beside it, as in `123/4/2025`, is not a date. The scan runs
+  in time linear in the line. A mandatory section must have
+  content. Exit 0 is a mechanical pass, 1 a contract or arithmetic breach, 2
+  a gate that could not run and 3, for human review, a prohibited-conclusion
+  screen match or a recorded state-changing action. An `ESCALATE` or
   `HARD_STOP` draft may be the abbreviated record the Output contract allows;
   its other mandatory sections are reported as notes.
 - `gate --facts FILE` reads a JSON facts file and asks for review (exit 3),

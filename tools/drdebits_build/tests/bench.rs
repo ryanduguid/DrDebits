@@ -12,6 +12,7 @@ use common::{py, repo_root, run_in};
 use drdebits::bench::{self, Cited, Scored, Value};
 use drdebits::pyjson::{self, Json};
 
+const TOPIC: &str = "payday-div7a";
 const DIR: &str = "benchmarks/payday-div7a";
 const FILES: [&str; 4] = [
     "questions.json",
@@ -39,7 +40,7 @@ fn edit(tree: &Path, file: &str, from: &str, to: &str) {
 }
 
 fn keys() -> Vec<bench::Key> {
-    bench::load_keys(&py(&repo_root())).unwrap()
+    bench::load_keys(&py(&repo_root()), TOPIC).unwrap()
 }
 
 fn mark(answers: &str) -> Result<Vec<Scored>, String> {
@@ -54,7 +55,7 @@ fn one(answers: &str, id: &str) -> (Value, Cited) {
 
 #[test]
 fn every_published_key_reproduces_and_agrees_with_the_engine_record() {
-    let report = bench::check_keys(&py(&repo_root())).unwrap();
+    let report = bench::check_keys(&py(&repo_root()), TOPIC).unwrap();
     assert_eq!(report.problems, Vec::<String>::new());
     assert_eq!((report.computed, report.not_recomputed), (21, 10));
     assert_eq!(report.engine_checked, 31);
@@ -69,7 +70,7 @@ fn a_key_changed_by_one_day_is_caught_by_the_rule_and_the_engine_record() {
         "\"value\": \"2026-08-11\"",
         "\"value\": \"2026-08-10\"",
     );
-    let report = bench::check_keys(&py(tree.path())).unwrap();
+    let report = bench::check_keys(&py(tree.path()), TOPIC).unwrap();
     assert_eq!(report.problems.len(), 2, "{:?}", report.problems);
     assert!(report.problems[0].starts_with("PDS-002: the key says"));
 }
@@ -83,7 +84,7 @@ fn dropping_picnic_day_from_the_calendar_moves_the_dates_that_cross_it() {
         "2026-08-03",
         "2026-08-02",
     );
-    let report = bench::check_keys(&py(tree.path())).unwrap();
+    let report = bench::check_keys(&py(tree.path()), TOPIC).unwrap();
     let moved: Vec<&str> = report.problems.iter().map(|p| &p[..7]).collect();
     assert_eq!(moved, ["PDS-001", "PDS-002", "PDS-007"]);
 }
@@ -97,7 +98,7 @@ fn a_key_with_no_engine_record_is_a_problem_not_a_pass() {
         "\"id\": \"D7A-016\"",
         "\"id\": \"D7A-999\"",
     );
-    let report = bench::check_keys(&py(tree.path())).unwrap();
+    let report = bench::check_keys(&py(tree.path()), TOPIC).unwrap();
     assert_eq!(
         report.problems,
         ["D7A-016: no engine output is recorded".to_string()]
@@ -113,7 +114,7 @@ fn a_rule_that_runs_past_the_calendar_stops_the_check() {
         "\"complete_until\": \"2027-08-31\"",
         "\"complete_until\": \"2026-07-31\"",
     );
-    let error = bench::check_keys(&py(tree.path())).unwrap_err();
+    let error = bench::check_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(error.contains("past the calendar"), "{error}");
 }
 
@@ -121,7 +122,7 @@ fn a_rule_that_runs_past_the_calendar_stops_the_check() {
 fn keys_that_do_not_answer_the_questions_one_for_one_are_refused() {
     let tree = copy();
     edit(tree.path(), "questions.json", "PDS-001", "PDS-000");
-    let error = bench::load_keys(&py(tree.path())).unwrap_err();
+    let error = bench::load_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(error.contains("do not match the questions"), "{error}");
 }
 
@@ -137,7 +138,7 @@ fn matching_duplicate_ids_are_refused() {
         );
     }
     assert_eq!(
-        bench::load_keys(&py(tree.path())).unwrap_err(),
+        bench::load_keys(&py(tree.path()), TOPIC).unwrap_err(),
         "a question id appears twice"
     );
 }
@@ -168,7 +169,7 @@ fn malformed_keys_are_refused_before_scoring() {
     ] {
         let tree = copy();
         edit(tree.path(), "keys.json", from, to);
-        let error = bench::load_keys(&py(tree.path())).unwrap_err();
+        let error = bench::load_keys(&py(tree.path()), TOPIC).unwrap_err();
         assert!(error.contains(expected), "{error}");
     }
 }
@@ -177,7 +178,7 @@ fn malformed_keys_are_refused_before_scoring() {
 fn a_changed_canary_is_refused() {
     let tree = copy();
     edit(tree.path(), "keys.json", "DRDEBITS-BENCHMARK", "BENCHMARK");
-    let error = bench::load_keys(&py(tree.path())).unwrap_err();
+    let error = bench::load_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(error.contains("benchmark_canary"), "{error}");
 }
 
@@ -185,7 +186,7 @@ fn a_changed_canary_is_refused() {
 fn a_key_needs_its_source_and_derivation() {
     let tree = copy();
     edit(tree.path(), "keys.json", "\"derivation\"", "\"working\"");
-    let error = bench::load_keys(&py(tree.path())).unwrap_err();
+    let error = bench::load_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert_eq!(error, "keys file PDS-001: derivation is missing");
 }
 
@@ -309,7 +310,7 @@ fn the_keys_must_state_how_several_authorities_work() {
         "is enough alone",
         "is required jointly",
     );
-    let error = bench::load_keys(&py(tree.path())).unwrap_err();
+    let error = bench::load_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(
         error.contains("authority_rule is missing or changed"),
         "{error}"
@@ -349,7 +350,7 @@ fn a_changed_output_alone_is_caught() {
     ] {
         let tree = copy();
         edit(tree.path(), "engine-check.json", from, to);
-        let report = bench::check_keys(&py(tree.path())).unwrap();
+        let report = bench::check_keys(&py(tree.path()), TOPIC).unwrap();
         assert_eq!(report.problems.len(), 2, "{id}: {:?}", report.problems);
         assert!(report.problems[0].contains("its output gives"), "{id}");
         assert!(report.problems[0].starts_with(id), "{:?}", report.problems);
@@ -365,7 +366,7 @@ fn a_changed_stated_value_alone_conflicts_with_its_output() {
         "\"value\": \"2026-08-07\"",
         "\"value\": \"2026-08-08\"",
     );
-    let report = bench::check_keys(&py(tree.path())).unwrap();
+    let report = bench::check_keys(&py(tree.path()), TOPIC).unwrap();
     assert_eq!(
         report.problems,
         ["PDS-001: the record states 2026-08-08 but its output gives 2026-08-07".to_string()]
@@ -382,7 +383,7 @@ fn a_duplicate_engine_record_is_refused() {
         "\"id\": \"PDS-002\"",
         "\"id\": \"PDS-001\"",
     );
-    let error = bench::check_keys(&py(tree.path())).unwrap_err();
+    let error = bench::check_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(error.ends_with("PDS-001 is recorded twice"), "{error}");
 }
 
@@ -395,7 +396,7 @@ fn an_engine_record_that_does_not_refuse_the_loan_year_is_refused() {
         "\"REFUSED_YEAR_IS_YEAR_OF_LOAN\"",
         "\"REFUSED_GATE_UNKNOWN\"",
     );
-    let error = bench::check_keys(&py(tree.path())).unwrap_err();
+    let error = bench::check_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(
         error.contains("does not refuse the year of the loan"),
         "{error}"
@@ -429,7 +430,7 @@ fn an_engine_record_with_a_bad_read_is_refused() {
     ] {
         let tree = copy();
         edit(tree.path(), "engine-check.json", from, to);
-        let found = bench::check_keys(&py(tree.path()));
+        let found = bench::check_keys(&py(tree.path()), TOPIC);
         let text = match found {
             Ok(report) => report.problems.join("; "),
             Err(error) => error,
@@ -739,9 +740,292 @@ fn a_rule_that_starts_before_the_calendar_stops_the_check() {
         "\"complete_from\": \"2026-07-01\"",
         "\"complete_from\": \"2026-07-02\"",
     );
-    let error = bench::check_keys(&py(tree.path())).unwrap_err();
+    let error = bench::check_keys(&py(tree.path()), TOPIC).unwrap_err();
     assert!(
         error.contains("is before the calendar's first complete day"),
         "{error}"
     );
+}
+
+/// The README's table of naive baselines has to be what the scorer gives, and
+/// its PDS-002 sentence has to quote what each file answers.
+#[test]
+fn the_published_naive_baselines_score_as_the_readme_says() {
+    let readme = std::fs::read_to_string(repo_root().join(DIR).join("README.md")).unwrap();
+    for (file, pds_002, row) in [
+        ("calendar-days.json", "2026-08-06", "| 0 | 14 | 17 | 14 |"),
+        ("weekdays-only.json", "2026-08-10", "| 7 | 7 | 17 | 14 |"),
+    ] {
+        let path = repo_root().join(DIR).join("baselines").join(file);
+        let body = std::fs::read_to_string(path).unwrap();
+        let scored = mark(&body).unwrap();
+        let count = |hit: &dyn Fn(&Scored) -> bool| scored.iter().filter(|s| hit(s)).count();
+        let shown = format!(
+            "| {} | {} | {} | {} |",
+            count(&|s| s.value == Value::Correct),
+            count(&|s| s.value == Value::Wrong),
+            count(&|s| s.value == Value::Unanswered),
+            count(&|s| s.cited == Cited::Right),
+        );
+        assert_eq!(shown, row, "{file}");
+        let line = format!("[{file}](baselines/{file}) {row}");
+        assert!(readme.contains(&line), "README row for {file}: {line}");
+        let answers = pyjson::loads(&body).unwrap();
+        let answered = answers
+            .get("answers")
+            .and_then(|a| a.get("PDS-002"))
+            .and_then(|a| a.get("value"))
+            .and_then(Json::as_str);
+        assert_eq!(answered, Some(pds_002), "{file} PDS-002");
+        assert!(readme.contains(pds_002), "README PDS-002 answer {pds_002}");
+    }
+}
+
+/// Worked by hand from the binomial distribution with p = 1/2, ties left out.
+/// 6 to 1: 2 × (C(7,0) + C(7,1)) / 2^7 = 2 × (1 + 7) / 128 = 0.125.
+/// 0 to 7: 2 × C(7,0) / 2^7 = 2 / 128 = 0.015625, shown as 0.0156.
+/// 10 to 0: 2 × C(10,0) / 2^10 = 2 / 1,024 = 0.001953125, shown as 0.0020.
+/// 3 to 3: 2 × (1 + 6 + 15 + 20) / 2^6 = 84 / 64, more than 1, so 1.
+/// 0 to 0: no untied pair, so 1.
+#[test]
+fn the_sign_test_matches_the_binomial_tail_worked_by_hand() {
+    for ((a, b), p) in [
+        ((6, 1), "p = 0.1250"),
+        ((1, 6), "p = 0.1250"),
+        ((0, 7), "p = 0.0156"),
+        ((10, 0), "p = 0.0020"),
+        ((3, 3), "p = 1.0000"),
+        ((0, 0), "p = 1.0000"),
+    ] {
+        assert_eq!(bench::sign_test(a, b), p, "{a} to {b}");
+    }
+}
+
+/// A p that would show as 0.0000 is never printed as 0. 15 to 0:
+/// 2 / 2^15 = 0.000061, shown as 0.0001; 16 to 0: 2 / 2^16 = 0.0000305,
+/// below what 4 places show. 5 to 0 is the most uneven split of 5 and still
+/// gives 2 / 2^5 = 0.0625; 6 to 0 gives 0.03125, shown as 0.0313.
+#[test]
+fn a_tiny_p_is_shown_as_below_the_last_place_not_as_0() {
+    for ((a, b), p) in [
+        ((15, 0), "p = 0.0001"),
+        ((16, 0), "p < 0.0001"),
+        ((0, 31), "p < 0.0001"),
+        ((5, 0), "p = 0.0625"),
+        ((6, 0), "p = 0.0313"),
+    ] {
+        assert_eq!(bench::sign_test(a, b), p, "{a} to {b}");
+    }
+}
+
+/// An answers file giving the key's value, with no citation, for each
+/// question at the given positions in the key list.
+fn answering(keys: &[bench::Key], positions: std::ops::Range<usize>) -> Json {
+    let answers: Vec<String> = keys[positions]
+        .iter()
+        .map(|k| format!("\"{}\": {{\"value\": \"{}\"}}", k.id, k.value))
+        .collect();
+    pyjson::loads(&format!("{{\"answers\": {{{}}}}}", answers.join(", "))).unwrap()
+}
+
+/// Condition a answers questions 1 to 6 right in both repeats. Condition b
+/// answers questions 1 to 3 right in its first repeat and question 7 right in
+/// its second. So a has more right answers on 6 questions (1 to 6), b on 1
+/// (7), and the other 24 are tied at none: p = 0.1250 as worked above.
+/// Unanswered runs the other way, 1 to 6, with the same p. No answer is
+/// wrong and none cites a section, so those measures tie on all 31.
+#[test]
+fn a_paired_comparison_counts_each_question_once_and_keeps_the_ties() {
+    let keys = keys();
+    let a = [answering(&keys, 0..6), answering(&keys, 0..6)];
+    let b = [answering(&keys, 0..3), answering(&keys, 6..7)];
+    let paired = bench::compare(&keys, &a, &b).unwrap();
+    let row = |measure: &str| paired.iter().find(|p| p.measure == measure).unwrap();
+    let value = row("value correct");
+    assert_eq!(
+        (
+            value.a_total,
+            value.b_total,
+            value.a_higher,
+            value.b_higher,
+            value.ties
+        ),
+        (12, 4, 6, 1, 24)
+    );
+    assert_eq!(value.p, "p = 0.1250");
+    let unanswered = row("unanswered");
+    assert_eq!(
+        (
+            unanswered.a_total,
+            unanswered.b_total,
+            unanswered.a_higher,
+            unanswered.b_higher
+        ),
+        (50, 58, 1, 6)
+    );
+    assert_eq!(unanswered.p, "p = 0.1250");
+    for measure in [
+        "value wrong",
+        "authority right",
+        "correct value and authority",
+    ] {
+        let tied = row(measure);
+        assert_eq!(
+            (tied.a_higher, tied.b_higher, tied.ties),
+            (0, 0, 31),
+            "{measure}"
+        );
+        assert_eq!(tied.p, "p = 1.0000", "{measure}");
+    }
+}
+
+#[test]
+fn a_comparison_without_a_file_on_each_side_or_with_unequal_repeats_is_refused() {
+    let keys = keys();
+    let one = answering(&keys, 0..1);
+    let error = bench::compare(&keys, &[], std::slice::from_ref(&one)).unwrap_err();
+    assert_eq!(error, "each condition needs at least one answers file");
+    let error = bench::compare(&keys, std::slice::from_ref(&one), &[]).unwrap_err();
+    assert_eq!(error, "each condition needs at least one answers file");
+    let error = bench::compare(
+        &keys,
+        &[one.clone(), one.clone()],
+        std::slice::from_ref(&one),
+    )
+    .unwrap_err();
+    assert_eq!(
+        error,
+        "the conditions are unpaired: a has 2 repeats and b has 1"
+    );
+    let unknown = pyjson::loads(r#"{"answers": {"XYZ-001": {"value": "1"}}}"#).unwrap();
+    let error = bench::compare(&keys, &[one], &[unknown]).unwrap_err();
+    assert_eq!(
+        error,
+        "answers file: unknown question XYZ-001 (condition b, file 1)"
+    );
+}
+
+/// The 2 published naive baselines are a round already in the repository:
+/// compared as a against b, each with its one file, they give the README's
+/// totals.
+#[test]
+fn comparing_the_published_baselines_reproduces_the_readme_totals() {
+    let root = repo_root();
+    let file = |name: &str| format!("{DIR}/baselines/{name}");
+    let output = run_in(
+        &root,
+        &[
+            "bench",
+            "compare",
+            "--a",
+            &file("calendar-days.json"),
+            "--b",
+            &file("weekdays-only.json"),
+        ],
+        true,
+    );
+    assert_eq!(output.code, 0, "{}", output.stderr);
+    let readme = std::fs::read_to_string(root.join(DIR).join("README.md")).unwrap();
+    assert!(
+        readme.contains("[calendar-days.json](baselines/calendar-days.json) | 0 | 14 | 17 | 14 |")
+    );
+    assert!(
+        readme.contains("[weekdays-only.json](baselines/weekdays-only.json) | 7 | 7 | 17 | 14 |")
+    );
+    assert_eq!(
+        output.stdout,
+        "bench compare: 31 questions paired by question; answers files per condition: 1\n\
+         value correct: a 0 (mean 0.00), b 7 (mean 7.00); a higher on 0, b higher on 7, ties 24; two-sided sign test p = 0.0156\n\
+         value wrong: a 14 (mean 14.00), b 7 (mean 7.00); a higher on 7, b higher on 0, ties 24; two-sided sign test p = 0.0156\n\
+         unanswered: a 17 (mean 17.00), b 17 (mean 17.00); a higher on 0, b higher on 0, ties 31; two-sided sign test p = 1.0000; too few untied questions for any split to give p below 0.05\n\
+         authority right: a 14 (mean 14.00), b 14 (mean 14.00); a higher on 0, b higher on 0, ties 31; two-sided sign test p = 1.0000; too few untied questions for any split to give p below 0.05\n\
+         correct value and authority: a 0 (mean 0.00), b 7 (mean 7.00); a higher on 0, b higher on 7, ties 24; two-sided sign test p = 0.0156\n"
+    );
+
+    // b's file is a copy, because one path given twice is refused first.
+    let dir = tempfile::tempdir().unwrap();
+    let copy = dir.path().join("weekdays-only.json");
+    std::fs::copy(root.join(file("weekdays-only.json")), &copy).unwrap();
+    let unpaired = run_in(
+        &root,
+        &[
+            "bench",
+            "compare",
+            "--a",
+            &file("calendar-days.json"),
+            &file("weekdays-only.json"),
+            "--b",
+            copy.to_str().unwrap(),
+        ],
+        true,
+    );
+    assert_eq!(unpaired.code, 2);
+    assert_eq!(
+        unpaired.stderr,
+        "bench: the conditions are unpaired: a has 2 repeats and b has 1\n"
+    );
+    let missing = run_in(
+        &root,
+        &["bench", "compare", "--a", &file("calendar-days.json")],
+        true,
+    );
+    assert_eq!(missing.code, 2);
+    assert!(missing.stderr.contains("--b"), "{}", missing.stderr);
+}
+
+/// A file given twice, a file that is not JSON and a file the scorer refuses
+/// each stop the comparison, and the message says which file.
+#[test]
+fn compare_names_the_file_it_refuses() {
+    let root = repo_root();
+    let calendar = format!("{DIR}/baselines/calendar-days.json");
+    let weekdays = format!("{DIR}/baselines/weekdays-only.json");
+    let dir = tempfile::tempdir().unwrap();
+    let write = |name: &str, body: &str| {
+        let path = dir.path().join(name);
+        std::fs::write(&path, body).unwrap();
+        path.to_str().unwrap().to_string()
+    };
+    let broken = write("broken.json", "{\"answers\": ");
+    let unknown = write(
+        "unknown.json",
+        r#"{"answers": {"XYZ-001": {"value": "1"}}}"#,
+    );
+    let empty = write("empty.json", r#"{"answers": {}}"#);
+    let also_calendar = format!("./{calendar}");
+    for (a, b, expected) in [
+        // One file spelt 2 ways is still one file.
+        (
+            vec![calendar.as_str()],
+            vec![also_calendar.as_str()],
+            format!(
+                "bench: {also_calendar} is given more than once: each answers file is one repeat of one condition\n"
+            ),
+        ),
+        (
+            vec![calendar.as_str(), weekdays.as_str()],
+            vec![weekdays.as_str(), calendar.as_str()],
+            format!(
+                "bench: {weekdays} is given more than once: each answers file is one repeat of one condition\n"
+            ),
+        ),
+        (
+            vec![calendar.as_str()],
+            vec![broken.as_str()],
+            format!("(condition b, {broken})\n"),
+        ),
+        (
+            vec![calendar.as_str(), weekdays.as_str()],
+            vec![empty.as_str(), unknown.as_str()],
+            "bench: answers file: unknown question XYZ-001 (condition b, file 2)\n".to_string(),
+        ),
+    ] {
+        let mut args = vec!["bench", "compare", "--a"];
+        args.extend(&a);
+        args.push("--b");
+        args.extend(&b);
+        let refused = run_in(&root, &args, true);
+        assert_eq!(refused.code, 2, "{}", refused.stdout);
+        assert!(refused.stderr.ends_with(&expected), "{}", refused.stderr);
+    }
 }

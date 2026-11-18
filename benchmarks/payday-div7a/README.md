@@ -1,6 +1,6 @@
 # Payday Super and Division 7A benchmark
 
-Thirty-one questions on Payday Super due dates and Division 7A, with published keys, derivations and a scorer. No model has been scored. The claim is that the keys are reproducible, not that the benchmark is independent.
+Thirty-one questions on Payday Super due dates and Division 7A, with published keys, derivations and a scorer. Two model rounds were scored on 14 November 2026: [results-2026-11-14.md](results-2026-11-14.md). The claim is that the keys are reproducible, not that the benchmark is independent.
 
 **Publisher conflict.** Ryan Duguid publishes this benchmark, and also publishes `payday-super-checker`, `div7a-loan-review` and `aus-accounting-mcp`, which it could score. The keys were checked against 2 of those products, and `business-days.json` is copied from one of them. Its table's sources were checked on 15 August 2026. The rule check and the engine check therefore share one calendar for all 14 date keys, and an ATO example stands apart from it for PDS-001 to PDS-007 alone. Read any score with that in mind.
 
@@ -12,6 +12,7 @@ Thirty-one questions on Payday Super due dates and Division 7A, with published k
 | [keys.json](keys.json) | Each key's value, the sections it accepts, its source, a derivation and a rule to recompute it. Its `authority_rule` says how several listed sections work. |
 | [business-days.json](business-days.json) | The weekdays from 1 July 2026 to 31 August 2027 that are public holidays for the whole of a State or Territory, copied from the `payday-super-checker` table at the recorded commit. That table's sources were checked on 15 August 2026, not for this benchmark. |
 | [engine-check.json](engine-check.json) | Each case's request to an engine, the output, where the value sits in that output and the value read from it. |
+| [baselines/](baselines/) | Answers from 2 naive date methods, scored below. No model wrote them. |
 
 Each key comes from one of these, named in the key's `source`:
 
@@ -52,6 +53,25 @@ The scorer marks 2 things separately, because a right figure can rest on the wro
 - **Authority:** right when every citation is readable and names a section the key lists, at section level, so `s 109N(2)` meets `s 109N`. Each listed section is enough alone: for the Payday Super keys either s 6 or s 18C counts as right, because each states the period relied on. `authority_mixed` counts answers with a right section beside a readable section outside the key, so citing every section at once earns no `authority_right`. `authority_partly_unreadable` counts answers whose readable citations are all right beside one the gate cannot read, because it could be wrong. `wrong_authority` counts answers with no right section among their readable citations. `authority_unreadable` counts answers citing only forms the gate cannot read, such as `Division 7A`. `authority_missing` counts answers with no citation.
 
 `correct_value_wrong_authority` counts the right figure on the wrong section. Add `--json` for each question's marks.
+
+## Compare 2 conditions
+
+```bash
+cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- bench compare --a with-1.json with-2.json with-3.json --b without-1.json without-2.json without-3.json --root .
+```
+
+`bench compare` scores every answers file and pairs the 2 conditions question by question. For each measure (value correct, value wrong, unanswered, authority right, and correct value and authority) it prints each condition's total and mean per file, the number of questions on which each condition has the measure in more of its repeats, the ties, and an exact two-sided sign test on the untied questions. Each question is one pair, whatever the number of repeats, so repeats of one question are not counted as independent. It refuses a condition with no file, conditions with different numbers of files, a file named twice and any file the scorer refuses, and says which file: its path, or for a file the scorer refuses, its condition and place in the list. A sign test says how often a split at least that uneven would arise by chance if, on each untied question, either condition were equally likely to come out ahead, independently of the other questions; it is not a measure of size, and 31 questions can detect only a large difference. With fewer than 6 untied questions no split can give p below 0.05, and the output says so. A p that would show as 0.0000 is printed as `p < 0.0001`. The 5 measures overlap (value correct, value wrong and unanswered add up to the repeats), so they are not 5 independent tests, and one low p amongst them is weaker evidence than it looks. Run on the 2 files in [baselines/](baselines/), it gives the totals in the table below. Add `--topic payg-medicare` to compare runs of the [PAYG withholding and Medicare levy benchmark](../payg-medicare/README.md).
+
+## What 2 naive date methods score
+
+No model ran for these. Each file in [baselines/](baselines/) answers the 14 keys that follow the business-day rule, citing s 6 of the *Superannuation Guarantee (Administration) Act 1992*, and leaves the other 17 unanswered. A test scores both files and checks these figures.
+
+| Method | File | Value correct | Value wrong | Unanswered | Authority right |
+| --- | --- | --- | --- | --- | --- |
+| Counts calendar days, not business days | [calendar-days.json](baselines/calendar-days.json) | 0 | 14 | 17 | 14 |
+| Skips weekends but not State or Territory public holidays | [weekdays-only.json](baselines/weekdays-only.json) | 7 | 7 | 17 | 14 |
+
+For PDS-002, wages paid on 30 July 2026, the key is 2026-08-11 because Picnic Day in the Northern Territory, 3 August 2026, is not a business day. The first method gives 2026-08-06 and the second 2026-08-10. Nagaris's [AI Accounting Index](https://nagaris.com/ai-accounting-index) (first edition, October 2026; read 13 November 2026) describes the same payday and deadline and reports that none of the 14 setups that answered it got the date right: most said 10 August, and 4 counted calendar days and said 6 August. The Index publishes its results and one example question, but no question set or answer keys. This benchmark publishes its questions, keys and scorer, and its [model results](results-2026-11-14.md).
 
 ## Limits
 

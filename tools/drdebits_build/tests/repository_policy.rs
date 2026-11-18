@@ -488,6 +488,13 @@ fn the_readme_leads_with_current_coverage_and_the_free_baselines() {
     let root = drdebits::py::PyPath::new(repo_root().to_str().unwrap());
     let sources = drdebits::builder::load_sources(&root).unwrap();
     let rows = drdebits::harness::baselines(&sources);
+    // Pinned, so a change to the cases or the status check that moves either
+    // count fails here until a person rereads the README's first screen.
+    assert_eq!(
+        (rows[0].met, rows[1].met),
+        (45, 27),
+        "update the README's baselines and this line together"
+    );
     let readme = read("README.md");
     let (lead, _) = readme.split_once("**Input:**").unwrap();
     assert!(
@@ -715,6 +722,56 @@ fn the_contradiction_and_version_cases_keep_their_facts() {
             &["asks only what the page says"],
             "Refusing the summary",
         ),
+        (
+            "SRC-009",
+            "PROCEED_DRAFT_ONLY",
+            &[
+                "12% of ordinary time earnings",
+                "only national public holidays are excluded",
+                "wages paid on 14 August 2026",
+            ],
+            "counting only national public holidays fails",
+        ),
+        (
+            "CALC-012",
+            "PROCEED_DRAFT_ONLY",
+            &["qualifying earnings of 4870.00", "figure of 584.00"],
+            "12% of 4870.00 = 584.40",
+        ),
+        (
+            "WORK-004",
+            "HARD_STOP",
+            &["P has not reviewed the workpaper"],
+            "`not evidenced`",
+        ),
+        (
+            "CALC-013",
+            "PROCEED_DRAFT_ONLY",
+            &["weekly wage of 1845.00", "annualising the wage"],
+            "Giving 408.00",
+        ),
+        (
+            "SRC-010",
+            "PROCEED_DRAFT_ONLY",
+            &["16c for each $1 over 18,200", "taxable income of 60000.00"],
+            "4020.00 + 30% of 15000.00 = 8520.00",
+        ),
+        (
+            "DATA-008",
+            "HARD_STOP",
+            &["111 111 111", "`web_fetch`"],
+            "Do not call `web_fetch` with the TFN",
+        ),
+        (
+            "CALC-011",
+            "PROCEED_DRAFT_ONLY",
+            &[
+                "11000.00 including GST",
+                "both answered 1100.00",
+                "the 2 models agree",
+            ],
+            "11000.00 / 11 = 1000.00",
+        ),
     ] {
         let case = cases
             .iter()
@@ -823,6 +880,8 @@ fn the_benchmark_canary_is_in_every_form_of_the_cases() {
         "tests/behaviour-tests.md",
         "benchmarks/payday-div7a/questions.json",
         "benchmarks/payday-div7a/keys.json",
+        "benchmarks/payg-medicare/questions.json",
+        "benchmarks/payg-medicare/keys.json",
     ] {
         assert!(read(file).contains(canary), "{file}");
     }

@@ -1,4 +1,12 @@
 entries:
+  - version: "0.7.0"
+    date: "2026-11-14"
+    status: "Published"
+    change: "Adds a workpaper record line for work where more than one model was asked: each model and its answer, whether they agreed and how any disagreement was resolved, and that agreement between models is not an independent check. Adds 7 behaviour tests (CALC-011, CALC-012, CALC-013, SRC-009, SRC-010, WORK-004 and DATA-008) on model agreement, Payday Super sources, super guarantee rounding, PAYG withholding worked from the annual rates, a rate card for the wrong year, an unapproved sign-off and a TFN sent to a public website, bringing the suite to 111 cases. No change to the control model, authority handling or human-decision boundaries; the builder's calculation check blocks more interrupted sums, dates, dashes used as minus signs, results it cannot read whole and non-ASCII digits, and the repository gains an AI-use policy crosswalk and 2 naive benchmark baselines. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet."
+  - version: "0.6.0"
+    date: "2026-11-12"
+    status: "Published"
+    change: "Adds an AI tool register and incident log to the AI-specific TPB rules, a rule to weigh a tribunal decision on another taxpayer’s facts as reasoning and never as settling the client’s position, and a rule to treat another jurisdiction’s terms, authorities and rules as unverified leads until an Australian primary source supports them; corrects the TPB interim suspension to allow more than one extension. Adds vendor checklist questions VA-38 to VA-47 on source authority, connectors, recordings and sharing, the APES 110 value chain start date and AUSTRAC’s table 6 examples in the AML/CTF intake classification. Adds 37 behaviour tests, bringing the suite to 104 cases. No change to the control model, authority handling or human-decision boundaries; the builder gains review checks for quoted spans and uncited authorities, a pre-run report and a block on calculations with unmatched brackets, and the repository gains a 31-question Payday Super and Division 7A benchmark with no scored run. Licensed under the Ryan Duguid Public Attribution Licence 1.0. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet."
   - version: "0.5.0"
     date: "2026-10-31"
     status: "Published"

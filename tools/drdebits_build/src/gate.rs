@@ -12,8 +12,8 @@
 //! 0   PASS    every mechanical check passed; a human still reviews the draft
 //! 1   BLOCK   the draft breaks the output contract or its arithmetic
 //! 2   the gate could not run (unreadable response, guide sources or `--source` file)
-//! 3   REVIEW  nothing blocked, but the prohibited-conclusion screen fired or
-//!             the draft records a state-changing action; a human decides
+//! 3   REVIEW  nothing blocked, but the prohibited-conclusion screen fired
+//!             or the draft records a state-changing action; a human decides
 //! ```
 //!
 //! Checked: the draft banner; one primary decision status naming one allowed
@@ -22,9 +22,79 @@
 //! the guide makes mandatory, each with content; and every written calculation
 //! of the form `a op b = c`, including each link of a chain, reperformed in
 //! exact decimal arithmetic. A minus sign needs spaces around it, so section
-//! numbers such as `8-1` and years such as `2026-27` are not subtractions. A
+//! numbers such as `8-1` and years such as `2026-27` are not subtractions.
+//! Every dash, such as an en dash or em dash, reads as a hyphen and every
+//! space, such as a no-break space, as a space, so `$1,000 – $200 = $800` is
+//! a subtraction, and a spaced `X` multiplies as `x` does. A
 //! lone bracketed amount such as `(120)` blocks as ambiguous, because it may
-//! be an accounting negative.
+//! be an accounting negative. A bracket opened before a calculation, as in
+//! `(2 + 3 = 5)`, belongs to the sentence. Any other bracket that does not
+//! pair within its step between `=` signs blocks the calculation, even a
+//! correct one: the gate sees only part of the sentence and cannot tell what
+//! the bracket encloses. For the same reason a calculation blocks, even a
+//! correct one, when an amount and, after it, an operator come before it on
+//! its line with text other than whitespace and no `=` between, even another
+//! dollar amount: a sum that a word interrupts, as in
+//! `$100 + wages $200 + $50 = $250`, `$100 + $20 wages $200 + $50 = $250` and
+//! `$500 wages + $200 + $50 = $250`, and also a sum after such a label, as
+//! in `Item 3 - Deductions $100 + $50 = $150`. So does an `=` followed by a
+//! digit, after an amount and an operator with no `=`
+//! between, when no calculation the gate reads ends at it, and a digit
+//! before the next `=`, other than one starting a calculation the gate
+//! reads after a `,` or `;`, so
+//! `$100 + $50 = in all, $150` blocks: the result is not
+//! an amount the gate reads whole, as in `$100 + $50 = $ 150`,
+//! `$100 + $50 = A$150`, `$100 - $150 = $-50`, `2 + 3 == 5`,
+//! `$100 + $50 = $150k` and `100/4 = 25 x 1`, a word stands in the sum, as in
+//! `Wages $500 + super $50 = $600` and
+//! `Salary $80,000 + $5,000 bonus = $95,000`, a bracket closes outside every
+//! amount, as in `$100 + $50 (GST) = $160` and `2 + (3) ) = 6`, a table cell
+//! boundary stands in it, as in `| Rent | $500 × 52 | = $26,000 |`, or the
+//! result is an expression, as in
+//! `(95,000 + 20,000 - 10,000) / 480,000 = 105,000 / 480,000`. A `|` does not
+//! end the look-back, since it does not reliably mark a cell and a sum can
+//! span cells, so a table row that repeats its amounts, as in
+//! `| Laptop | 2 x $1,000 | 2 x $1,000 = $2,000 |`, blocks. A calculation
+//! does not start inside a hyphenated number, so `Rent 2025-07-01 + 2 + 2 = 5`
+//! and `FY 2025-26 + 1 = 27` are such sums, not `01 + 2 + 2 = 5` and
+//! `26 + 1 = 27`, and a date read as prose does not hide the sum before it, as
+//! in `Rent $500 × 52 weeks to 30/6/2026 = $26,001`. A label with a spaced
+//! hyphen after a number, as in `Year 1 - Depreciation = $2,000`, reads as an
+//! amount and an operator, so it blocks too. Nor does a calculation start
+//! after a sign written after `$`, so `$-150 + 200 = 350` is such a sum, not
+//! `150 + 200 = 350`. Before a calculation the gate reads, a minus, `x` or
+//! `/` counts as an operator only with spaces round it, so dates such as
+//! `1/7/2025` and fractions such as `1/11` are not read as one, and nor is
+//! `$100/wages`, which reads as a rate such as `$2,000/month`. Before an `=`
+//! that no read calculation ends, a `/`, `x` or `X` between numbers is one
+//! with or without spaces, unless it is in a date, and so is an unspaced
+//! minus before `$`, a minus spaced on one side only, and a minus, `/`, `x`
+//! or `X` joined to the next number but not to the text before it, so
+//! `$12,000/4 bonus = $3,000`, `1/11 of the price = $100`, `2x3 = 6`,
+//! `$1,000-$200 = $800`, `$1,000 -200 = $800` and
+//! `$3,000 per quarter, x4 = $12,000` block. A math symbol the gate does not
+//! read, which is any but `+`, `×`, `÷`, `=`, `−`, `|`, `<` and `>`, and `·`
+//! and `^`, counts both as an operator and as an `=`, so `5 · 3 = 15`,
+//! `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block. A calculation blocks, right or wrong,
+//! when text joined to it may belong to it: before the first amount, a
+//! hyphen or dash joined to a word, which may be a sign or a hyphen, as in
+//! `AUD-150 + 200 = 50` and `Quarterly-$12,000/4 = $3,000`, a dash after
+//! `:`, `=`, `(` or the start of the line, which may be a sign, as in
+//! `Net: – 150 + 200 = 50`, or a number and a space before an amount
+//! without `$`, which may be a digit group, as in `1 000 + 1 = 1 001`; after
+//! the result, a space and a digit, as in `$150 000`, a minus and a digit,
+//! as in `5-1` and `5 -1`, a scale word, as in `$150 k` and `$150 million`,
+//! or a math symbol the gate does not read, as in `5^2`. A dash and a word
+//! after a result are prose, as in `$150—the total` and `$150-ish`, and so is
+//! a dash after a word and a space, as in `Fees – $100 + $50 = $150`. A
+//! date
+//! written as a calculation's only operand, bracketed or not, as in
+//! `1/7/2026 = 2026`, is prose; a date with other operands, as in
+//! `1/7/2025 + 2 + 2 = 5`, blocks; a number with a digit or letter beside it,
+//! as in `123/4/2025`, is not a date. A calculation with digits other than 0
+//! to 9, such as Arabic-Indic `٥`, blocks, and so does one with a numeric
+//! character beside it, such as `²` in `2 + 3 = 5²`. The scan runs in time
+//! linear in the line, so it reads every line whole.
 //!
 //! Mandatory sections follow Risk classification for `PROCEED_DRAFT_ONLY` and
 //! `NEEDS_FACTS`. An `ESCALATE` or `HARD_STOP` draft may be the abbreviated
@@ -146,14 +216,42 @@ static FIELD: LazyLock<regex::Regex> = LazyLock::new(|| {
 });
 
 const NUM: &str = r"\$?\d{1,3}(?:,\d{3})+(?:\.\d+)?%?|\$?\d+(?:\.\d+)?%?";
-static CLAIM: LazyLock<fancy_regex::Regex> = LazyLock::new(|| {
-    // One line only: a bullet's leading hyphen is not a minus sign. Group 1
-    // holds every link before the final result, each ending in `=`; the first
-    // link needs an operator, so a label such as `Item 2 =` is not one.
+/// What stands before a calculation: the start of the line or a character
+/// that is not part of a word, number or date. A hyphen, which
+/// `calculations` makes of every dash, or a minus counts only when no digit
+/// or `$` comes before it, since it joins numbers, as in `2025-07-01` and
+/// `2025–26`, and signs an amount, as in `$-150`. After a word, as in
+/// `Quarterly-$12,000/4`, the calculation starts and `JOINED_BEFORE` blocks
+/// it.
+const BEFORE: &str = r"(?:^|[^\w.,$/\-−]|(?:^|[^\d.,$])[-−])";
+/// What may follow a result: the end of the line, or text that does not
+/// continue it as a longer number, an operator or `=`, nor a letter written
+/// onto it, as in `$150k`.
+const AFTER: &str =
+    r"(?:$|[,.]+(?:$|[^\d,.])|[ \t]+(?:$|[^ \t+×*/÷=\-−xX]|[-−xX](?:$|[^ \t]))|[^\w,. \t+×*/÷=])";
+/// One written calculation, `calc`, on one line only: a bullet's leading
+/// hyphen is not a minus sign. `left` holds every link before the final
+/// result, `right`, each ending in `=`; the first link needs an operator, so
+/// a label such as `Item 2 =` is not one. The `regex` crate searches in time
+/// linear in the line, so the scan never gives up on one; it has no
+/// lookaround, so `BEFORE` and `AFTER` take a character either side, and
+/// `scan` resumes at the result's last character.
+static CLAIM: LazyLock<regex::Regex> = LazyLock::new(|| {
     let operand = format!(r"\(*[ \t]*[-−]?(?:{NUM})[ \t]*\)*");
-    let op = r"(?:[ \t]*[+×*/÷][ \t]*|[ \t]+[-−x][ \t]+)";
-    fancy_regex::Regex::new(&format!(
-        r"(?<![\w.,$/])({operand}(?:{op}{operand})+[ \t]*=[ \t]*(?:{operand}(?:{op}{operand})*[ \t]*=[ \t]*)*)(\([ \t]*[-−]?(?:{NUM})[ \t]*\)|[-−]?(?:{NUM}))(?![\d,.]*\d)(?![ \t]*[+×*/÷=])(?![ \t]+[-−x][ \t])"
+    let op = r"(?:[ \t]*[+×*/÷][ \t]*|[ \t]+[-−xX][ \t]+)";
+    regex::Regex::new(&format!(
+        r"{BEFORE}(?P<calc>(?P<left>{operand}(?:{op}{operand})+[ \t]*=[ \t]*(?:{operand}(?:{op}{operand})*[ \t]*=[ \t]*)*)(?P<right>\([ \t]*[-−]?(?:{NUM})[ \t]*\)|[-−]?(?:{NUM}))){AFTER}"
+    ))
+    .expect("pattern")
+});
+/// An `=`, or a math symbol in `OTHER`, and the text after it to the end of
+/// the word holding its first digit before the next `=`, as in `= $160`,
+/// `= $ 160`, `= A$160`, `= $-60`, `== 6`, `≈ 7` and `= in all, $160`: a
+/// result, readable or not. `calculations` skips a `digit` that starts a
+/// calculation it reads after a `,` or `;`, as in `= x, and 2 + 2 = 4`.
+static RESULT: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(&format!(
+        r"(?:=+|{OTHER})(?P<gap>[^\d=]*)(?P<digit>\d)[^\s=]*"
     ))
     .expect("pattern")
 });
@@ -164,8 +262,71 @@ static NUMBER: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(NUM).
 /// negative. `(-120)` carries its sign and is not ambiguous.
 static BRACKETED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(&format!(r"\([ \t]*(?:{NUM})[ \t]*\)")).expect("pattern"));
+/// When an amount and, after it, an operator stand before a calculation with
+/// no `=` between that amount and the calculation, the calculation may be the
+/// tail of a longer sum, as after `$100 + wages `, `$100 + $20 wages `,
+/// `$500 wages + ` and `$100 + ... `; `+`, `×`, `*`, `÷` and every math
+/// symbol in `OTHER` are operators
+/// wherever they stand, and a minus, `x`, `X` and `/` only with whitespace
+/// round them, since they also mark hyphens, words, dates such as
+/// `1/7/2025`, fractions such as `1/11` and rates such as `$2,000/month`.
+static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(&format!(
+        r"(?:{NUM})[^=]*(?:[+×*÷]|{OTHER}|[ \t][-−xX/](?:[ \t]|$))[^=]*$"
+    ))
+    .expect("pattern")
+});
+/// An operator `INTERRUPTED` does not count, after a number: a `/`, `x` or
+/// `X` between numbers without spaces round it, as in `100/4`,
+/// `$12,000/ 4 bonus` and `$500x52`; a minus before `$`, as in
+/// `$1,000-$200`, or spaced on one side only, as in `$1,000- 200`; or a
+/// minus, `/`, `x` or `X` joined to the next number but not to the text
+/// before it, as in `$1,000 -200` and `per quarter, x4`. An operator before
+/// an `=` that no read calculation ends, once dates are taken out. A minus
+/// joined to numbers on both sides, as in `8-1` and `2025-26`, is a hyphen.
+static UNSPACED: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(
+        r"\d[ \t]*(?:[/xX][ \t]*\$?|[-−][ \t]*\$|[-−][ \t]+\$?)\d|\d.*[^\w$][-−/xX]\$?\d",
+    )
+    .expect("pattern")
+});
+/// A math symbol the gate does not read, as an operator or as `=`: any but
+/// `+`, `×`, `÷`, `=`, the minus `−`, a table's `|` and the comparisons `<`
+/// and `>`, which also mark HTML, and the middle dot `·` and caret `^`, as in
+/// `5 · 3`, `5 ∗ 3`, `10 ∕ 2`, `2 + 3 ＝ 5`, `2 + 3 ≈ 5` and `5^2`.
+const OTHER: &str = r"[\p{Sm}·^&&[^+×÷=−|<>]]";
+/// Text before a calculation that may belong to its first amount: a hyphen,
+/// which `calculations` makes of every dash, that the calculation does not
+/// take as a sign, joined to a word, as in `AUD-150`, which may be a sign or
+/// a hyphen, or after `:`, `=`, `(` or the start of the line, as in
+/// `Net: – 150`, which may be a sign. After a word and a space it separates,
+/// as in `Fees – $100`. `CLAIM` takes a sign joined to the amount, as in
+/// `Net: -150`.
+static JOINED_BEFORE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"(?:[^\W\d]|(?:^|[:=(])[ \t]*)[-−][ \t]*$").expect("pattern")
+});
+/// A number and a space before a calculation whose first amount has no `$`,
+/// as in `1 000 + 1`: the amount may be a digit group of a longer one.
+static GROUPED: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"\d[ \t]+$").expect("pattern"));
+/// Text after a result that may change it: a minus and a digit, as in `5-1`;
+/// a math symbol in `OTHER`, as in `5^2` and `5 ≈ 6`; or a space and a
+/// digit, as in `$150 000`, an operator joined to a number, as in `5 -1`, or a
+/// scale word, as in `$150 k` and `$150 million`.
+static JOINED_AFTER: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(&format!(
+        r"^(?:[-−]\d|[ \t]*{OTHER}|[ \t]+(?:[-−xX/]?\$?\d|(?i:k|m|b|bn|mn|mil|thousand|million|billion|trillion)s?\b))"
+    ))
+    .expect("pattern")
+});
+/// Any dash, such as an en dash or em dash, which `calculations` reads as a
+/// hyphen.
+static DASH: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"\p{Pd}").expect("pattern"));
+/// A date such as `1/7/2025`, with no digit or letter either side, so
+/// `123/4/2025` is a quotient.
 static DATE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"\d{1,2}/\d{1,2}/\d{2,4}").expect("pattern"));
+    LazyLock::new(|| regex::Regex::new(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b").expect("pattern"));
 static NUMBERED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"^\d{1,2}[.)]?\s+").expect("pattern"));
 
@@ -201,6 +362,19 @@ impl Q {
     }
     pub(crate) fn equals(&self, o: &Q) -> bool {
         &self.n * &o.d == &o.n * &self.d
+    }
+    pub(crate) fn less_than(&self, o: &Q) -> bool {
+        &self.n * &o.d < &o.n * &self.d
+    }
+    /// The largest whole number not above this one.
+    pub(crate) fn floor(&self) -> Q {
+        let whole = &self.n / &self.d;
+        let whole = if &whole * &self.d > self.n {
+            whole - 1
+        } else {
+            whole
+        };
+        Q::new(whole, BigInt::from(1))
     }
 }
 
@@ -280,7 +454,7 @@ fn tokens(text: &str) -> Option<Vec<Token>> {
             let op = match c {
                 '+' | '(' | ')' | '/' => c,
                 '-' | '−' => '-',
-                '×' | '*' | 'x' => '*',
+                '×' | '*' | 'x' | 'X' => '*',
                 '÷' => '/',
                 _ => return None,
             };
@@ -424,6 +598,34 @@ pub struct Calculation {
     pub results: Vec<String>,
 }
 
+/// Each match of `pattern` on a line, by its `calc` group. A search resumes
+/// at the last character of the previous `calc`, which may be the character
+/// `BEFORE` the next one.
+fn scan<'a>(pattern: &'a regex::Regex, line: &'a str) -> impl Iterator<Item = regex::Captures<'a>> {
+    let mut at = 0;
+    std::iter::from_fn(move || {
+        let m = pattern.captures_at(line, at)?;
+        let end = m.name("calc").expect("a `calc` group").end();
+        at = end - line[..end].chars().next_back().map_or(0, char::len_utf8);
+        Some(m)
+    })
+}
+
+/// A calculation the gate cannot read, which blocks.
+fn unread(text: String, computed: &str) -> Calculation {
+    Calculation {
+        text,
+        computed: computed.into(),
+        matches: false,
+        operands: Vec::new(),
+        results: Vec::new(),
+    }
+}
+
+const INTERRUPTION: &str = "could not read: an amount and an operator stand before this step with no `=` between, so it may be the tail of a longer sum the gate cannot read, such as one a word interrupts; write the calculation on a line of its own, with only amounts, operators and brackets before each `=` and one amount after the last";
+const JOINED: &str = "could not read: text joined to the first amount or the result may belong to it, as a sign, a digit group, a scale word such as `k` or a math symbol the gate does not read can, so the gate cannot tell what the calculation is; write the calculation on a line of its own, with only amounts, operators and brackets before each `=` and one amount after the last";
+const UNREAD_SUM: &str = "could not read: an amount and an operator stand before this `=` with no `=` between, but no calculation the gate can read ends at it, as when a word, a bracket that does not pair, a table cell boundary, a math symbol the gate does not read or a hyphenated number such as a date stands in the sum, or the result is not one amount the gate reads whole; write the calculation on a line of its own, with only amounts, operators and brackets before each `=` and one amount after the last";
+
 /// Every `a op b = c` in the text, reperformed. The claimed result matches
 /// when it is within one unit of its last decimal place, so a result rounded
 /// up, down or to nearest passes and a wrong digit does not. In a chain
@@ -431,33 +633,112 @@ pub struct Calculation {
 /// expression or its leading number, as a running total writes it.
 pub fn calculations(text: &str) -> Vec<Calculation> {
     let mut out = Vec::new();
-    let lines: Vec<String> = py::splitlines(text).into_iter().map(normalise).collect();
-    for m in lines
-        .iter()
-        .flat_map(|line| CLAIM.captures_iter(line.as_str()))
-        .filter_map(Result::ok)
-    {
-        let (whole, left, right) = (&m[0], &m[1], &m[2]);
+    // Each dash reads as a hyphen and each whitespace character as a space,
+    // so `5 – 3` is `5 - 3`, once list markers are gone, so a leading `–`,
+    // as in `– 150 + 200 = 350`, is a dash before the sum, not a bullet.
+    let lines = py::splitlines(text).into_iter().map(|line| {
+        DASH.replace_all(&normalise(line), "-")
+            .replace(char::is_whitespace, " ")
+    });
+    for line in lines {
+        let read = calculations_on(&line, &mut out);
+        // A sum that no read calculation ends, as in
+        // `Wages $500 + super $50 = $600`, `$100 + $50 (GST) = $160` and
+        // `$100 + $50 = $ 150`: an `=` and a digit after an amount and an
+        // operator, or after an unspaced operator between numbers outside a
+        // date, as in `$12,000/4 bonus = $3,000`.
+        // `read` is in order and its spans do not overlap.
+        let covered = |at: usize| {
+            let within = read.partition_point(|r| r.end <= at);
+            read.get(within).is_some_and(|r| r.contains(&at))
+        };
+        for c in RESULT.captures_iter(&line) {
+            let m = c.get(0).expect("a match");
+            let equals = m.start();
+            let start = line[..equals].rfind('=').map_or(0, |i| i + 1);
+            // A digit that starts a read calculation after a `,` or `;`, as
+            // in `= x, and 2 + 2 = 4`, is not this `=`'s result; one after
+            // other text is, as `$600` is in
+            // `Wages $500 + super $50 = $600 + $10 = $610` and
+            // `$100 + $50 = about $160 + $16 = $176`.
+            let clause = c["gap"].contains([',', ';']);
+            if !covered(equals)
+                && !(clause && covered(c.name("digit").expect("a `digit` group").start()))
+                && (INTERRUPTED.is_match(&line[..equals])
+                    || UNSPACED.is_match(&DATE.replace_all(&line[start..equals], " ")))
+            {
+                out.push(unread(
+                    py::strip(&line[start..m.end()]).to_string(),
+                    UNREAD_SUM,
+                ));
+            }
+        }
+    }
+    out
+}
+
+/// The calculations `CLAIM` finds on one line, reperformed into `out`, and
+/// the span of each.
+fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Range<usize>> {
+    let mut read = Vec::new();
+    for m in scan(&CLAIM, line) {
+        let calc = m.name("calc").expect("a `calc` group");
+        let (whole, left, right) = (calc.as_str(), &m["left"], &m["right"]);
+        let text = py::strip(whole).to_string();
         if DATE.is_match(left) {
+            // A date alone, bracketed or not, as in `1/7/2026 = 2026`, is
+            // prose; a date with other operands, as in `1/7/2025 + 2 + 2 = 5`,
+            // is a sum the gate cannot read.
+            let dates_only = left
+                .split('=')
+                .map(|link| {
+                    link.trim_matches(|c: char| matches!(c, '(' | ')') || c.is_whitespace())
+                })
+                .filter(|s| !s.is_empty())
+                .all(|link| DATE.find(link).is_some_and(|d| d.len() == link.len()));
+            // A date alone is not a read calculation, so the `=` after it is
+            // still checked, as in `Rent $500 × 52 weeks to 30/6/2026 = $26,000`.
+            if !dates_only {
+                read.push(calc.range());
+                out.push(unread(text, "could not read: a date stands in the sum, so the gate cannot tell what it adds; write the calculation without the date"));
+            }
             continue;
         }
-        let text = py::strip(whole).to_string();
+        read.push(calc.range());
+        // `\d` admits any decimal digit, such as Arabic-Indic `٥`, and the
+        // characters either side, which the match includes, may be numeric,
+        // as `²` is in `2 + 3 = 5²`.
+        if m[0].chars().any(|c| c.is_numeric() && !c.is_ascii_digit()) {
+            out.push(unread(text, "could not read: a number has digits other than 0 to 9; write it with the digits 0 to 9"));
+            continue;
+        }
         if BRACKETED.is_match(whole) {
-            out.push(Calculation {
+            out.push(unread(
                 text,
-                computed: "ambiguous: a bracketed amount may be negative; write a minus sign"
-                    .into(),
-                matches: false,
-                operands: Vec::new(),
-                results: Vec::new(),
-            });
+                "ambiguous: a bracketed amount may be negative; write a minus sign",
+            ));
+            continue;
+        }
+        // The tail of a sum that a word interrupts, as in `$200 + $50 = $250`
+        // after `$100 + wages `: the gate cannot tell what the sum adds.
+        if INTERRUPTED.is_match(&line[..calc.start()]) {
+            out.push(unread(text, INTERRUPTION));
+            continue;
+        }
+        // Text joined to the first amount or the result, as in
+        // `AUD-150 + 200 = 50`, `1 000 + 1 = 1 001` and `$100 + $50 = $150 k`.
+        let before = &line[..calc.start()];
+        if JOINED_BEFORE.is_match(before)
+            || (GROUPED.is_match(before) && whole.starts_with(|c: char| c.is_ascii_digit()))
+            || JOINED_AFTER.is_match(&line[calc.end()..])
+        {
+            out.push(unread(text, JOINED));
             continue;
         }
         // A signed bracketed result, `(-50)`.
         let right = right.trim_start_matches('(').trim_end_matches(')').trim();
-        let Some((claimed, places, percent)) = number(right) else {
-            continue;
-        };
+        let (claimed, places, percent) =
+            number(right).expect("a result of the digits 0 to 9, as checked above");
         // An opening bracket of the surrounding prose, as in `(2 + 3 = 5)`.
         let unopened = left
             .matches('(')
@@ -476,16 +757,13 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
             .map(|l| evaluate(l))
             .collect::<Option<Vec<_>>>()
         else {
+            // Every character `CLAIM` admits is a token, so only brackets
+            // that do not pair within a step leave it unreadable.
+            out.push(unread(text, "could not read: a bracket does not pair within its step between `=` signs, so the gate cannot tell what it encloses; write the calculation on its own"));
             continue;
         };
         let Some(values) = values.into_iter().collect::<Option<Vec<Q>>>() else {
-            out.push(Calculation {
-                text,
-                computed: "undefined (division by zero)".into(),
-                matches: false,
-                operands: Vec::new(),
-                results: Vec::new(),
-            });
+            out.push(unread(text, "undefined (division by zero)"));
             continue;
         };
         let last = values.len() - 1;
@@ -555,7 +833,7 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
             results,
         });
     }
-    out
+    read
 }
 
 /// A line without Markdown emphasis, heading marks or list markers. A marker
@@ -1509,5 +1787,16 @@ mod tests {
     fn a_ruling_has_no_subsection_to_strip() {
         let authority = Authority::read("TR 2020/1").unwrap();
         assert_eq!(authority.section(), "TR 2020/1");
+    }
+
+    /// Integer division truncates towards zero, so a negative fraction needs
+    /// the step down that a positive one does not.
+    #[test]
+    fn floor_rounds_down_on_both_sides_of_zero() {
+        let q = |n: i64, d: i64| Q::new(BigInt::from(n), BigInt::from(d));
+        for ((n, d), floor) in [((7, 2), 3), ((-7, 2), -4), ((-6, 2), -3), ((6, 2), 3)] {
+            assert!(q(n, d).floor().equals(&q(floor, 1)), "{n}/{d}");
+        }
+        assert!(q(1, 3).less_than(&q(1, 2)) && !q(1, 2).less_than(&q(1, 2)));
     }
 }
