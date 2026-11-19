@@ -35,7 +35,7 @@ const API: &str = "https://api.prod.legislation.gov.au/v1";
 // that a compilation has been superseded.
 const UA: &str = "llm-tax-guardrails source-check (+https://github.com/ryanduguid/DrDebits)";
 const TIMEOUT: u64 = 60;
-const SELECT: &str = "titleId,registerId,compilationNumber,start";
+const SELECT: &str = "titleId,registerId,compilationNumber,start,reasons";
 // Longer than the gap between source reviews, so a change registered just
 // after one review is still inside the window when the next weekly run reports it.
 const HORIZON_DAYS: i64 = 120;
@@ -113,6 +113,9 @@ pub enum Current {
     },
     /// A record with null registerId and compilationNumber: nothing to compare.
     Incomplete(String),
+    /// The same, with the amendment that made it: an amended version in force
+    /// that the Register has not compiled yet, so no pinned compilation is current.
+    Uncompiled { start: String, reasons: String },
 }
 
 /// Strip the Markdown emphasis the table uses around statute titles.
@@ -195,7 +198,16 @@ pub fn current_version(
     {
         let start = Date::fromisoformat(py::prefix_chars(&field_str(version, "start"), 10))
             .map_or_else(|| "unavailable".to_string(), |d| d.isoformat());
-        return Some(Current::Incomplete(start));
+        let amended = matches!(version.get("reasons"),
+            Some(Json::Array(reasons)) if reasons.iter().any(|r| matches!(r, Json::Object(_))));
+        return Some(if amended {
+            Current::Uncompiled {
+                start,
+                reasons: describe(version),
+            }
+        } else {
+            Current::Incomplete(start)
+        });
     }
     let register_id = version.get("registerId").and_then(Json::as_str)?;
     if !TITLE_ID_FULL.is_match(register_id) {
@@ -350,6 +362,23 @@ pub fn classify(pin: &Pin, version: Option<&Current>) -> Finding {
                 pin.title_id
             ),
         ),
+        Some(Current::Uncompiled { start, reasons }) => {
+            let live = format!(
+                "the current version, in force from {start}, has no compilation yet; the Register records {reasons}. \
+                 Future versions were not checked."
+            );
+            if pin.register_id.is_empty() {
+                finding(UNPINNED, format!("the guide pins no compilation; {live}"))
+            } else {
+                finding(
+                    SUPERSEDED,
+                    format!(
+                        "the guide reads {}, Compilation No {}; {live}",
+                        pin.register_id, pin.compilation_number
+                    ),
+                )
+            }
+        }
         Some(Current::Usable {
             register_id,
             compilation_number,
@@ -393,7 +422,7 @@ pub fn check(
     for pin in &pins {
         let version = current_version(register, &pin.title_id, timeout);
         findings.push(classify(pin, version.as_ref()));
-        // Unusable or incomplete current metadata is already reported.
+        // Unusable, incomplete or uncompiled current metadata is already reported.
         if matches!(version, Some(Current::Usable { .. })) {
             let versions = registered_versions(register, &pin.title_id, today, timeout);
             findings.extend(upcoming(pin, versions.as_deref(), today, HORIZON_DAYS));

@@ -163,9 +163,36 @@ fn current_null_metadata_reports_the_fetched_record() {
         let query = percent_decode(asked[0].0.split_once('?').unwrap().1);
         assert_eq!(
             query,
-            "$top=1&$filter=titleId eq 'C2009A00013' and isCurrent eq true&$select=titleId,registerId,compilationNumber,start"
+            "$top=1&$filter=titleId eq 'C2009A00013' and isCurrent eq true&$select=titleId,registerId,compilationNumber,start,reasons"
         );
     }
+}
+
+// The Register's answer for the Tax Agent Services Regulations 2022 on
+// 20 November 2026: an amendment in force from 14 November, not yet compiled.
+const UNCOMPILED: &str = r#"{"value": [{"titleId": "C2009A00013", "start": "2026-11-14T00:00:00", "registerId": null, "compilationNumber": null, "reasons": [{"affect": "Amend", "markdown": "sch 1 (items 1, 2) of the [Treasury Laws Amendment (Permitted Records and Disclosures) Regulations 2026](/F2026L01501)", "affectedByTitle": {"titleId": "F2026L01501"}}]}]}"#;
+
+#[test]
+fn an_uncompiled_amendment_supersedes_the_pin_and_names_the_amending_title() {
+    let version = current_version(&Scripted::new(Some(UNCOMPILED)), "C2009A00013", T);
+    let finding = classify(&example(), version.as_ref());
+    assert_eq!(finding.outcome, "superseded");
+    for needle in [
+        "C2025C00107, Compilation No 26",
+        "in force from 2026-11-14, has no compilation yet",
+        "Amend: sch 1 (items 1, 2) of the Treasury Laws Amendment (Permitted Records and Disclosures) Regulations 2026 (F2026L01501)",
+    ] {
+        assert!(
+            finding.detail.contains(needle),
+            "{needle}: {}",
+            finding.detail
+        );
+    }
+    let unpinned = classify(
+        &pin("Example Act 2009", "C2009A00013", "", ""),
+        version.as_ref(),
+    );
+    assert_eq!(unpinned.outcome, "unpinned");
 }
 
 #[test]
