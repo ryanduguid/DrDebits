@@ -196,6 +196,28 @@ fn an_uncompiled_amendment_supersedes_the_pin_and_names_the_amending_title() {
 }
 
 #[test]
+fn a_null_record_without_a_named_reason_stays_incomplete() {
+    for reasons in [
+        "null",
+        "[]",
+        "\"Amend\"",
+        "[null]",
+        "[{}]",
+        r#"[{"affect": "Amend"}]"#,
+        r#"[{"affect": "Amend", "markdown": ""}]"#,
+    ] {
+        let body = format!(
+            r#"{{"value": [{{"titleId": "C2009A00013", "start": "2026-11-14T00:00:00", "registerId": null, "compilationNumber": null, "reasons": {reasons}}}]}}"#
+        );
+        assert_eq!(
+            current_version(&Scripted::new(Some(&body)), "C2009A00013", T),
+            Some(Current::Incomplete("2026-11-14".into())),
+            "{reasons}"
+        );
+    }
+}
+
+#[test]
 fn unusable_current_records_remain_rejected() {
     for body in [
         "null",

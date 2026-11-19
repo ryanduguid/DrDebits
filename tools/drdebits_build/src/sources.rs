@@ -198,8 +198,9 @@ pub fn current_version(
     {
         let start = Date::fromisoformat(py::prefix_chars(&field_str(version, "start"), 10))
             .map_or_else(|| "unavailable".to_string(), |d| d.isoformat());
+        // Only a reason that names what changed explains the missing compilation.
         let amended = matches!(version.get("reasons"),
-            Some(Json::Array(reasons)) if reasons.iter().any(|r| matches!(r, Json::Object(_))));
+            Some(Json::Array(reasons)) if reasons.iter().any(|r| !field_str(r, "markdown").is_empty()));
         return Some(if amended {
             Current::Uncompiled {
                 start,
