@@ -276,26 +276,26 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
-/// A complete amount, percentage or quotient that could supply an operand.
-/// Bare two-part fractions are prose. A currency quotient or a longer slash
-/// chain can be arithmetic. The caller checks date labels separately.
+/// A complete amount or expression that could supply an operand. Bare
+/// two-part fractions can be prose. A dollar sign, percentage or longer
+/// slash chain can identify arithmetic. The caller checks periods separately.
 static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let plain = format!(r"[-−]?(?:{NUM})");
-    let currency = r"[-−]?\$\d[\d,]*(?:\.\d+)?%?";
-    // A slash chain can group a quotient within another division.
+    let marked = r"[-−]?(?:\$\d[\d,]*(?:\.\d+)?%?|\d[\d,]*(?:\.\d+)?%)";
     let grouped = format!(r"\(* *{plain} *\)*");
-    let grouped_currency = format!(r"\(* *{currency} *\)*");
-    let divisor = format!(r" */ *{grouped}");
-    let chain = format!(r"{grouped}(?:{divisor}){{2,}}");
-    let currency_chain = format!(r"{grouped}(?:{divisor})* */ *{grouped_currency}(?:{divisor})*");
-    let money = format!(
-        r"(?:{currency}|\(+ *{currency} *\)+|{grouped_currency}(?:{divisor})+|{currency_chain})"
+    let grouped_marked = format!(r"\(* *{marked} *\)*");
+    let chain = format!(r"{grouped}(?: */ *{grouped}){{2,}}");
+    // The marker can be on any term of a quotient or a compact subtraction.
+    let operator = r"(?: */ *|[-−])";
+    let term = format!(r"{operator}{grouped}");
+    let marked_expression = format!(
+        r"(?:{marked}|\(+ *{marked} *\)+|{grouped_marked}(?:{term})+|{grouped}(?:{term})*{operator}{grouped_marked}(?:{term})*)"
     );
     // A numbered list marker like "1)" has no opening parenthesis.
-    // A colon can join a label to explicit currency, but also joins references
-    // like "AB:123". Without a dollar sign, require a delimiter after it.
+    // A colon can join a label to an amount with a dollar sign or percentage.
+    // Without either, a joined colon can be part of a reference like "AB:123".
     regex::Regex::new(&format!(
-        r"(?:(?:^|[ (\[;=+×*÷|])(?:{plain}|\(+ *{plain} *\)+|{chain}|{money})|:{money})$"
+        r"(?:(?:^|[ (\[;=+×*÷|])(?:{plain}|\(+ *{plain} *\)+|{chain})|(?:^|[ (\[;=+×*÷|:]){marked_expression})$"
     ))
     .expect("pattern")
 });
@@ -339,13 +339,14 @@ static JOINED_BEFORE: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// as in `1 000 + 1`: the amount may be a digit group of a longer one.
 static GROUPED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\d[ \t]+$").expect("pattern"));
-/// Text after a result that may change it: a minus and a digit, as in `5-1`;
+/// Text after a result that may change it: a minus and an amount, as in
+/// `5-1` or `$5- $4`;
 /// a math symbol in `OTHER`, as in `5^2` and `5 ≈ 6`; or a space and a
 /// digit, as in `$150 000`, an operator joined to a number, as in `5 -1`, or a
 /// scale word, as in `$150 k` and `$150 million`.
 static JOINED_AFTER: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"^(?:[-−]\d|[ \t]*{OTHER}|[ \t]+(?:[-−xX/]?\$?\d|(?i:k|m|b|bn|mn|mil|thousand|million|billion|trillion)s?\b))"
+        r"^(?:[ \t]*(?:[-−][ \t]*(?:\([ \t]*)*[-−]?\$?\d|{OTHER})|[ \t]+(?:[xX/]?\$?\d|(?i:k|m|b|bn|mn|mil|thousand|million|billion|trillion)s?\b))"
     ))
     .expect("pattern")
 });

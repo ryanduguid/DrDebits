@@ -1048,6 +1048,47 @@ fn a_one_sided_minus_cannot_drop_a_quotient_with_a_currency_divisor() {
 }
 
 #[test]
+fn a_truncated_subtraction_cannot_drop_a_percentage_quotient() {
+    for amount in ["20%/4", "20/4%", "(20% /4)", "Rate:20%/4"] {
+        assert_unread_tail(&format!("{amount}- 5% + 2% = 7%"), "5% + 2% = 7%");
+        assert_unread_tail(&format!("{amount} -5% + 2% = -3%"), "-5% + 2% = -3%");
+    }
+}
+
+#[test]
+fn a_truncated_subtraction_cannot_drop_a_labelled_percentage() {
+    assert_unread_tail("Rate:20%- 5% + 2% = 7%", "5% + 2% = 7%");
+    assert_unread_tail("Rate:20% -5% + 2% = -3%", "-5% + 2% = -3%");
+}
+
+#[test]
+fn a_truncated_subtraction_cannot_split_a_running_total() {
+    for line in [
+        "2 + 3 = 5- 4 + 1 = 5",
+        "$2 + $3 = $5- $4 + $1 = $5",
+        "2 + 3 = 5- (4 + 1) + 1 = 6",
+    ] {
+        let found = calculations(line);
+        assert_eq!(found.len(), 2, "{line}");
+        assert!(!found[0].matches, "{line}");
+        assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+    }
+}
+
+#[test]
+fn a_truncated_subtraction_cannot_drop_a_compact_marked_expression() {
+    for amount in [
+        "$1,000-$200",
+        "1,000-$200",
+        "$1,000-200",
+        "Gross:$1,000-$200",
+    ] {
+        assert_unread_tail(&format!("{amount}- $5 + $2 = $7"), "$5 + $2 = $7");
+        assert_unread_tail(&format!("{amount} -$5 + $2 = -$3"), "-$5 + $2 = -$3");
+    }
+}
+
+#[test]
 fn a_hyphen_joined_to_both_an_amount_and_a_period_is_not_a_spaced_minus() {
     let line = "Ref 1000-Date:(30/6/2026), $5 + $2 = $7";
     let found = calculations(line);
