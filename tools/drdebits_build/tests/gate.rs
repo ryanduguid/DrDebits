@@ -980,6 +980,13 @@ fn a_plain_numbered_reference_does_not_supply_an_operand() {
         "Ref. 1",
         "Ref: 1",
         "Ref:(1)",
+        "Ref AB:123",
+        "Ref AB:(123)",
+        "Ref:AB:123",
+        "ref AB: 123",
+        "Reference AZ:12",
+        "Ref INV-1:2",
+        "Ref file_id:3",
         "Reference: (1)",
         "Item 1",
         "Step 2",
@@ -993,6 +1000,38 @@ fn a_plain_numbered_reference_does_not_supply_an_operand() {
         assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
     }
     assert_unread_tail("Ref: $1000 -$5 + $2 = -$3", "-$5 + $2 = -$3");
+    assert_unread_tail("Ref AB:$1000 -$5 + $2 = -$3", "-$5 + $2 = -$3");
+    assert_unread_tail("Ref AB:1,000 -5 + 2 = -3", "-5 + 2 = -3");
+}
+
+#[test]
+fn a_colon_can_join_a_label_to_an_unmarked_number() {
+    for amount in [
+        "Gross:1,000",
+        "Gross:1000",
+        "Gross:1,000.50",
+        "Gross:10.25",
+        "Gross2:1,000",
+        "Gross (AUD):1000",
+        "Line total:1000",
+        "Case amount:1200",
+        "Reference amount:1200",
+    ] {
+        assert_unread_tail(&format!("{amount}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn numeric_colons_do_not_supply_an_operand() {
+    for label in ["Time:12:30", "At 12:30", "Ratio 2:1", "Cutoff 09:05"] {
+        let line = format!("{label} -5 + 2 = -3");
+        let found = calculations(&line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert_eq!(found[0].text, "-5 + 2 = -3", "{line}");
+        assert!(found[0].matches, "{line}: {}", found[0].computed);
+        assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
+    }
 }
 
 #[test]

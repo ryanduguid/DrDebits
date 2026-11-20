@@ -291,23 +291,30 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let marked_expression = format!(
         r"(?:{marked}|\(+ *{marked} *\)+|{grouped_marked}(?:{term})+|{grouped}(?:{term})*{operator}{grouped_marked}(?:{term})*)"
     );
-    // A colon can join a label to a grouped or marked amount or to a slash chain.
-    // A bare number after it may be part of a reference like "AB:123".
-    // A numbered list marker like "1)" has no opening parenthesis.
+    // A colon can join a label to an amount. A digit-to-digit colon can
+    // instead be part of a clock time or ratio. The caller excludes
+    // explicit references. A list marker like "1)" is not grouped.
     let boundary = r"^|[ (\[;=+×*÷|]";
+    let label_colon = r"(?:^|[^\d]|[\p{L}_]\d+):";
     let parenthesised = format!(r"\(+ *{plain} *\)+");
     regex::Regex::new(&format!(
-        r"(?:(?:{boundary}){plain}|(?:{boundary}|:)(?:{parenthesised}|{chain}|{marked_expression}))$"
+        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{boundary}|:)(?:{parenthesised}|{chain}|{marked_expression}))$"
     ))
     .expect("pattern")
 });
-/// Explicit ordinal labels before a calculation, such as "Item (1)" or
-/// "Ref. 1". A marked amount after a label can still be an operand.
+/// Explicit ordinal labels, such as "Item (1)", "Ref. 1" or "Ref AB:123".
+/// A marked or thousands-grouped amount after a label can still be an operand.
 static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let label = r"\b(?i:item|note|step|line|case|ref(?:erence)?\.?|section|paragraph)";
     let ordinal = r"\d+(?:\.\d+)*";
+    let grouped = format!(r"\( *{ordinal} *\)");
+    let separator = r"(?: +| *: *)";
+    // A reference code uses capitals, digits or an identifier separator.
+    // Ordinary labels such as "Line total:" introduce an amount.
+    let reference = r"\b(?i:ref(?:erence)?\.?)";
+    let code = r"(?:[A-Z][A-Z0-9]*|[A-Za-z][A-Za-z0-9_.-]*[0-9_.-][A-Za-z0-9_.-]*) *: *";
     regex::Regex::new(&format!(
-        r"{label}(?:(?: +| *: *){ordinal}| *:? *\( *{ordinal} *\))$"
+        r"(?:(?:{label}{separator}|{reference}{separator}{code})(?:{ordinal}|{grouped})|{label}{grouped})$"
     ))
     .expect("pattern")
 });
