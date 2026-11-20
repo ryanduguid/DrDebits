@@ -696,21 +696,19 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
     if let Some(amount) = prefix.strip_suffix(['-', '−']) {
         return (separated || amount.ends_with(' ')) && ends_in_amount(amount);
     }
-    if !separated || !left.trim_start().starts_with(['-', '−']) || !ends_in_amount(prefix) {
-        return false;
-    }
-
-    // A period can label a signed amount. Check the text immediately before
-    // the label for a subtraction the scanner may already have skipped.
-    let period = PERIOD_END
-        .captures(prefix.trim_end_matches([' ', ')']))
-        .and_then(|label| label.name("period"));
-    period.is_none_or(|label| {
-        prefix[..label.start()]
+    // A period can label a calculation. Do not let that label hide an
+    // earlier subtraction, regardless of how the calculation starts.
+    if let Some(period) = PERIOD_END
+        .captures(prefix.trim_end_matches([' ', '(', ')']))
+        .and_then(|label| label.name("period"))
+    {
+        return prefix[..period.start()]
             .trim_end_matches([' ', '('])
             .strip_suffix(['-', '−'])
-            .is_some_and(ends_in_amount)
-    })
+            .is_some_and(ends_in_amount);
+    }
+
+    separated && left.trim_start().starts_with(['-', '−']) && ends_in_amount(prefix)
 }
 
 fn ends_in_amount(text: &str) -> bool {
