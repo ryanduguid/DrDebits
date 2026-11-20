@@ -979,6 +979,7 @@ fn a_plain_numbered_reference_does_not_supply_an_operand() {
         "Ref 1",
         "Ref. 1",
         "Ref: 1",
+        "Ref:(1)",
         "Reference: (1)",
         "Item 1",
         "Step 2",
@@ -992,6 +993,14 @@ fn a_plain_numbered_reference_does_not_supply_an_operand() {
         assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
     }
     assert_unread_tail("Ref: $1000 -$5 + $2 = -$3", "-$5 + $2 = -$3");
+}
+
+#[test]
+fn a_colon_can_join_a_label_to_a_grouped_operand() {
+    for amount in ["Gross:(1,000)", "Gross:((-20))", "Gross:( 1,000 )"] {
+        assert_unread_tail(&format!("{amount}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
 }
 
 #[test]

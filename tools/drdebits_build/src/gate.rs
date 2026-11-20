@@ -291,11 +291,13 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let marked_expression = format!(
         r"(?:{marked}|\(+ *{marked} *\)+|{grouped_marked}(?:{term})+|{grouped}(?:{term})*{operator}{grouped_marked}(?:{term})*)"
     );
-    // A numbered list marker like "1)" has no opening parenthesis.
-    // A colon can join a label to a marked amount or to a slash chain.
+    // A colon can join a label to a grouped or marked amount or to a slash chain.
     // A bare number after it may be part of a reference like "AB:123".
+    // A numbered list marker like "1)" has no opening parenthesis.
+    let boundary = r"^|[ (\[;=+×*÷|]";
+    let parenthesised = format!(r"\(+ *{plain} *\)+");
     regex::Regex::new(&format!(
-        r"(?:(?:^|[ (\[;=+×*÷|])(?:{plain}|\(+ *{plain} *\)+)|(?:^|[ (\[;=+×*÷|:])(?:{chain}|{marked_expression}))$"
+        r"(?:(?:{boundary}){plain}|(?:{boundary}|:)(?:{parenthesised}|{chain}|{marked_expression}))$"
     ))
     .expect("pattern")
 });
