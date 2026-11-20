@@ -332,9 +332,10 @@ const SLASH_DATE: &str = r"\b\d{1,2}/\d{1,2}/\d{2,4}\b";
 static DATE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(SLASH_DATE).expect("pattern"));
 /// A date or labelled financial year can precede a signed calculation.
+/// Label punctuation may precede it, as in a colon before a date.
 static PERIOD_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:^|[ (−-])(?P<period>{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}}|(?i:FY *|financial year +|in +|for +)\d{{4}}-\d{{2}})$"
+        r"(?:^|[ (\[:,−-])(?P<period>(?i:date *: *)?(?:{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}})|(?i:FY *|financial year +|in +|for +)\d{{4}}-\d{{2}})$"
     ))
     .expect("pattern")
 });
@@ -696,14 +697,14 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
     if let Some(amount) = prefix.strip_suffix(['-', '−']) {
         return (separated || amount.ends_with(' ')) && ends_in_amount(amount);
     }
-    // A period can label a calculation. Do not let that label hide an
-    // earlier subtraction, regardless of how the calculation starts.
+    // Strip punctuation that frames a period label before checking for
+    // an earlier subtraction.
     if let Some(period) = PERIOD_END
-        .captures(prefix.trim_end_matches([' ', '(', ')']))
+        .captures(prefix.trim_end_matches([' ', '(', ')', '[', ']', ':', ',']))
         .and_then(|label| label.name("period"))
     {
         return prefix[..period.start()]
-            .trim_end_matches([' ', '('])
+            .trim_end_matches([' ', '(', '[', ':', ','])
             .strip_suffix(['-', '−'])
             .is_some_and(ends_in_amount);
     }

@@ -836,13 +836,17 @@ fn a_period_cannot_hide_a_one_sided_minus() {
     for line in ["FY2025-26- 5 + 2 = 7", "2025-99-99- 5 + 2 = 7"] {
         assert_unread_tail(line, "5 + 2 = 7");
     }
+    assert_unread_tail("80/30/6/2026 -5 + 2 = -3", "-5 + 2 = -3");
     let labels = [
         "30/6/2026",
         "2026-06-30",
+        "Date:30/6/2026",
+        "Date: 2026-06-30",
         "FY2025-26",
         "In 2025-26",
         "For 2025-26",
         "(30/6/2026)",
+        "[FY2025-26]",
     ];
     let steps = [
         ("-5 + 2 = -3", "-5 + 2 = -3"),
@@ -851,23 +855,34 @@ fn a_period_cannot_hide_a_one_sided_minus() {
         ("$5 + $2 = $7", "$5 + $2 = $7"),
     ];
     for label in labels {
-        for (expression, tail) in steps {
-            // A bare number after a digit can still trigger the existing
-            // grouped-number check. Test standalone forms that it reads.
-            if !expression.starts_with(|c: char| c.is_ascii_digit()) {
-                let standalone = format!("{label} {expression}");
-                let found = calculations(&standalone);
-                assert_eq!(found.len(), 1, "{standalone}");
-                assert_eq!(found[0].text, tail, "{standalone}");
-                assert!(found[0].matches, "{standalone}: {}", found[0].computed);
-            }
+        for delimiter in ["", ":", ","] {
+            for (expression, tail) in steps {
+                // A bare number after a digit can still trigger the existing
+                // grouped-number check. Test standalone forms that it reads.
+                if !expression.starts_with(|c: char| c.is_ascii_digit()) {
+                    let standalone = format!("{label}{delimiter} {expression}");
+                    let found = calculations(&standalone);
+                    assert_eq!(found.len(), 1, "{standalone}");
+                    assert_eq!(found[0].text, tail, "{standalone}");
+                    assert!(found[0].matches, "{standalone}: {}", found[0].computed);
+                }
 
-            for before in ["$1,000- ", "$1,000 -", "($1,000)− ", "($1,000) −"] {
-                let line = format!("{before}{label} {expression}");
-                assert_unread_tail(&line, tail);
+                for before in ["$1,000- ", "$1,000 -", "($1,000)− ", "($1,000) −"] {
+                    let line = format!("{before}{label}{delimiter} {expression}");
+                    assert_unread_tail(&line, tail);
+                }
             }
         }
     }
+}
+
+#[test]
+fn a_colon_can_join_a_date_label_to_its_value() {
+    let line = "Date:30/6/2026 -5 + 2 = -3";
+    let found = calculations(line);
+    assert_eq!(found.len(), 1, "{line}");
+    assert_eq!(found[0].text, "-5 + 2 = -3", "{line}");
+    assert!(found[0].matches, "{line}: {}", found[0].computed);
 }
 
 fn assert_unread_tail(line: &str, tail: &str) {
