@@ -292,13 +292,15 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
         r"(?:{marked}|\(+ *{marked} *\)+|{grouped_marked}(?:{term})+|{grouped}(?:{term})*{operator}{grouped_marked}(?:{term})*)"
     );
     // A colon can join a label to an amount. A digit-to-digit colon can
-    // instead be part of a clock time or ratio. The caller excludes
-    // explicit references. A list marker like "1)" is not grouped.
+    // instead be part of a clock time or ratio. A marked or grouped amount
+    // can follow a label directly, as in "Net-$1" or "Net(100)". The
+    // caller excludes explicit references. A list marker is not grouped.
     let boundary = r"^|[ (\[;=+×*÷|]";
     let label_colon = r"(?:^|[^\d]|[\p{L}_]\d+):";
+    let attached = r"^|[^\d.,$]";
     let parenthesised = format!(r"\(+ *{plain} *\)+");
     regex::Regex::new(&format!(
-        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{boundary}|:)(?:{parenthesised}|{chain}|{marked_expression}))$"
+        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{parenthesised}|{marked_expression}))$"
     ))
     .expect("pattern")
 });

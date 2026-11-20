@@ -1046,6 +1046,26 @@ fn a_colon_can_join_a_label_to_a_grouped_operand() {
 }
 
 #[test]
+fn a_one_sided_minus_cannot_drop_an_amount_joined_to_a_label() {
+    for amount in [
+        "Net-$1",
+        "Net–$1,000",
+        "Net$1,000",
+        "Net-($1,000)",
+        "Net-(1,000)",
+        "Net(1,000)",
+        "Net-1000/4/2",
+        "Net A$1,000",
+        "Net-$1,000/4",
+        "Net-$1,000x4",
+        "Rate-20%",
+    ] {
+        assert_unread_tail(&format!("{amount}- 2 + 3 = 5"), "2 + 3 = 5");
+        assert_unread_tail(&format!("{amount} -2 + 3 = 1"), "-2 + 3 = 1");
+    }
+}
+
+#[test]
 fn a_one_sided_minus_cannot_drop_a_compact_currency_product() {
     for amount in ["$1000x4", "$1,000X 4", "1000 x$4", "Gross:(1000X$4)"] {
         assert_unread_tail(&format!("{amount}- $5 + $2 = $7"), "$5 + $2 = $7");
