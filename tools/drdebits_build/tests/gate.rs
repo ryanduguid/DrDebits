@@ -807,17 +807,7 @@ fn one_sided_subtraction_cannot_drop_a_bracketed_amount() {
         ("(-$1,000)– $200 + $50 = $250", "$200 + $50 = $250"),
         ("$1,000− $200 + $50 = $250", "$200 + $50 = $250"),
     ] {
-        let found = calculations(line);
-        assert_eq!(found.len(), 1, "{line}");
-        assert_eq!(found[0].text, tail, "{line}");
-        assert!(!found[0].matches, "{line}");
-        assert!(
-            found[0]
-                .computed
-                .contains("it may be the tail of a longer sum"),
-            "{line}: {}",
-            found[0].computed
-        );
+        assert_unread_tail(line, tail);
     }
 }
 
@@ -827,6 +817,8 @@ fn a_date_or_financial_year_can_label_a_signed_calculation() {
         ("At 30/6/2026 -200 + 50 = -150", "-200 + 50 = -150"),
         ("At (30/6/2026) -200 + 50 = -150", "-200 + 50 = -150"),
         ("At 2026-06-30 -200 + 50 = -150", "-200 + 50 = -150"),
+        ("In 2025-26 -5 + 2 = -3", "-5 + 2 = -3"),
+        ("For 2025-26 -5 + 2 = -3", "-5 + 2 = -3"),
         ("At 30/6/2026 (-5 + 2 = -3)", "(-5 + 2 = -3"),
         ("FY2025-26 (-5 + 2 = -3)", "(-5 + 2 = -3"),
         ("FY2025-26\t-5% + 2% = -3%", "-5% + 2% = -3%"),
@@ -841,28 +833,56 @@ fn a_date_or_financial_year_can_label_a_signed_calculation() {
 
 #[test]
 fn a_period_cannot_hide_a_one_sided_minus() {
-    for (line, tail) in [
-        ("FY2025-26- 5 + 2 = 7", "5 + 2 = 7"),
-        ("2025-99-99- 5 + 2 = 7", "5 + 2 = 7"),
-        ("$1,000- 30/6/2026 -5 + 2 = -3", "-5 + 2 = -3"),
-        ("$1,000- 30/6/2026 (-5 + 2 = -3)", "(-5 + 2 = -3"),
-        ("$1,000- FY2025-26 (-5 + 2 = -3)", "(-5 + 2 = -3"),
-        ("$1,000- 30/6/2026 5 + 2 = 7", "5 + 2 = 7"),
-        ("($1,000)− (30/6/2026) -5 + 2 = -3", "-5 + 2 = -3"),
-    ] {
-        let found = calculations(line);
-        assert_eq!(found.len(), 1, "{line}");
-        assert_eq!(found[0].text, tail, "{line}");
-        assert!(!found[0].matches, "{line}");
-        assert!(
-            found[0]
-                .computed
-                .contains("it may be the tail of a longer sum"),
-            "{line}: {}",
-            found[0].computed
-        );
-        assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+    for line in ["FY2025-26- 5 + 2 = 7", "2025-99-99- 5 + 2 = 7"] {
+        assert_unread_tail(line, "5 + 2 = 7");
     }
+    let labels = [
+        "30/6/2026",
+        "2026-06-30",
+        "FY2025-26",
+        "In 2025-26",
+        "For 2025-26",
+        "(30/6/2026)",
+    ];
+    let steps = [
+        ("-5 + 2 = -3", "-5 + 2 = -3"),
+        ("5 + 2 = 7", "5 + 2 = 7"),
+        ("(-5 + 2 = -3)", "(-5 + 2 = -3"),
+        ("$5 + $2 = $7", "$5 + $2 = $7"),
+    ];
+    for label in labels {
+        for (expression, tail) in steps {
+            // A bare number after a digit can still trigger the existing
+            // grouped-number check. Test standalone forms that it reads.
+            if !expression.starts_with(|c: char| c.is_ascii_digit()) {
+                let standalone = format!("{label} {expression}");
+                let found = calculations(&standalone);
+                assert_eq!(found.len(), 1, "{standalone}");
+                assert_eq!(found[0].text, tail, "{standalone}");
+                assert!(found[0].matches, "{standalone}: {}", found[0].computed);
+            }
+
+            for before in ["$1,000- ", "$1,000 -", "($1,000)− ", "($1,000) −"] {
+                let line = format!("{before}{label} {expression}");
+                assert_unread_tail(&line, tail);
+            }
+        }
+    }
+}
+
+fn assert_unread_tail(line: &str, tail: &str) {
+    let found = calculations(line);
+    assert_eq!(found.len(), 1, "{line}");
+    assert_eq!(found[0].text, tail, "{line}");
+    assert!(!found[0].matches, "{line}");
+    assert!(
+        found[0]
+            .computed
+            .contains("it may be the tail of a longer sum"),
+        "{line}: {}",
+        found[0].computed
+    );
+    assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
 }
 
 #[test]

@@ -334,7 +334,7 @@ static DATE: LazyLock<regex::Regex> =
 /// A date or labelled financial year can precede a signed calculation.
 static PERIOD_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:^|[ (])(?P<period>{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}}|(?i:FY *|financial year +)\d{{4}}-\d{{2}})$"
+        r"(?:^|[ (−-])(?P<period>{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}}|(?i:FY *|financial year +|in +|for +)\d{{4}}-\d{{2}})$"
     ))
     .expect("pattern")
 });
