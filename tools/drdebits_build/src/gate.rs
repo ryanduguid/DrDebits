@@ -280,12 +280,22 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// Bare two-part fractions are prose. A currency quotient or a longer slash
 /// chain can be arithmetic. The caller checks date labels separately.
 static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
-    let quotient = format!(r"\$\d[\d,]*(?:\.\d+)?/(?:{NUM})");
-    let operand = format!(r"[-−]?(?:(?:{NUM})(?:/\d+(?:/\d+)+)?|{quotient})");
+    let plain = format!(r"[-−]?(?:{NUM})(?:/\d+(?:/\d+)+)?");
+    let money = format!(r"[-−]?\$\d[\d,]*(?:\.\d+)?%?(?: */ *[-−]?(?:{NUM}))?");
+    let operand = format!(r"(?:{plain}|{money})");
     // A numbered list marker like "1)" has no opening parenthesis.
+    // A colon can join a label to explicit currency, but also joins references
+    // like "AB:123". Without a dollar sign, require a delimiter after it.
     regex::Regex::new(&format!(
-        r"(?:^|[ (:\[;=+×*÷|])(?:{operand}|\(+ *{operand} *\)+)$"
+        r"(?:(?:^|[ (\[;=+×*÷|])(?:{operand}|\(+ *{operand} *\)+)|:(?:{money}|\(+ *{money} *\)+))$"
     ))
+    .expect("pattern")
+});
+/// Explicit ordinal labels before a calculation, such as "Item (1)".
+static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(
+        r"\b(?i:item|note|step|line|case|ref|reference|section|paragraph) *\( *\d+ *\)$",
+    )
     .expect("pattern")
 });
 /// An operator `INTERRUPTED` does not count, after a number: a `/`, `x` or
@@ -730,7 +740,8 @@ fn period_at_end(text: &str) -> Option<regex::Match<'_>> {
 }
 
 fn ends_in_operand(text: &str) -> bool {
-    OPERAND_END.is_match(text.trim_end_matches(' '))
+    let text = text.trim_end_matches(' ');
+    !ITEM_REFERENCE_END.is_match(text) && OPERAND_END.is_match(text)
 }
 
 /// The calculations `CLAIM` finds on one line, reperformed into `out`, and

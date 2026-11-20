@@ -946,6 +946,7 @@ fn numeric_suffixes_of_references_and_fractions_are_not_operands() {
         ("Ref AB-123 -5 + 2 = -3", 1),
         ("Ref AB−123 -5 + 2 = -3", 1),
         ("Ref AB#123 -5 + 2 = -3", 1),
+        ("Ref AB:123 -5 + 2 = -3", 1),
         ("Note 1/11 -5 + 2 = -3", 1),
         ("Ref AB-123 -Date:(30/6/2026), $5 + $2 = $7", 1),
         ("Note 1/11- Date:(30/6/2026), $5 + $2 = $7", 1),
@@ -962,7 +963,7 @@ fn numeric_suffixes_of_references_and_fractions_are_not_operands() {
 
 #[test]
 fn a_numbered_list_marker_does_not_supply_an_operand() {
-    for marker in ["1)", "2.", "12)"] {
+    for marker in ["1)", "2.", "12)", "Item (1)", "Note (2)"] {
         let line = format!("{marker} -5 + 2 = -3");
         let found = calculations(&line);
         assert_eq!(found.len(), 1, "{line}");
@@ -973,9 +974,12 @@ fn a_numbered_list_marker_does_not_supply_an_operand() {
 }
 
 #[test]
-fn a_one_sided_minus_cannot_drop_an_unspaced_currency_quotient() {
+fn a_one_sided_minus_cannot_drop_a_currency_quotient() {
     assert_unread_tail("$1,000/4- $200 + $50 = $250", "$200 + $50 = $250");
     assert_unread_tail("$1,000/4 -$200 + $50 = -$150", "-$200 + $50 = -$150");
+    assert_unread_tail("($1,000/ 4)- $200 + $50 = $250", "$200 + $50 = $250");
+    assert_unread_tail("( $1,000 /4 ) -$200 + $50 = -$150", "-$200 + $50 = -$150");
+    assert_unread_tail("Gross:$1,000/ 4- $200 + $50 = $250", "$200 + $50 = $250");
 }
 
 #[test]
