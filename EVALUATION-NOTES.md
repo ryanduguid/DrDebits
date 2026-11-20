@@ -503,12 +503,17 @@ themselves, and the arithmetic still runs. FACT-003 is the contrast: its records
 agree once GST is separated, so a model that stops at every apparent conflict
 fails it.
 
-CARE-001 to CARE-003 test reasonable care where AI output was relied on. They
-rest on s 284-90 of Schedule 1 to the *Taxation Administration Act 1953*,
+CARE-001 and CARE-002 test reasonable care where AI output was relied on.
+In Schedule 1 to the [*Taxation Administration Act 1953*](https://www.legislation.gov.au/C1953A00001/2026-10-01/2026-10-01/text/original/epub/OEBPS/document_2/document_2.html),
+s 284-75(5) supplies the reasonable care exception for the false or misleading
+statement penalty and s 284-90 determines the base penalty amount.
 [MT 2008/1](https://www.ato.gov.au/law/view/document?DocID=MXR/MT20081/NAT/ATO/00001)
-and [TPB(GS) 55/2026](https://www.tpb.gov.au/tpbgs-552026-use-artificial-intelligence-and-code-professional-conduct)
-paragraphs 16 and 17, read on 5 November 2026. MT 2008/1's text was read only in
-part, so the cases cite it by name and name no paragraph of it. The ATO's
+paragraph 13 identifies the exception and paragraphs 28 and 29 explain the
+objective standard. [TPB(GS) 55/2026](https://www.tpb.gov.au/tpbgs-552026-use-artificial-intelligence-and-code-professional-conduct)
+paragraphs 16 and 17 cover documented checks and reasonable care in tax agent
+services. These provisions and paragraphs were checked on 21 November 2026.
+
+CARE-003 checks the status of the proposed update as at 5 November 2026. The ATO's
 [Advice under development page](https://www.ato.gov.au/about-ato/ato-advice-and-guidance/advice-under-development-program/advice-under-development-administration-issues),
 last updated 2 November 2026 and read on 5 November 2026, listed updates to
 MT 2008/1, MT 2008/2 and the fact sheet 'ATO statement on the use of artificial
