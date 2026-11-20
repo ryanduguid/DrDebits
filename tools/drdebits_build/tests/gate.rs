@@ -842,6 +842,9 @@ fn a_period_cannot_hide_a_one_sided_minus() {
         "2026-06-30",
         "Date:30/6/2026",
         "Date: 2026-06-30",
+        "Date:(30/6/2026)",
+        "Date:[30/6/2026]",
+        "Date: ( [2026-06-30] )",
         "FY2025-26",
         "In 2025-26",
         "For 2025-26",
@@ -855,12 +858,12 @@ fn a_period_cannot_hide_a_one_sided_minus() {
         ("$5 + $2 = $7", "$5 + $2 = $7"),
     ];
     for label in labels {
-        for delimiter in ["", ":", ","] {
+        for delimiter in [" ", ": ", ", ", ":"] {
             for (expression, tail) in steps {
                 // A bare number after a digit can still trigger the existing
                 // grouped-number check. Test standalone forms that it reads.
                 if !expression.starts_with(|c: char| c.is_ascii_digit()) {
-                    let standalone = format!("{label}{delimiter} {expression}");
+                    let standalone = format!("{label}{delimiter}{expression}");
                     let found = calculations(&standalone);
                     assert_eq!(found.len(), 1, "{standalone}");
                     assert_eq!(found[0].text, tail, "{standalone}");
@@ -868,7 +871,7 @@ fn a_period_cannot_hide_a_one_sided_minus() {
                 }
 
                 for before in ["$1,000- ", "$1,000 -", "($1,000)− ", "($1,000) −"] {
-                    let line = format!("{before}{label}{delimiter} {expression}");
+                    let line = format!("{before}{label}{delimiter}{expression}");
                     assert_unread_tail(&line, tail);
                 }
             }
@@ -883,6 +886,16 @@ fn a_colon_can_join_a_date_label_to_its_value() {
     assert_eq!(found.len(), 1, "{line}");
     assert_eq!(found[0].text, "-5 + 2 = -3", "{line}");
     assert!(found[0].matches, "{line}: {}", found[0].computed);
+}
+
+#[test]
+fn a_named_bracketed_date_cannot_hide_a_right_spaced_minus() {
+    assert_unread_tail("$1,000- Date:(30/6/2026), $5 + $2 = $7", "$5 + $2 = $7");
+}
+
+#[test]
+fn a_named_bracketed_date_cannot_hide_a_left_spaced_minus() {
+    assert_unread_tail("$1,000 -Date:[30/6/2026]: -$5 + $2 = -$3", "-$5 + $2 = -$3");
 }
 
 fn assert_unread_tail(line: &str, tail: &str) {

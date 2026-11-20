@@ -332,10 +332,10 @@ const SLASH_DATE: &str = r"\b\d{1,2}/\d{1,2}/\d{2,4}\b";
 static DATE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(SLASH_DATE).expect("pattern"));
 /// A date or labelled financial year can precede a signed calculation.
-/// Label punctuation may precede it, as in a colon before a date.
+/// A named date can also use brackets, as in "Date: (30/6/2026)".
 static PERIOD_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:^|[ (\[:,−-])(?P<period>(?i:date *: *)?(?:{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}})|(?i:FY *|financial year +|in +|for +)\d{{4}}-\d{{2}})$"
+        r"(?:^|[ (\[:,−-])(?P<period>(?i:date *:[ (\[]*)?(?:{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}})|(?i:FY *|financial year +|in +|for +)\d{{4}}-\d{{2}})$"
     ))
     .expect("pattern")
 });
