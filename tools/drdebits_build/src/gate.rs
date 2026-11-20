@@ -280,16 +280,18 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// Bare two-part fractions are prose. A currency quotient or a longer slash
 /// chain can be arithmetic. The caller checks date labels separately.
 static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
-    let plain = format!(r"[-−]?(?:{NUM})(?:/\d+(?:/\d+)+)?");
+    let plain = format!(r"[-−]?(?:{NUM})");
     let currency = r"[-−]?\$\d[\d,]*(?:\.\d+)?%?";
     // A slash chain can group a quotient within another division.
-    let quotient = format!(r"\(* *{currency} *\)*(?: */ *\(* *[-−]?(?:{NUM}) *\)*)+");
-    let money = format!(r"(?:{currency}|\(+ *{currency} *\)+|{quotient})");
+    let grouped = format!(r"\(* *{plain} *\)*");
+    let divisor = format!(r" */ *{grouped}");
+    let chain = format!(r"{grouped}(?:{divisor}){{2,}}");
+    let money = format!(r"(?:{currency}|\(+ *{currency} *\)+|\(* *{currency} *\)*(?:{divisor})+)");
     // A numbered list marker like "1)" has no opening parenthesis.
     // A colon can join a label to explicit currency, but also joins references
     // like "AB:123". Without a dollar sign, require a delimiter after it.
     regex::Regex::new(&format!(
-        r"(?:(?:^|[ (\[;=+×*÷|])(?:{plain}|\(+ *{plain} *\)+|{money})|:{money})$"
+        r"(?:(?:^|[ (\[;=+×*÷|])(?:{plain}|\(+ *{plain} *\)+|{chain}|{money})|:{money})$"
     ))
     .expect("pattern")
 });
@@ -721,8 +723,16 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
     }
     // Strip punctuation that frames a period label before checking for
     // an earlier subtraction.
+    let signed_left = separated && left.trim_start().starts_with(['-', '−']);
     if let Some(period) = period_at_end(prefix) {
         let before_period = &prefix[..period.start()];
+        // A date-like suffix can be part of a longer slash chain, not a label.
+        if signed_left
+            && before_period.trim_end_matches(' ').ends_with('/')
+            && ends_in_operand(prefix)
+        {
+            return true;
+        }
         let operator_prefix = before_period.trim_end_matches([' ', '(', '[', ':', ',']);
         return operator_prefix
             .strip_suffix(['-', '−'])
@@ -732,7 +742,7 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
             });
     }
 
-    separated && left.trim_start().starts_with(['-', '−']) && ends_in_operand(prefix)
+    signed_left && ends_in_operand(prefix)
 }
 
 fn period_at_end(text: &str) -> Option<regex::Match<'_>> {

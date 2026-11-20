@@ -1015,6 +1015,25 @@ fn a_one_sided_minus_cannot_drop_a_grouped_currency_slash_chain() {
 }
 
 #[test]
+fn a_one_sided_minus_cannot_drop_a_mixed_space_numeric_slash_chain() {
+    for amount in ["120/ 3/2", "120/3 /2", "(120/ 3) /2", "120/(3/ 2)"] {
+        assert_unread_tail(&format!("{amount}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn a_slash_date_cannot_hide_an_earlier_division() {
+    for line in [
+        "$1,000,000/ 1/7/2025 -$5 + $2 = -$3",
+        "$1,000,000/1/7/2025 -$5 + $2 = -$3",
+        "1000/ 1/7/2025 -$5 + $2 = -$3",
+    ] {
+        assert_unread_tail(line, "-$5 + $2 = -$3");
+    }
+}
+
+#[test]
 fn a_hyphen_joined_to_both_an_amount_and_a_period_is_not_a_spaced_minus() {
     let line = "Ref 1000-Date:(30/6/2026), $5 + $2 = $7";
     let found = calculations(line);
