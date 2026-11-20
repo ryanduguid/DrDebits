@@ -1004,6 +1004,14 @@ fn a_colon_can_join_a_label_to_a_grouped_operand() {
 }
 
 #[test]
+fn a_one_sided_minus_cannot_drop_a_compact_currency_product() {
+    for amount in ["$1000x4", "$1,000X 4", "1000 x$4", "Gross:(1000X$4)"] {
+        assert_unread_tail(&format!("{amount}- $5 + $2 = $7"), "$5 + $2 = $7");
+        assert_unread_tail(&format!("{amount} -$5 + $2 = -$3"), "-$5 + $2 = -$3");
+    }
+}
+
+#[test]
 fn a_one_sided_minus_cannot_drop_a_currency_quotient() {
     assert_unread_tail("$1,000/4- $200 + $50 = $250", "$200 + $50 = $250");
     assert_unread_tail("$1,000/4 -$200 + $50 = -$150", "-$200 + $50 = -$150");

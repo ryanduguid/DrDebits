@@ -285,8 +285,8 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let grouped = format!(r"\(* *{plain} *\)*");
     let grouped_marked = format!(r"\(* *{marked} *\)*");
     let chain = format!(r"{grouped}(?: */ *{grouped}){{2,}}");
-    // The marker can be on any term of a quotient or a compact subtraction.
-    let operator = r"(?: */ *|[-−])";
+    // The marker can be on any term of a quotient, product or compact subtraction.
+    let operator = r"(?: *[/xX] *|[-−])";
     let term = format!(r"{operator}{grouped}");
     let marked_expression = format!(
         r"(?:{marked}|\(+ *{marked} *\)+|{grouped_marked}(?:{term})+|{grouped}(?:{term})*{operator}{grouped_marked}(?:{term})*)"
