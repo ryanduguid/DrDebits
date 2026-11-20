@@ -825,6 +825,8 @@ fn a_date_or_financial_year_can_label_a_signed_calculation() {
         ("For 2026 -5 + 2 = -3", "-5 + 2 = -3"),
         ("At 30/6/2026 (-5 + 2 = -3)", "(-5 + 2 = -3"),
         ("FY2025-26 (-5 + 2 = -3)", "(-5 + 2 = -3"),
+        ("FY 2026 -5 + 2 = -3", "-5 + 2 = -3"),
+        ("Financial year 2026 -5 + 2 = -3", "-5 + 2 = -3"),
         ("FY2025-26\t-5% + 2% = -3%", "-5% + 2% = -3%"),
         ("FY 2025–26 −5% + 2% = −3%", "−5% + 2% = −3%"),
     ] {
@@ -850,6 +852,8 @@ fn a_period_cannot_hide_a_one_sided_minus() {
         "Date:[30/6/2026]",
         "Date: ( [2026-06-30] )",
         "FY2025-26",
+        "FY 2026",
+        "Financial year 2026",
         "In 2025-26",
         "For 2025-26",
         "In 2026",
@@ -941,6 +945,7 @@ fn numeric_suffixes_of_references_and_fractions_are_not_operands() {
         ("Ref A1,234 -5 + 2 = -3", 1),
         ("Ref AB-123 -5 + 2 = -3", 1),
         ("Ref AB−123 -5 + 2 = -3", 1),
+        ("Ref AB#123 -5 + 2 = -3", 1),
         ("Note 1/11 -5 + 2 = -3", 1),
         ("Ref AB-123 -Date:(30/6/2026), $5 + $2 = $7", 1),
         ("Note 1/11- Date:(30/6/2026), $5 + $2 = $7", 1),
@@ -953,6 +958,24 @@ fn numeric_suffixes_of_references_and_fractions_are_not_operands() {
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn a_numbered_list_marker_does_not_supply_an_operand() {
+    for marker in ["1)", "2.", "12)"] {
+        let line = format!("{marker} -5 + 2 = -3");
+        let found = calculations(&line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert_eq!(found[0].text, "-5 + 2 = -3", "{line}");
+        assert!(found[0].matches, "{line}: {}", found[0].computed);
+        assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
+    }
+}
+
+#[test]
+fn a_one_sided_minus_cannot_drop_an_unspaced_currency_quotient() {
+    assert_unread_tail("$1,000/4- $200 + $50 = $250", "$200 + $50 = $250");
+    assert_unread_tail("$1,000/4 -$200 + $50 = -$150", "-$200 + $50 = -$150");
 }
 
 #[test]

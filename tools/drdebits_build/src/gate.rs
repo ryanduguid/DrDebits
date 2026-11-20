@@ -276,11 +276,15 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
-/// A complete amount, percentage or slash chain that could supply an operand.
-/// A suffix of `AB-123` or `1/11` is neither. The caller checks date labels.
+/// A complete amount, percentage or quotient that could supply an operand.
+/// Bare two-part fractions are prose. A currency quotient or a longer slash
+/// chain can be arithmetic. The caller checks date labels separately.
 static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let quotient = format!(r"\$\d[\d,]*(?:\.\d+)?/(?:{NUM})");
+    let operand = format!(r"[-−]?(?:(?:{NUM})(?:/\d+(?:/\d+)+)?|{quotient})");
+    // A numbered list marker like "1)" has no opening parenthesis.
     regex::Regex::new(&format!(
-        r"(?:^|[^\w.,$/\-−])[-−]?(?:{NUM})(?:/\d+(?:/\d+)+)?$"
+        r"(?:^|[ (:\[;=+×*÷|])(?:{operand}|\(+ *{operand} *\)+)$"
     ))
     .expect("pattern")
 });
@@ -340,7 +344,7 @@ static DATE: LazyLock<regex::Regex> =
 /// A named date can also use brackets, as in "Date: (30/6/2026)".
 static PERIOD_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:^|[ (\[:,−-])(?P<period>(?i:date *:[ (\[]*)?(?:{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}})|(?i:FY *|financial year +)\d{{4}}-\d{{2}}|(?i:in +|for +)\d{{4}}(?:-\d{{2}})?)$"
+        r"(?:^|[ (\[:,−-])(?P<period>(?i:date *:[ (\[]*)?(?:{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}})|(?i:FY *|financial year +|in +|for +)\d{{4}}(?:-\d{{2}})?)$"
     ))
     .expect("pattern")
 });
@@ -726,7 +730,7 @@ fn period_at_end(text: &str) -> Option<regex::Match<'_>> {
 }
 
 fn ends_in_operand(text: &str) -> bool {
-    OPERAND_END.is_match(text.trim_end_matches([' ', ')']))
+    OPERAND_END.is_match(text.trim_end_matches(' '))
 }
 
 /// The calculations `CLAIM` finds on one line, reperformed into `out`, and
