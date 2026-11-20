@@ -292,10 +292,10 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
         r"(?:{marked}|\(+ *{marked} *\)+|{grouped_marked}(?:{term})+|{grouped}(?:{term})*{operator}{grouped_marked}(?:{term})*)"
     );
     // A numbered list marker like "1)" has no opening parenthesis.
-    // A colon can join a label to an amount with a dollar sign or percentage.
-    // Without either, a joined colon can be part of a reference like "AB:123".
+    // A colon can join a label to a marked amount or to a slash chain.
+    // A bare number after it may be part of a reference like "AB:123".
     regex::Regex::new(&format!(
-        r"(?:(?:^|[ (\[;=+×*÷|])(?:{plain}|\(+ *{plain} *\)+|{chain})|(?:^|[ (\[;=+×*÷|:]){marked_expression})$"
+        r"(?:(?:^|[ (\[;=+×*÷|])(?:{plain}|\(+ *{plain} *\)+)|(?:^|[ (\[;=+×*÷|:])(?:{chain}|{marked_expression}))$"
     ))
     .expect("pattern")
 });
@@ -731,11 +731,16 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
     let signed_left = separated && left.trim_start().starts_with(['-', '−']);
     if let Some(period) = period_at_end(prefix) {
         let before_period = &prefix[..period.start()];
-        // A date-like suffix can be part of a longer slash chain, not a label.
+        // Date-shaped groups can be terms in a longer operand. For compact
+        // subtraction, require an operand before the first minus and keep
+        // explicitly labelled dates distinct.
+        let before_operators = before_period.trim_end_matches([' ', '(', '-', '−']);
+        let operator = &before_period[before_operators.len()..];
+        let subtracts_date = operator.starts_with(['-', '−'])
+            && period.as_str().starts_with(|c: char| c.is_ascii_digit())
+            && ends_in_operand(before_operators);
         if signed_left
-            && before_period
-                .trim_end_matches([' ', '(', '-', '−'])
-                .ends_with('/')
+            && (before_operators.ends_with('/') || subtracts_date)
             && ends_in_operand(prefix)
         {
             return true;

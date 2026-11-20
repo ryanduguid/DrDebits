@@ -1089,12 +1089,39 @@ fn a_truncated_subtraction_cannot_drop_a_compact_marked_expression() {
 }
 
 #[test]
+fn a_date_cannot_hide_a_compact_marked_subtraction() {
+    for amount in ["$1000-1/7/2025", "20%-(1/7/2025)", "$1000-(-1/7/2025)"] {
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn a_currency_quotient_cannot_be_lost_before_a_date_shaped_term() {
+    assert_unread_tail("$100/4-1/7/2025 -$5 + $2 = -$3", "-$5 + $2 = -$3");
+}
+
+#[test]
+fn an_iso_date_cannot_hide_a_compact_marked_subtraction() {
+    assert_unread_tail("$100-2026-06-30 -$5 + $2 = -$3", "-$5 + $2 = -$3");
+}
+
+#[test]
+fn a_label_cannot_hide_a_three_term_slash_chain() {
+    assert_unread_tail("Gross:100/4/2- 5 + 2 = 7", "5 + 2 = 7");
+    assert_unread_tail("Gross:100/4/2 -5 + 2 = -3", "-5 + 2 = -3");
+}
+
+#[test]
 fn a_hyphen_joined_to_both_an_amount_and_a_period_is_not_a_spaced_minus() {
-    let line = "Ref 1000-Date:(30/6/2026), $5 + $2 = $7";
-    let found = calculations(line);
-    assert_eq!(found.len(), 1, "{line}");
-    assert!(found[0].matches, "{line}: {}", found[0].computed);
-    assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+    for line in [
+        "Ref 1000-Date:(30/6/2026), $5 + $2 = $7",
+        "Gross $1000-Date:(30/6/2026) -5 + 2 = -3",
+    ] {
+        let found = calculations(line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert!(found[0].matches, "{line}: {}", found[0].computed);
+        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+    }
 }
 
 fn assert_unread_tail(line: &str, tail: &str) {
