@@ -983,6 +983,38 @@ fn a_one_sided_minus_cannot_drop_a_currency_quotient() {
 }
 
 #[test]
+fn a_one_sided_minus_cannot_drop_a_grouped_currency_slash_chain() {
+    let mut failures = Vec::new();
+    for first_slash in ["/", "/ ", " /"] {
+        for second_slash in ["/", "/ ", " /"] {
+            for amount in [
+                format!("$1,000{first_slash}4{second_slash}2"),
+                format!("($1,000{first_slash}4{second_slash}2)"),
+                format!("($1,000{first_slash}4){second_slash}2"),
+                format!("$1,000{first_slash}(4{second_slash}2)"),
+            ] {
+                for suffix in ["- $200 + $50 = $250", " -$200 + $50 = -$150"] {
+                    let line = format!("{amount}{suffix}");
+                    let tail = if suffix.starts_with(' ') {
+                        suffix.trim_start()
+                    } else {
+                        &suffix[2..]
+                    };
+                    let found = calculations(&line);
+                    if !matches!(found.as_slice(), [calc] if calc.text == tail
+                        && !calc.matches && calc.computed.contains("it may be the tail of a longer sum"))
+                        || with_line(&line).verdict().1 != EXIT_BLOCK
+                    {
+                        failures.push(line);
+                    }
+                }
+            }
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
 fn a_hyphen_joined_to_both_an_amount_and_a_period_is_not_a_spaced_minus() {
     let line = "Ref 1000-Date:(30/6/2026), $5 + $2 = $7";
     let found = calculations(line);

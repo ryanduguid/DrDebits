@@ -281,13 +281,15 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// chain can be arithmetic. The caller checks date labels separately.
 static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let plain = format!(r"[-−]?(?:{NUM})(?:/\d+(?:/\d+)+)?");
-    let money = format!(r"[-−]?\$\d[\d,]*(?:\.\d+)?%?(?: */ *[-−]?(?:{NUM}))?");
-    let operand = format!(r"(?:{plain}|{money})");
+    let currency = r"[-−]?\$\d[\d,]*(?:\.\d+)?%?";
+    // A slash chain can group a quotient within another division.
+    let quotient = format!(r"\(* *{currency} *\)*(?: */ *\(* *[-−]?(?:{NUM}) *\)*)+");
+    let money = format!(r"(?:{currency}|\(+ *{currency} *\)+|{quotient})");
     // A numbered list marker like "1)" has no opening parenthesis.
     // A colon can join a label to explicit currency, but also joins references
     // like "AB:123". Without a dollar sign, require a delimiter after it.
     regex::Regex::new(&format!(
-        r"(?:(?:^|[ (\[;=+×*÷|])(?:{operand}|\(+ *{operand} *\)+)|:(?:{money}|\(+ *{money} *\)+))$"
+        r"(?:(?:^|[ (\[;=+×*÷|])(?:{plain}|\(+ *{plain} *\)+|{money})|:{money})$"
     ))
     .expect("pattern")
 });
