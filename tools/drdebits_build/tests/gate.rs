@@ -819,6 +819,8 @@ fn a_date_or_financial_year_can_label_a_signed_calculation() {
         ("At 2026-06-30 -200 + 50 = -150", "-200 + 50 = -150"),
         ("In 2025-26 -5 + 2 = -3", "-5 + 2 = -3"),
         ("For 2025-26 -5 + 2 = -3", "-5 + 2 = -3"),
+        ("In 2026 -5 + 2 = -3", "-5 + 2 = -3"),
+        ("For 2026 -5 + 2 = -3", "-5 + 2 = -3"),
         ("At 30/6/2026 (-5 + 2 = -3)", "(-5 + 2 = -3"),
         ("FY2025-26 (-5 + 2 = -3)", "(-5 + 2 = -3"),
         ("FY2025-26\t-5% + 2% = -3%", "-5% + 2% = -3%"),
@@ -848,6 +850,8 @@ fn a_period_cannot_hide_a_one_sided_minus() {
         "FY2025-26",
         "In 2025-26",
         "For 2025-26",
+        "In 2026",
+        "For 2026",
         "(30/6/2026)",
         "[FY2025-26]",
     ];
@@ -923,6 +927,32 @@ fn a_finished_calculation_cannot_hide_a_new_operand_before_a_period() {
     assert!(found[0].matches, "{line}");
     assert!(!found[1].matches, "{line}");
     assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+}
+
+#[test]
+fn digits_joined_to_a_reference_are_not_an_operand() {
+    for line in [
+        "Ref A1 -5 + 2 = -3",
+        "2 + 2 = 4, Ref A1 -5 + 2 = -3",
+        "Ref A1-Date:(30/6/2026), $5 + $2 = $7",
+        "Ref A1,234 -5 + 2 = -3",
+    ] {
+        let found = calculations(line);
+        assert!(!found.is_empty(), "{line}");
+        for calc in found {
+            assert!(calc.matches, "{line}: {}", calc.computed);
+        }
+        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+    }
+}
+
+#[test]
+fn a_hyphen_joined_to_both_an_amount_and_a_period_is_not_a_spaced_minus() {
+    let line = "Ref 1000-Date:(30/6/2026), $5 + $2 = $7";
+    let found = calculations(line);
+    assert_eq!(found.len(), 1, "{line}");
+    assert!(found[0].matches, "{line}: {}", found[0].computed);
+    assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
 }
 
 fn assert_unread_tail(line: &str, tail: &str) {

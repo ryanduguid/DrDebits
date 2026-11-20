@@ -276,9 +276,10 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
-/// The last digit of a number or percentage before a subtraction.
+/// A complete amount or percentage before a subtraction. A digit joined
+/// to a word or identifier does not start an amount.
 static AMOUNT_END: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"\d%?$").expect("pattern"));
+    LazyLock::new(|| regex::Regex::new(&format!(r"(?:^|[^\w.,])(?:{NUM})$")).expect("pattern"));
 /// An operator `INTERRUPTED` does not count, after a number: a `/`, `x` or
 /// `X` between numbers without spaces round it, as in `100/4`,
 /// `$12,000/ 4 bonus` and `$500x52`; a minus before `$`, as in
@@ -331,11 +332,11 @@ static DASH: LazyLock<regex::Regex> =
 const SLASH_DATE: &str = r"\b\d{1,2}/\d{1,2}/\d{2,4}\b";
 static DATE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(SLASH_DATE).expect("pattern"));
-/// A date or labelled financial year can precede a signed calculation.
+/// A date or labelled year can precede a signed calculation.
 /// A named date can also use brackets, as in "Date: (30/6/2026)".
 static PERIOD_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:^|[ (\[:,−-])(?P<period>(?i:date *:[ (\[]*)?(?:{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}})|(?i:FY *|financial year +|in +|for +)\d{{4}}-\d{{2}})$"
+        r"(?:^|[ (\[:,−-])(?P<period>(?i:date *:[ (\[]*)?(?:{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}})|(?i:FY *|financial year +)\d{{4}}-\d{{2}}|(?i:in +|for +)\d{{4}}(?:-\d{{2}})?)$"
     ))
     .expect("pattern")
 });
@@ -703,10 +704,14 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
         .captures(prefix.trim_end_matches([' ', '(', ')', '[', ']', ':', ',']))
         .and_then(|label| label.name("period"))
     {
-        return prefix[..period.start()]
-            .trim_end_matches([' ', '(', '[', ':', ','])
+        let before_period = &prefix[..period.start()];
+        let operator_prefix = before_period.trim_end_matches([' ', '(', '[', ':', ',']);
+        return operator_prefix
             .strip_suffix(['-', '−'])
-            .is_some_and(ends_in_amount);
+            .is_some_and(|amount| {
+                (amount.ends_with(' ') || before_period[operator_prefix.len()..].starts_with(' '))
+                    && ends_in_amount(amount)
+            });
     }
 
     separated && left.trim_start().starts_with(['-', '−']) && ends_in_amount(prefix)
