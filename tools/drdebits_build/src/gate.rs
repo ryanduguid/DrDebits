@@ -299,11 +299,14 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
-/// Explicit ordinal labels before a calculation, such as "Item (1)".
+/// Explicit ordinal labels before a calculation, such as "Item (1)" or
+/// "Ref. 1". A marked amount after a label can still be an operand.
 static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(
-        r"\b(?i:item|note|step|line|case|ref|reference|section|paragraph) *\( *\d+ *\)$",
-    )
+    let label = r"\b(?i:item|note|step|line|case|ref(?:erence)?\.?|section|paragraph)";
+    let ordinal = r"\d+(?:\.\d+)*";
+    regex::Regex::new(&format!(
+        r"{label}(?:(?: +| *: *){ordinal}| *:? *\( *{ordinal} *\))$"
+    ))
     .expect("pattern")
 });
 /// An operator `INTERRUPTED` does not count, after a number: a `/`, `x` or

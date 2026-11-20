@@ -974,6 +974,27 @@ fn a_numbered_list_marker_does_not_supply_an_operand() {
 }
 
 #[test]
+fn a_plain_numbered_reference_does_not_supply_an_operand() {
+    for marker in [
+        "Ref 1",
+        "Ref. 1",
+        "Ref: 1",
+        "Reference: (1)",
+        "Item 1",
+        "Step 2",
+        "Section 1.2",
+    ] {
+        let line = format!("{marker} -5 + 2 = -3");
+        let found = calculations(&line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert_eq!(found[0].text, "-5 + 2 = -3", "{line}");
+        assert!(found[0].matches, "{line}: {}", found[0].computed);
+        assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
+    }
+    assert_unread_tail("Ref: $1000 -$5 + $2 = -$3", "-$5 + $2 = -$3");
+}
+
+#[test]
 fn a_one_sided_minus_cannot_drop_a_currency_quotient() {
     assert_unread_tail("$1,000/4- $200 + $50 = $250", "$200 + $50 = $250");
     assert_unread_tail("$1,000/4 -$200 + $50 = -$150", "-$200 + $50 = -$150");
