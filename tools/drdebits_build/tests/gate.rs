@@ -806,6 +806,8 @@ fn one_sided_subtraction_cannot_drop_a_bracketed_amount() {
         ("($1,000) -$200 + $50 = -$150", "-$200 + $50 = -$150"),
         ("(-$1,000)– $200 + $50 = $250", "$200 + $50 = $250"),
         ("$1,000− $200 + $50 = $250", "$200 + $50 = $250"),
+        ("-$1,000- $200 + $50 = $250", "$200 + $50 = $250"),
+        ("-$1,000 -$200 + $50 = -$150", "-$200 + $50 = -$150"),
     ] {
         assert_unread_tail(line, tail);
     }
@@ -930,20 +932,27 @@ fn a_finished_calculation_cannot_hide_a_new_operand_before_a_period() {
 }
 
 #[test]
-fn digits_joined_to_a_reference_are_not_an_operand() {
-    for line in [
-        "Ref A1 -5 + 2 = -3",
-        "2 + 2 = 4, Ref A1 -5 + 2 = -3",
-        "Ref A1-Date:(30/6/2026), $5 + $2 = $7",
-        "Ref A1,234 -5 + 2 = -3",
+fn numeric_suffixes_of_references_and_fractions_are_not_operands() {
+    let mut failures = Vec::new();
+    for (line, expected) in [
+        ("Ref A1 -5 + 2 = -3", 1),
+        ("2 + 2 = 4, Ref A1 -5 + 2 = -3", 2),
+        ("Ref A1-Date:(30/6/2026), $5 + $2 = $7", 1),
+        ("Ref A1,234 -5 + 2 = -3", 1),
+        ("Ref AB-123 -5 + 2 = -3", 1),
+        ("Ref AB−123 -5 + 2 = -3", 1),
+        ("Note 1/11 -5 + 2 = -3", 1),
+        ("Ref AB-123 -Date:(30/6/2026), $5 + $2 = $7", 1),
+        ("Note 1/11- Date:(30/6/2026), $5 + $2 = $7", 1),
     ] {
         let found = calculations(line);
-        assert!(!found.is_empty(), "{line}");
-        for calc in found {
-            assert!(calc.matches, "{line}: {}", calc.computed);
+        let exit = with_line(line).verdict().1;
+        if found.len() != expected || found.iter().any(|calc| !calc.matches) || exit != EXIT_PASS {
+            let output: Vec<_> = found.iter().map(|calc| &calc.computed).collect();
+            failures.push(format!("{line}: exit {exit}, {output:?}"));
         }
-        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
     }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
 #[test]

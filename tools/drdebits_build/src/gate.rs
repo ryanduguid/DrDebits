@@ -276,10 +276,14 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
-/// A complete amount or percentage before a subtraction. A digit joined
-/// to a word or identifier does not start an amount.
-static AMOUNT_END: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(&format!(r"(?:^|[^\w.,])(?:{NUM})$")).expect("pattern"));
+/// A complete amount, percentage or slash chain that could supply an operand.
+/// A suffix of `AB-123` or `1/11` is neither. The caller checks date labels.
+static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(&format!(
+        r"(?:^|[^\w.,$/\-−])[-−]?(?:{NUM})(?:/\d+(?:/\d+)+)?$"
+    ))
+    .expect("pattern")
+});
 /// An operator `INTERRUPTED` does not count, after a number: a `/`, `x` or
 /// `X` between numbers without spaces round it, as in `100/4`,
 /// `$12,000/ 4 bonus` and `$500x52`; a minus before `$`, as in
@@ -696,29 +700,33 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
     let prefix = before.trim_end_matches(' ');
     let separated = before.ends_with(' ') || left.starts_with(' ');
     if let Some(amount) = prefix.strip_suffix(['-', '−']) {
-        return (separated || amount.ends_with(' ')) && ends_in_amount(amount);
+        return (separated || amount.ends_with(' '))
+            && (ends_in_operand(amount) || period_at_end(amount).is_some());
     }
     // Strip punctuation that frames a period label before checking for
     // an earlier subtraction.
-    if let Some(period) = PERIOD_END
-        .captures(prefix.trim_end_matches([' ', '(', ')', '[', ']', ':', ',']))
-        .and_then(|label| label.name("period"))
-    {
+    if let Some(period) = period_at_end(prefix) {
         let before_period = &prefix[..period.start()];
         let operator_prefix = before_period.trim_end_matches([' ', '(', '[', ':', ',']);
         return operator_prefix
             .strip_suffix(['-', '−'])
             .is_some_and(|amount| {
                 (amount.ends_with(' ') || before_period[operator_prefix.len()..].starts_with(' '))
-                    && ends_in_amount(amount)
+                    && ends_in_operand(amount)
             });
     }
 
-    separated && left.trim_start().starts_with(['-', '−']) && ends_in_amount(prefix)
+    separated && left.trim_start().starts_with(['-', '−']) && ends_in_operand(prefix)
 }
 
-fn ends_in_amount(text: &str) -> bool {
-    AMOUNT_END.is_match(text.trim_end_matches([' ', ')']))
+fn period_at_end(text: &str) -> Option<regex::Match<'_>> {
+    PERIOD_END
+        .captures(text.trim_end_matches([' ', '(', ')', '[', ']', ':', ',']))
+        .and_then(|label| label.name("period"))
+}
+
+fn ends_in_operand(text: &str) -> bool {
+    OPERAND_END.is_match(text.trim_end_matches([' ', ')']))
 }
 
 /// The calculations `CLAIM` finds on one line, reperformed into `out`, and
