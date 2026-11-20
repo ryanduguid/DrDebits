@@ -982,6 +982,11 @@ fn a_plain_numbered_reference_does_not_supply_an_operand() {
         "Ref:(1)",
         "Ref AB:123",
         "Ref AB:(123)",
+        "Ref AB(1)",
+        "Ref AB (1)",
+        "Ref AB 2",
+        "Ref ab(1)",
+        "Reference: AB(1)",
         "Ref:AB:123",
         "ref AB: 123",
         "Reference: AZ:12",
@@ -1004,6 +1009,8 @@ fn a_plain_numbered_reference_does_not_supply_an_operand() {
     assert_unread_tail("Ref: $1000 -$5 + $2 = -$3", "-$5 + $2 = -$3");
     assert_unread_tail("Ref AB:$1000 -$5 + $2 = -$3", "-$5 + $2 = -$3");
     assert_unread_tail("Ref AB:1,000 -5 + 2 = -3", "-5 + 2 = -3");
+    assert_unread_tail("Ref AB($1,000) -5 + 2 = -3", "-5 + 2 = -3");
+    assert_unread_tail("Reference amount(1000) -5 + 2 = -3", "-5 + 2 = -3");
 }
 
 #[test]

@@ -317,11 +317,10 @@ static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     // A code follows "Ref " or an explicit "Reference:" label. A phrase
     // such as "Reference amount:" can still introduce an operand.
     let reference = r"\b(?:(?i:ref\.?) +|(?i:ref(?:erence)?\.?) *: *)";
-    let code = r"[A-Za-z][A-Za-z0-9_.-]* *: *";
-    regex::Regex::new(&format!(
-        r"(?:(?:{label}{separator}|{reference}{code})(?:{ordinal}|{grouped})|{label}{grouped})$"
-    ))
-    .expect("pattern")
+    let code = r"[A-Za-z][A-Za-z0-9_.-]*";
+    let numbered_label = format!(r"{label}(?:{separator}{ordinal}|(?:{separator})?{grouped})");
+    let coded = format!(r"{reference}{code}(?:{separator}{ordinal}| *:? *{grouped})");
+    regex::Regex::new(&format!(r"(?:{numbered_label}|{coded})$")).expect("pattern")
 });
 /// An operator `INTERRUPTED` does not count, after a number: a `/`, `x` or
 /// `X` between numbers without spaces round it, as in `100/4`,
