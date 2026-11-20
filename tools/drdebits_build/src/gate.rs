@@ -284,9 +284,13 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let currency = r"[-−]?\$\d[\d,]*(?:\.\d+)?%?";
     // A slash chain can group a quotient within another division.
     let grouped = format!(r"\(* *{plain} *\)*");
+    let grouped_currency = format!(r"\(* *{currency} *\)*");
     let divisor = format!(r" */ *{grouped}");
     let chain = format!(r"{grouped}(?:{divisor}){{2,}}");
-    let money = format!(r"(?:{currency}|\(+ *{currency} *\)+|\(* *{currency} *\)*(?:{divisor})+)");
+    let currency_chain = format!(r"{grouped}(?:{divisor})* */ *{grouped_currency}(?:{divisor})*");
+    let money = format!(
+        r"(?:{currency}|\(+ *{currency} *\)+|{grouped_currency}(?:{divisor})+|{currency_chain})"
+    );
     // A numbered list marker like "1)" has no opening parenthesis.
     // A colon can join a label to explicit currency, but also joins references
     // like "AB:123". Without a dollar sign, require a delimiter after it.
@@ -728,7 +732,9 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
         let before_period = &prefix[..period.start()];
         // A date-like suffix can be part of a longer slash chain, not a label.
         if signed_left
-            && before_period.trim_end_matches(' ').ends_with('/')
+            && before_period
+                .trim_end_matches([' ', '(', '-', '−'])
+                .ends_with('/')
             && ends_in_operand(prefix)
         {
             return true;

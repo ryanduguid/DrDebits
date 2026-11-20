@@ -1031,6 +1031,20 @@ fn a_slash_date_cannot_hide_an_earlier_division() {
     ] {
         assert_unread_tail(line, "-$5 + $2 = -$3");
     }
+    for amount in ["1000/(1/7/2025)", "1000/-1/7/2025", "1000/ ((-1/7/2025))"] {
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn a_one_sided_minus_cannot_drop_a_quotient_with_a_currency_divisor() {
+    for amount in ["1000/$4", "1000/ $4", "(1000 /$4)", "Gross:1000/$4"] {
+        assert_unread_tail(&format!("{amount}- $200 + $50 = $250"), "$200 + $50 = $250");
+        assert_unread_tail(
+            &format!("{amount} -$200 + $50 = -$150"),
+            "-$200 + $50 = -$150",
+        );
+    }
 }
 
 #[test]
