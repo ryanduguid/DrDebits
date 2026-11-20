@@ -309,12 +309,12 @@ static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let ordinal = r"\d+(?:\.\d+)*";
     let grouped = format!(r"\( *{ordinal} *\)");
     let separator = r"(?: +| *: *)";
-    // A reference code uses capitals, digits or an identifier separator.
-    // Ordinary labels such as "Line total:" introduce an amount.
-    let reference = r"\b(?i:ref(?:erence)?\.?)";
-    let code = r"(?:[A-Z][A-Z0-9]*|[A-Za-z][A-Za-z0-9_.-]*[0-9_.-][A-Za-z0-9_.-]*) *: *";
+    // A code follows "Ref " or an explicit "Reference:" label. A phrase
+    // such as "Reference amount:" can still introduce an operand.
+    let reference = r"\b(?:(?i:ref\.?) +|(?i:ref(?:erence)?\.?) *: *)";
+    let code = r"[A-Za-z][A-Za-z0-9_.-]* *: *";
     regex::Regex::new(&format!(
-        r"(?:(?:{label}{separator}|{reference}{separator}{code})(?:{ordinal}|{grouped})|{label}{grouped})$"
+        r"(?:(?:{label}{separator}|{reference}{code})(?:{ordinal}|{grouped})|{label}{grouped})$"
     ))
     .expect("pattern")
 });

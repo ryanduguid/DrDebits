@@ -984,7 +984,9 @@ fn a_plain_numbered_reference_does_not_supply_an_operand() {
         "Ref AB:(123)",
         "Ref:AB:123",
         "ref AB: 123",
-        "Reference AZ:12",
+        "Reference: AZ:12",
+        "Ref ab:123",
+        "Reference: ab:123",
         "Ref INV-1:2",
         "Ref file_id:3",
         "Reference: (1)",
@@ -1016,6 +1018,7 @@ fn a_colon_can_join_a_label_to_an_unmarked_number() {
         "Line total:1000",
         "Case amount:1200",
         "Reference amount:1200",
+        "REFERENCE AMOUNT:1000",
     ] {
         assert_unread_tail(&format!("{amount}- 5 + 2 = 7"), "5 + 2 = 7");
         assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
