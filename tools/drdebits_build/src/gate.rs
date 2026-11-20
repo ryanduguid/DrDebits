@@ -281,7 +281,10 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// slash chain can identify arithmetic. The caller checks periods separately.
 static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let plain = format!(r"[-−]?(?:{NUM})");
-    let marked = r"[-−]?(?:\$\d[\d,]*(?:\.\d+)?%?|\d[\d,]*(?:\.\d+)?%)";
+    let digits = r"\d[\d,]*(?:\.\d+)?";
+    // A partially read calculation can omit either -$100 or $-100.
+    let currency = r"(?:[-−]?\$|\$[-−])";
+    let marked = format!(r"(?:{currency}{digits}%?|[-−]?{digits}%)");
     let grouped = format!(r"\(* *{plain} *\)*");
     let grouped_marked = format!(r"\(* *{marked} *\)*");
     let chain = format!(r"{grouped}(?: */ *{grouped}){{2,}}");
