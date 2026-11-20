@@ -276,6 +276,9 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
+/// The last digit of a number or percentage before a subtraction.
+static AMOUNT_END: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"\d%?$").expect("pattern"));
 /// An operator `INTERRUPTED` does not count, after a number: a `/`, `x` or
 /// `X` between numbers without spaces round it, as in `100/4`,
 /// `$12,000/ 4 bonus` and `$500x52`; a minus before `$`, as in
@@ -325,8 +328,16 @@ static DASH: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\p{Pd}").expect("pattern"));
 /// A date such as `1/7/2025`, with no digit or letter either side, so
 /// `123/4/2025` is a quotient.
+const SLASH_DATE: &str = r"\b\d{1,2}/\d{1,2}/\d{2,4}\b";
 static DATE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b").expect("pattern"));
+    LazyLock::new(|| regex::Regex::new(SLASH_DATE).expect("pattern"));
+/// A date or labelled financial year can precede a signed calculation.
+static PERIOD_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(&format!(
+        r"(?:^|[ (])(?P<period>{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}}|(?i:FY *|financial year +)\d{{4}}-\d{{2}})$"
+    ))
+    .expect("pattern")
+});
 static NUMBERED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"^\d{1,2}[.)]?\s+").expect("pattern"));
 
@@ -677,6 +688,35 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
     out
 }
 
+/// A one-sided minus can cause the scanner to enter partway through a
+/// subtraction. The scanner may consume its boundary space or the minus.
+fn follows_one_sided_minus(before: &str, left: &str) -> bool {
+    let prefix = before.trim_end_matches(' ');
+    let separated = before.ends_with(' ') || left.starts_with(' ');
+    if let Some(amount) = prefix.strip_suffix(['-', '−']) {
+        return (separated || amount.ends_with(' ')) && ends_in_amount(amount);
+    }
+    if !separated || !left.trim_start().starts_with(['-', '−']) || !ends_in_amount(prefix) {
+        return false;
+    }
+
+    // A period can label a signed amount. Check the text immediately before
+    // the label for a subtraction the scanner may already have skipped.
+    let period = PERIOD_END
+        .captures(prefix.trim_end_matches([' ', ')']))
+        .and_then(|label| label.name("period"));
+    period.is_none_or(|label| {
+        prefix[..label.start()]
+            .trim_end_matches([' ', '('])
+            .strip_suffix(['-', '−'])
+            .is_some_and(ends_in_amount)
+    })
+}
+
+fn ends_in_amount(text: &str) -> bool {
+    AMOUNT_END.is_match(text.trim_end_matches([' ', ')']))
+}
+
 /// The calculations `CLAIM` finds on one line, reperformed into `out`, and
 /// the span of each.
 fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Range<usize>> {
@@ -719,15 +759,15 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
             ));
             continue;
         }
-        // The tail of a sum that a word interrupts, as in `$200 + $50 = $250`
-        // after `$100 + wages `: the gate cannot tell what the sum adds.
-        if INTERRUPTED.is_match(&line[..calc.start()]) {
+        // This may be only the tail of a larger sum, as after
+        // `$100 + wages ` or in `$1,000- 200 + 50 = 250`.
+        let before = &line[..calc.start()];
+        if INTERRUPTED.is_match(before) || follows_one_sided_minus(before, left) {
             out.push(unread(text, INTERRUPTION));
             continue;
         }
         // Text joined to the first amount or the result, as in
         // `AUD-150 + 200 = 50`, `1 000 + 1 = 1 001` and `$100 + $50 = $150 k`.
-        let before = &line[..calc.start()];
         if JOINED_BEFORE.is_match(before)
             || (GROUPED.is_match(before) && whole.starts_with(|c: char| c.is_ascii_digit()))
             || JOINED_AFTER.is_match(&line[calc.end()..])

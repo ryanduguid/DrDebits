@@ -746,6 +746,16 @@ fn a_calculation_the_gate_cannot_read_whole_blocks() {
         // amount only, before an `=` no read calculation ends.
         ("$1,000 -200 = $900", true),
         ("$1,000- 200 = $900", true),
+        // A one-sided minus can also precede a calculation the gate reads.
+        ("$1,000- 200 + 50 = 250", true),
+        ("$1,000- $200 + $50 = $250", true),
+        ("$1,000 -200 + 50 = -150", true),
+        ("$1,000 -$200 + $50 = -$150", true),
+        ("20%- 5% + 2% = 7%", true),
+        ("20% -5% + 2% = -3%", true),
+        ("$1,000 - 200 + 50 = $850", false),
+        ("In 2026, -200 + 50 = -150", false),
+        ("In 2025-26 $200 + $50 = $250", false),
         ("$12,000/4 = $3,000 per quarter, x4 = $13,000", true),
         ("$1,000 -200 = $800", true),
         ("$3,000 per quarter, x4 = $12,000", true),
@@ -785,6 +795,69 @@ fn a_calculation_the_gate_cannot_read_whole_blocks() {
         })
         .collect();
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+#[test]
+fn one_sided_subtraction_cannot_drop_a_bracketed_amount() {
+    for (line, tail) in [
+        ("(20%)- 5% + 2% = 7%", "5% + 2% = 7%"),
+        ("(20%) -5% + 2% = -3%", "-5% + 2% = -3%"),
+        ("($1,000)- $200 + $50 = $250", "$200 + $50 = $250"),
+        ("($1,000) -$200 + $50 = -$150", "-$200 + $50 = -$150"),
+        ("(-$1,000)– $200 + $50 = $250", "$200 + $50 = $250"),
+        ("$1,000− $200 + $50 = $250", "$200 + $50 = $250"),
+    ] {
+        let found = calculations(line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert_eq!(found[0].text, tail, "{line}");
+        assert!(!found[0].matches, "{line}");
+        assert!(
+            found[0]
+                .computed
+                .contains("it may be the tail of a longer sum"),
+            "{line}: {}",
+            found[0].computed
+        );
+    }
+}
+
+#[test]
+fn a_date_or_financial_year_can_label_a_signed_calculation() {
+    for (line, equation) in [
+        ("At 30/6/2026 -200 + 50 = -150", "-200 + 50 = -150"),
+        ("At (30/6/2026) -200 + 50 = -150", "-200 + 50 = -150"),
+        ("At 2026-06-30 -200 + 50 = -150", "-200 + 50 = -150"),
+        ("FY2025-26\t-5% + 2% = -3%", "-5% + 2% = -3%"),
+        ("FY 2025–26 −5% + 2% = −3%", "−5% + 2% = −3%"),
+    ] {
+        let found = calculations(line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert_eq!(found[0].text, equation, "{line}");
+        assert!(found[0].matches, "{line}: {}", found[0].computed);
+    }
+}
+
+#[test]
+fn a_period_cannot_hide_a_one_sided_minus() {
+    for (line, tail) in [
+        ("FY2025-26- 5 + 2 = 7", "5 + 2 = 7"),
+        ("2025-99-99- 5 + 2 = 7", "5 + 2 = 7"),
+        ("$1,000- 30/6/2026 -5 + 2 = -3", "-5 + 2 = -3"),
+        ("($1,000)− (30/6/2026) -5 + 2 = -3", "-5 + 2 = -3"),
+    ] {
+        let found = calculations(line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert_eq!(found[0].text, tail, "{line}");
+        assert!(!found[0].matches, "{line}");
+        assert!(
+            found[0]
+                .computed
+                .contains("it may be the tail of a longer sum"),
+            "{line}: {}",
+            found[0].computed
+        );
+        assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+    }
 }
 
 #[test]
