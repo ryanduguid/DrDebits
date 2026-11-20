@@ -743,6 +743,7 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
             }
             continue;
         }
+        let preceding_end = read.last().map_or(0, |span| span.end);
         read.push(calc.range());
         // `\d` admits any decimal digit, such as Arabic-Indic `٥`, and the
         // characters either side, which the match includes, may be numeric,
@@ -759,9 +760,11 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
             continue;
         }
         // This may be only the tail of a larger sum, as after
-        // `$100 + wages ` or in `$1,000- 200 + 50 = 250`.
+        // `$100 + wages ` or in `$1,000- 200 + 50 = 250`. A result
+        // the scanner already read cannot supply the missing amount.
         let before = &line[..calc.start()];
-        if INTERRUPTED.is_match(before) || follows_one_sided_minus(before, left) {
+        let unread_before = &line[preceding_end..calc.start()];
+        if INTERRUPTED.is_match(before) || follows_one_sided_minus(unread_before, left) {
             out.push(unread(text, INTERRUPTION));
             continue;
         }

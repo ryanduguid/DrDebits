@@ -898,6 +898,33 @@ fn a_named_bracketed_date_cannot_hide_a_left_spaced_minus() {
     assert_unread_tail("$1,000 -Date:[30/6/2026]: -$5 + $2 = -$3", "-$5 + $2 = -$3");
 }
 
+#[test]
+fn a_finished_calculation_does_not_supply_an_operand_to_the_next() {
+    for period in ["Date:(30/6/2026)", "Date:[30/6/2026]"] {
+        for sum in ["-5 + 2 = -3", "5 + 2 = 7"] {
+            let line = format!("2 + 2 = 4-{period}, {sum}");
+            let found = calculations(&line);
+            assert_eq!(found.len(), 2, "{line}");
+            assert_eq!(found[0].text, "2 + 2 = 4", "{line}");
+            assert_eq!(found[1].text, sum, "{line}");
+            for calc in found {
+                assert!(calc.matches, "{line}: {}", calc.computed);
+            }
+            assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
+        }
+    }
+}
+
+#[test]
+fn a_finished_calculation_cannot_hide_a_new_operand_before_a_period() {
+    let line = "2 + 2 = 4, $1,000- Date:(30/6/2026), $5 + $2 = $7";
+    let found = calculations(line);
+    assert_eq!(found.len(), 2, "{line}");
+    assert!(found[0].matches, "{line}");
+    assert!(!found[1].matches, "{line}");
+    assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+}
+
 fn assert_unread_tail(line: &str, tail: &str) {
     let found = calculations(line);
     assert_eq!(found.len(), 1, "{line}");
