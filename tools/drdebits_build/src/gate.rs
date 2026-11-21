@@ -728,7 +728,7 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
             if !covered(equals)
                 && !(clause && covered(c.name("digit").expect("a `digit` group").start()))
                 && (INTERRUPTED.is_match(&line[..equals])
-                    || UNSPACED.is_match(&DATE.replace_all(&line[start..equals], " ")))
+                    || UNSPACED.is_match(&mask_prose_dates(&line[start..equals])))
             {
                 out.push(unread(
                     py::strip(&line[start..m.end()]).to_string(),
@@ -784,6 +784,44 @@ fn period_at_end(text: &str) -> Option<regex::Match<'_>> {
     PERIOD_END
         .captures(text.trim_end_matches([' ', '(', ')', '[', ']', ':', ',']))
         .and_then(|label| label.name("period"))
+        .filter(|period| {
+            DATE.find(period.as_str())
+                .is_none_or(|date| valid_slash_date(date.as_str()))
+        })
+}
+
+fn valid_slash_date(text: &str) -> bool {
+    let mut parts = text.split('/');
+    let day = parts.next().and_then(|day| day.parse::<i8>().ok());
+    let month = parts.next().and_then(|month| month.parse::<i8>().ok());
+    let year = parts.next().and_then(|year| {
+        year.parse::<i16>().ok().map(|number| {
+            if year.len() == 2 {
+                2000 + number
+            } else {
+                number
+            }
+        })
+    });
+    let (Some(day), Some(month), Some(year)) = (day, month, year) else {
+        return false;
+    };
+    jiff::civil::Date::new(year, month, day).is_ok()
+}
+
+fn mask_prose_dates(text: &str) -> std::borrow::Cow<'_, str> {
+    DATE.replace_all(text, |caps: &regex::Captures<'_>| {
+        let date = caps.get(0).expect("a date-shaped match");
+        let before = text[..date.start()].trim_end_matches([' ', '(']);
+        let subtraction = before
+            .strip_suffix(['-', '−'])
+            .is_some_and(|amount| ends_in_operand(amount) && period_at_end(amount).is_none());
+        if valid_slash_date(date.as_str()) && !subtraction {
+            " ".to_string()
+        } else {
+            date.as_str().to_string()
+        }
+    })
 }
 
 fn ends_in_operand(text: &str) -> bool {
@@ -799,7 +837,10 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
         let calc = m.name("calc").expect("a `calc` group");
         let (whole, left, right) = (calc.as_str(), &m["left"], &m["right"]);
         let text = py::strip(whole).to_string();
-        if DATE.is_match(left) {
+        if DATE
+            .find_iter(left)
+            .any(|date| valid_slash_date(date.as_str()))
+        {
             // A date alone, bracketed or not, as in `1/7/2026 = 2026`, is
             // prose; a date with other operands, as in `1/7/2025 + 2 + 2 = 5`,
             // is a sum the gate cannot read.
@@ -809,7 +850,10 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
                     link.trim_matches(|c: char| matches!(c, '(' | ')') || c.is_whitespace())
                 })
                 .filter(|s| !s.is_empty())
-                .all(|link| DATE.find(link).is_some_and(|d| d.len() == link.len()));
+                .all(|link| {
+                    DATE.find(link)
+                        .is_some_and(|d| d.len() == link.len() && valid_slash_date(d.as_str()))
+                });
             // A date alone is not a read calculation, so the `=` after it is
             // still checked, as in `Rent $500 × 52 weeks to 30/6/2026 = $26,000`.
             if !dates_only {

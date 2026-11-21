@@ -1216,6 +1216,40 @@ fn an_unread_subtraction_cannot_hide_after_a_bracket_or_percent_sign() {
 }
 
 #[test]
+fn a_slash_date_cannot_mask_a_subtraction_before_a_result() {
+    for line in [
+        "($2)- 99/99/9999 = $4",
+        "($2)- 31/2/2026 = $4",
+        "($2)- 1/2/2026 = $4",
+        "$2- (1/2/2026) = $4",
+        "20%- 1/2/2026 = 4%",
+    ] {
+        let report = with_line(line);
+        assert_eq!(
+            report.verdict().1,
+            EXIT_BLOCK,
+            "{line}: {:?}",
+            report.blocks
+        );
+        assert!(
+            report
+                .blocks
+                .iter()
+                .any(|block| block.contains("could not read")),
+            "{line}: {:?}",
+            report.blocks
+        );
+    }
+    for line in [
+        "1/7/2025- 30/6/2026 = FY 2026",
+        "29/2/2024 = leap day 2024",
+        "Date: 1/2/2026 -5 + 2 = -3",
+    ] {
+        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+    }
+}
+
+#[test]
 fn a_currency_sign_before_the_minus_cannot_hide_a_subtraction() {
     for line in [
         "$1 + $1 = $2- $-1 = $4",
