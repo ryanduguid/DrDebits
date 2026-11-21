@@ -1307,27 +1307,25 @@ fn run_compare(root: &PyPath, topic: &str, a: &[String], b: &[String]) -> Result
         } else {
             ""
         };
-        if m.every_repeat {
-            outln!(
-                "{}: a {}, b {} of {} questions; a higher on {}, b higher on {}, ties {}; two-sided sign test {}{few}",
-                m.measure,
+        let totals = if m.every_repeat {
+            format!(
+                "a {}, b {} of {} questions",
                 m.a_total,
                 m.b_total,
-                keys.len(),
-                m.a_higher,
-                m.b_higher,
-                m.ties,
-                m.p
-            );
-            continue;
-        }
+                keys.len()
+            )
+        } else {
+            format!(
+                "a {} (mean {}), b {} (mean {})",
+                m.a_total,
+                mean(m.a_total),
+                m.b_total,
+                mean(m.b_total)
+            )
+        };
         outln!(
-            "{}: a {} (mean {}), b {} (mean {}); a higher on {}, b higher on {}, ties {}; two-sided sign test {}{few}",
+            "{}: {totals}; a higher on {}, b higher on {}, ties {}; two-sided sign test {}{few}",
             m.measure,
-            m.a_total,
-            mean(m.a_total),
-            m.b_total,
-            mean(m.b_total),
             m.a_higher,
             m.b_higher,
             m.ties,

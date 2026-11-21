@@ -1064,6 +1064,14 @@ fn a_question_counts_on_every_repeat_only_when_no_repeat_misses_it() {
     let first_six = marked(&answering(&keys, 0..6));
     let first_three = marked(&answering(&keys, 0..3));
     assert_eq!(held(&[first_six, first_three]), [3, 0]);
+    // Right on value both times, but cited only the first time.
+    let cited = mark(
+        r#"{"answers": {"D7A-001": {"value": "8.77",
+        "authorities": ["s 109N(2) of the Income Tax Assessment Act 1936"]}}}"#,
+    )
+    .unwrap();
+    let uncited = mark(r#"{"answers": {"D7A-001": {"value": "8.77"}}}"#).unwrap();
+    assert_eq!(held(&[cited, uncited]), [1, 0]);
 }
 
 /// With repeats, compare adds the every-repeat measures, each question one
