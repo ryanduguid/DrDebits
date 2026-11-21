@@ -990,12 +990,44 @@ const MEASURES: [Measure; 5] = [
     }),
 ];
 
+/// Measures a question holds only when its answer has them in every repeat,
+/// so a question right in 2 of 3 repeats does not count.
+const EVERY_REPEAT: [Measure; 2] = [
+    ("value correct on every repeat", |s| {
+        s.value == Value::Correct
+    }),
+    ("correct value and authority on every repeat", |s| {
+        s.value == Value::Correct && s.cited == Cited::Right
+    }),
+];
+
+fn on_every_repeat(runs: &[Vec<Scored>], q: usize, has: fn(&Scored) -> bool) -> bool {
+    runs.iter().all(|r| has(&r[q]))
+}
+
+/// How many questions hold each `EVERY_REPEAT` measure across repeats of one
+/// condition, each a list `score` returned for the same keys.
+pub fn every_repeat(runs: &[Vec<Scored>]) -> Vec<(&'static str, usize)> {
+    let questions = runs.first().map_or(0, Vec::len);
+    EVERY_REPEAT
+        .iter()
+        .map(|&(measure, has)| {
+            let held = (0..questions)
+                .filter(|&q| on_every_repeat(runs, q, has))
+                .count();
+            (measure, held)
+        })
+        .collect()
+}
+
 /// One measure compared between conditions a and b. Each question is one
 /// pair: the number of repeats in which a's answer has the measure against
-/// the number in which b's does.
+/// the number in which b's does, or for an `every_repeat` measure, whether
+/// a's answer has it in all of a's repeats against whether b's does.
 #[derive(Debug, PartialEq)]
 pub struct Paired {
     pub measure: &'static str,
+    pub every_repeat: bool,
     pub a_total: usize,
     pub b_total: usize,
     pub a_higher: usize,
@@ -1054,26 +1086,40 @@ pub fn compare(keys: &[Key], a: &[Json], b: &[Json]) -> Result<Vec<Paired>, Stri
             .collect::<Result<Vec<_>, _>>()
     };
     let (a, b) = (scored("a", a)?, scored("b", b)?);
-    Ok(MEASURES
+    let row = |measure, every_repeat, held: &dyn Fn(&[Vec<Scored>], usize) -> usize| {
+        let pairs: Vec<(usize, usize)> = (0..keys.len())
+            .map(|q| (held(&a, q), held(&b, q)))
+            .collect();
+        let a_higher = pairs.iter().filter(|(x, y)| x > y).count();
+        let b_higher = pairs.iter().filter(|(x, y)| x < y).count();
+        Paired {
+            measure,
+            every_repeat,
+            a_total: pairs.iter().map(|p| p.0).sum(),
+            b_total: pairs.iter().map(|p| p.1).sum(),
+            a_higher,
+            b_higher,
+            ties: pairs.len() - a_higher - b_higher,
+            p: sign_test(a_higher, b_higher),
+        }
+    };
+    let mut rows: Vec<Paired> = MEASURES
         .iter()
         .map(|&(measure, has)| {
-            let count = |runs: &[Vec<Scored>], q: usize| runs.iter().filter(|r| has(&r[q])).count();
-            let pairs: Vec<(usize, usize)> = (0..keys.len())
-                .map(|q| (count(&a, q), count(&b, q)))
-                .collect();
-            let a_higher = pairs.iter().filter(|(x, y)| x > y).count();
-            let b_higher = pairs.iter().filter(|(x, y)| x < y).count();
-            Paired {
-                measure,
-                a_total: pairs.iter().map(|p| p.0).sum(),
-                b_total: pairs.iter().map(|p| p.1).sum(),
-                a_higher,
-                b_higher,
-                ties: pairs.len() - a_higher - b_higher,
-                p: sign_test(a_higher, b_higher),
-            }
+            row(measure, false, &|runs, q| {
+                runs.iter().filter(|r| has(&r[q])).count()
+            })
         })
-        .collect())
+        .collect();
+    // With one repeat each, every repeat is the one answer: the rows above.
+    if a.len() > 1 {
+        rows.extend(EVERY_REPEAT.iter().map(|&(measure, has)| {
+            row(measure, true, &|runs, q| {
+                usize::from(on_every_repeat(runs, q, has))
+            })
+        }));
+    }
+    Ok(rows)
 }
 
 #[derive(clap::Args)]
@@ -1089,10 +1135,12 @@ pub struct Args {
 enum Command {
     /// Recompute the keys and compare them with any recorded engine output.
     Keys,
-    /// Mark a JSON answers file on value and authority.
+    /// Mark a JSON answers file on value and authority, or several repeats
+    /// of one condition with the questions right on every repeat.
     Score {
-        /// The answers file.
-        answers: String,
+        /// The answers file, or one file per repeat.
+        #[arg(required = true)]
+        answers: Vec<String>,
         /// Print each question's marks and the totals as JSON.
         #[arg(long)]
         json: bool,
@@ -1138,43 +1186,100 @@ fn read_answers(path: &str) -> Result<Json, String> {
     pyjson::loads(&body).map_err(|e| format!("answers file: {e}"))
 }
 
-fn run_score(root: &PyPath, topic: &str, path: &str, json: bool) -> Result<u8, String> {
+/// Refuse a file given twice: each answers file is one repeat. The same file
+/// under 2 spellings, such as `x.json` and `./x.json`, is still one file; a
+/// path that does not resolve fails when it is read.
+fn once_each<'a>(mut paths: impl Iterator<Item = &'a String>) -> Result<(), String> {
+    let mut seen = HashSet::new();
+    let file = |p: &String| std::fs::canonicalize(p).unwrap_or_else(|_| p.into());
+    match paths.find(|p| !seen.insert(file(p))) {
+        Some(twice) => Err(format!(
+            "{twice} is given more than once: each answers file is one repeat of one condition"
+        )),
+        None => Ok(()),
+    }
+}
+
+fn score_json(totals: &[(&str, usize)], scored: &[Scored]) -> Vec<(String, Json)> {
+    let int = |n: usize| Json::Int(BigInt::from(n));
+    let word = |m: String| Json::Str(m.to_lowercase());
+    vec![
+        (
+            "totals".into(),
+            Json::Object(
+                totals
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), int(*v)))
+                    .collect(),
+            ),
+        ),
+        (
+            "questions".into(),
+            Json::Array(
+                scored
+                    .iter()
+                    .map(|s| {
+                        Json::Object(vec![
+                            ("id".into(), Json::str_obj(&s.id)),
+                            ("value".into(), word(format!("{:?}", s.value))),
+                            ("authority".into(), word(format!("{:?}", s.cited))),
+                        ])
+                    })
+                    .collect(),
+            ),
+        ),
+    ]
+}
+
+/// One file prints its totals, as it always has. Several print each
+/// repeat's totals under its file, then the questions right on every repeat.
+fn run_score(root: &PyPath, topic: &str, paths: &[String], json: bool) -> Result<u8, String> {
     let keys = load_keys(root, topic)?;
-    let scored = score(&keys, &read_answers(path)?)?;
-    let totals = tally(&scored);
+    once_each(paths.iter())?;
+    let runs = paths
+        .iter()
+        .map(|p| {
+            let scored = read_answers(p).and_then(|a| score(&keys, &a));
+            match paths {
+                [_] => scored,
+                _ => scored.map_err(|e| format!("{e} ({p})")),
+            }
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let tallies: Vec<_> = runs.iter().map(|s| tally(s)).collect();
+    let held = every_repeat(&runs);
+    let int = |n: usize| Json::Int(BigInt::from(n));
     if json {
-        let int = |n: usize| Json::Int(BigInt::from(n));
-        let word = |m: String| Json::Str(m.to_lowercase());
-        let payload = Json::Object(vec![
-            (
-                "totals".into(),
-                Json::Object(
-                    totals
-                        .iter()
-                        .map(|(k, v)| (k.to_string(), int(*v)))
-                        .collect(),
-                ),
-            ),
-            (
-                "questions".into(),
-                Json::Array(
-                    scored
-                        .iter()
-                        .map(|s| {
-                            Json::Object(vec![
-                                ("id".into(), Json::str_obj(&s.id)),
-                                ("value".into(), word(format!("{:?}", s.value))),
-                                ("authority".into(), word(format!("{:?}", s.cited))),
-                            ])
-                        })
-                        .collect(),
-                ),
-            ),
-        ]);
-        outln!("{}", pyjson::dumps(&payload, false));
-    } else {
-        for (label, count) in &totals {
+        let payload = if let [scored] = &runs[..] {
+            score_json(&tallies[0], scored)
+        } else {
+            let repeats = paths.iter().zip(&tallies).zip(&runs).map(|((p, t), s)| {
+                let mut run = vec![("file".to_string(), Json::str_obj(p))];
+                run.extend(score_json(t, s));
+                Json::Object(run)
+            });
+            let mut every = vec![("repeats".to_string(), int(runs.len()))];
+            every.extend(held.iter().map(|(m, n)| (m.replace(' ', "_"), int(*n))));
+            vec![
+                ("repeats".into(), Json::Array(repeats.collect())),
+                ("every_repeat".into(), Json::Object(every)),
+            ]
+        };
+        outln!("{}", pyjson::dumps(&Json::Object(payload), false));
+        return Ok(EXIT_OK);
+    }
+    for (i, (path, totals)) in paths.iter().zip(&tallies).enumerate() {
+        if runs.len() > 1 {
+            outln!("repeat {}: {path}", i + 1);
+        }
+        for (label, count) in totals {
             outln!("{}: {count}", label.replace('_', " "));
+        }
+    }
+    if runs.len() > 1 {
+        outln!("across {} repeats of {} questions:", runs.len(), keys.len());
+        for (measure, count) in &held {
+            outln!("{measure}: {count}");
         }
     }
     Ok(EXIT_OK)
@@ -1182,15 +1287,7 @@ fn run_score(root: &PyPath, topic: &str, path: &str, json: bool) -> Result<u8, S
 
 fn run_compare(root: &PyPath, topic: &str, a: &[String], b: &[String]) -> Result<u8, String> {
     let keys = load_keys(root, topic)?;
-    // The same file under 2 spellings, such as `x.json` and `./x.json`, is
-    // still one file; a path that does not resolve fails when it is read.
-    let mut seen = HashSet::new();
-    let file = |p: &String| std::fs::canonicalize(p).unwrap_or_else(|_| p.into());
-    if let Some(twice) = a.iter().chain(b).find(|p| !seen.insert(file(p))) {
-        return Err(format!(
-            "{twice} is given more than once: each answers file is one repeat of one condition"
-        ));
-    }
+    once_each(a.iter().chain(b))?;
     let read = |side: &str, paths: &[String]| {
         paths
             .iter()
@@ -1210,13 +1307,25 @@ fn run_compare(root: &PyPath, topic: &str, a: &[String], b: &[String]) -> Result
         } else {
             ""
         };
+        let totals = if m.every_repeat {
+            format!(
+                "a {}, b {} of {} questions",
+                m.a_total,
+                m.b_total,
+                keys.len()
+            )
+        } else {
+            format!(
+                "a {} (mean {}), b {} (mean {})",
+                m.a_total,
+                mean(m.a_total),
+                m.b_total,
+                mean(m.b_total)
+            )
+        };
         outln!(
-            "{}: a {} (mean {}), b {} (mean {}); a higher on {}, b higher on {}, ties {}; two-sided sign test {}{few}",
+            "{}: {totals}; a higher on {}, b higher on {}, ties {}; two-sided sign test {}{few}",
             m.measure,
-            m.a_total,
-            mean(m.a_total),
-            m.b_total,
-            mean(m.b_total),
             m.a_higher,
             m.b_higher,
             m.ties,
