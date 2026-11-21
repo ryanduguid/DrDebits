@@ -66,6 +66,31 @@ baselines section scores a responder that refuses everything and one that
 always proceeds, so a status match rate can be read against them; no model
 answers those rows.
 
+## Inspect export
+
+`cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- inspect-export --out ../drdebits.jsonl --root .`
+writes every case in `cases.json` as one sample of an
+[Inspect](https://inspect.aisi.org.uk/) dataset, in JSON Lines and already in
+Inspect's `Sample` form, so `json_dataset("../drdebits.jsonl")` reads it with no
+field mapping. Write it outside this repository. Nothing calls a model.
+
+- `input` is the case's frozen prompt, as a system and a user message when the
+  case has a system instruction. A case with no frozen prompt gives its
+  scenario, which the protocol says to turn into a direct synthetic request
+  before a run; `metadata.input` is `prompt` or `scenario`, so a run can keep
+  to frozen prompts or replace the scenarios.
+- `target` is the rubric: `expected_status`, `required_behaviour` and
+  `side_effect_check`, one per line. A person judges each response against it
+  and the whole-response rule in `cases.json`; a model grader's verdict is
+  `model-proposed`, never a confirmed result.
+- `metadata` repeats those fields and any `prohibited_anywhere` labels, with
+  `guide_version`, `guide_sha256`, `cases_sha256` and the canary, so an
+  Inspect log names the cases it ran.
+
+The protocol above still applies: load the guide as project context (for
+example with Inspect's `system_message`), supply the inert tools, and record
+results as a result file.
+
 ## Retrieval evidence
 
 [Isaacus's Australian Tax Guidance Retrieval](https://huggingface.co/datasets/isaacus/australian-tax-guidance-retrieval)
