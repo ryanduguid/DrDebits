@@ -1342,6 +1342,50 @@ fn a_label_cannot_hide_a_three_term_slash_chain() {
 }
 
 #[test]
+fn a_label_cannot_hide_a_grouped_compact_product() {
+    for value in [
+        "Gross:100x4",
+        "Gross(100x4)",
+        "Gross[100X4]",
+        "Gross{100x(4/2)}",
+    ] {
+        assert_unread_tail(&format!("{value}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{value} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn a_spaced_date_range_can_precede_independent_arithmetic() {
+    for line in [
+        "Period: 1/7/2025 – 30/6/2026; 5 + 2 = 7",
+        "Budget $100; Period: 1/7/2025 - 30/6/2026; 5 + 2 = 7",
+        "Period: [1/7/2025] - {30/6/2026}, -5 + 2 = -3",
+        "Period (1/7/2025 - 30/6/2026); $5 + $2 = $7",
+        "Period (1/7/2025 - 30/6/2026) -5 + 2 = -3",
+        "Period[1/7/2025 - 30/6/2026]; 5 + 2 = 7",
+        "Period: 2025-07-01 - 2026-06-30; 5 + 2 = 7",
+        "Period: 2025-07-01 - 30/6/2026; 5 + 2 = 7",
+        "Period: 29/2/24 - 28/2/2025; 5 + 2 = 7",
+    ] {
+        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+    }
+    for line in [
+        "Period: 29/2/25 - 28/2/2025; 5 + 2 = 7",
+        "Period: 1/7/2025 - 31/6/2026; 5 + 2 = 7",
+        "Period: 2025-02-29 - 2026-06-30; 5 + 2 = 7",
+        "Gross: $1/7/2025 - 30/6/2026; 5 + 2 = 7",
+        "Gross: $ 1/7/2025 - 30/6/2026; 5 + 2 = 7",
+        "Gross: $- 1/7/2025 - 30/6/2026; 5 + 2 = 7",
+        "Gross: 1/7/2025 - 30/6/2026%; 5 + 2 = 7",
+        "($2)- 1/7/2025 - 30/6/2026; 5 + 2 = 7",
+        "($2)-[ 1/7/2025 - 30/6/2026]; 5 + 2 = 7",
+        "($2)- [-1/7/2025 - 30/6/2026]; 5 + 2 = 7",
+    ] {
+        assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+    }
+}
+
+#[test]
 fn a_hyphen_joined_to_both_an_amount_and_a_period_is_not_a_spaced_minus() {
     for line in [
         "Ref 1000-Date:(30/6/2026), $5 + $2 = $7",
