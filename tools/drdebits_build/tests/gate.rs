@@ -1186,6 +1186,36 @@ fn a_truncated_subtraction_cannot_split_a_running_total() {
 }
 
 #[test]
+fn an_unread_subtraction_cannot_hide_after_a_bracket_or_percent_sign() {
+    for line in [
+        "($2)- $-1 = $4",
+        "($1,000)- $200 = $900",
+        "($1,000) -$200 = $900",
+        "(( $1,000 ))- ($200) = $900",
+        "(−$1,000)- $200 = -$900",
+        "20%- 5% = 16%",
+        "20% -5% = 16%",
+        "Rate:20%- (5%) = 16%",
+    ] {
+        let report = with_line(line);
+        assert_eq!(
+            report.verdict().1,
+            EXIT_BLOCK,
+            "{line}: {:?}",
+            report.blocks
+        );
+        assert!(
+            report
+                .blocks
+                .iter()
+                .any(|block| block.contains("could not read")),
+            "{line}: {:?}",
+            report.blocks
+        );
+    }
+}
+
+#[test]
 fn a_currency_sign_before_the_minus_cannot_hide_a_subtraction() {
     for line in [
         "$1 + $1 = $2- $-1 = $4",

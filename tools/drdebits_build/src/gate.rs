@@ -329,10 +329,17 @@ static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// minus, `/`, `x` or `X` joined to the next number but not to the text
 /// before it, as in `$1,000 -200` and `per quarter, x4`. An operator before
 /// an `=` that no read calculation ends, once dates are taken out. A minus
-/// joined to numbers on both sides, as in `8-1` and `2025-26`, is a hyphen.
+/// joined to bare numbers on both sides, as in `8-1` and `2025-26`, is a
+/// hyphen. A closing bracket or percentage marker can end the left amount.
 static UNSPACED: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let amount_end = r"\d%?(?:[ \t]*\))*";
+    let opening = r"(?:\([ \t]*)*";
+    let quotient_or_product = format!(r"\d[ \t]*[/xX][ \t]*{CURRENCY_PREFIX}?");
+    let subtraction = format!(
+        r"{amount_end}(?:[ \t]*[-−][ \t]*{opening}{CURRENCY_PREFIX}|[ \t]*[-−][ \t]+{opening}[-−]?|[ \t]+[-−]{opening}[-−]?)"
+    );
     regex::Regex::new(&format!(
-        r"\d[ \t]*(?:[/xX][ \t]*(?:{CURRENCY_PREFIX})?|[-−](?:[ \t]*(?:\([ \t]*)*{CURRENCY_PREFIX}|[ \t]+))\d|\d.*[^\w$][-−/xX](?:{CURRENCY_PREFIX})?\d",
+        r"(?:{quotient_or_product}|{subtraction})\d|\d.*[^\w$][-−/xX]{CURRENCY_PREFIX}?\d",
     ))
     .expect("pattern")
 });
