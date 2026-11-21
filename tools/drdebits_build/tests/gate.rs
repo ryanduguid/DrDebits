@@ -806,10 +806,24 @@ fn one_sided_subtraction_cannot_drop_a_bracketed_amount() {
         ("($1,000) -$200 + $50 = -$150", "-$200 + $50 = -$150"),
         ("(-$1,000)– $200 + $50 = $250", "$200 + $50 = $250"),
         ("$1,000− $200 + $50 = $250", "$200 + $50 = $250"),
+        ("$1,000- [200 + 50 = 250]", "200 + 50 = 250"),
+        ("$1,000- {200 + 50 = 250}", "200 + 50 = 250"),
+        ("$1,000 -[200 + 50 = 250]", "200 + 50 = 250"),
+        ("$1,000 -{200 + 50 = 250}", "200 + 50 = 250"),
+        ("$1,000-[200 + 50 = 250]", "200 + 50 = 250"),
         ("-$1,000- $200 + $50 = $250", "$200 + $50 = $250"),
         ("-$1,000 -$200 + $50 = -$150", "-$200 + $50 = -$150"),
     ] {
         assert_unread_tail(line, tail);
+    }
+    for (open, close) in [('(', ')'), ('[', ']'), ('{', '}')] {
+        for minus in ["-", "- ", " -", " - "] {
+            let line = format!("$1,000{minus}{open}200 + 50 = 250{close}");
+            assert_eq!(with_line(&line).verdict().1, EXIT_BLOCK, "{line}");
+        }
+    }
+    for line in ["Note 1- [200 + 50 = 250]", "Note 1 -[200 + 50 = 250]"] {
+        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
     }
 }
 
@@ -1363,6 +1377,7 @@ fn a_labelled_two_term_amount_can_supply_an_operand() {
     for value in [
         "Gross:100/4",
         "Gross: 100/4",
+        "Gross 100/4",
         "Gross:100-4",
         "Gross(100/4)",
         "Gross[100-4]",
@@ -1395,6 +1410,7 @@ fn a_spaced_date_range_can_precede_independent_arithmetic() {
         "Period: 1/7/2025 - 30/6/2026 [inclusive]; 5 + 2 = 7",
         "Period: 1/7/2025 - 30/6/2026 {inclusive}: 5 + 2 = 7",
         "Ref AB:100/4/2- Period: 1/7/2025 - 30/6/2026 inclusive. 5 + 2 = 7",
+        "Ref AB:100/4/2- (Period: 1/7/2025 - 30/6/2026 inclusive). 5 + 2 = 7",
         "Period: 2025-07-01 - 2026-06-30. 5 + 2 = 7",
         "Period: [1/7/2025 - 30/6/2026 inclusive of both days]; 5 + 2 = 7",
         "Period: 1/7/2025 - 30/6/2026 exclusive, -5 + 2 = -3",
@@ -1419,6 +1435,9 @@ fn a_spaced_date_range_can_precede_independent_arithmetic() {
         "Gross: 1/7/2025 - 30/6/2026%; 5 + 2 = 7",
         "Gross: 1/7/2025 - 30/6/2026.5; 5 + 2 = 7",
         "Gross:100/4- Period: 1/7/2025 - 30/6/2026 inclusive. 5 + 2 = 7",
+        "Gross:100/4- (Period: 1/7/2025 - 30/6/2026 inclusive). 5 + 2 = 7",
+        "Gross:100/4- [Period: 1/7/2025 - 30/6/2026 inclusive]. 5 + 2 = 7",
+        "Gross:100/4- {Period: 1/7/2025 - 30/6/2026 inclusive}; 5 + 2 = 7",
         "Gross:100/4- Note: 5 + 2 = 7",
         "Gross: 1/7/2025 - 30/6/2026 + 5; 5 + 2 = 7",
         "Gross: 1/7/2025 - 30/6/2026 inclusive plus $2; 5 + 2 = 7",

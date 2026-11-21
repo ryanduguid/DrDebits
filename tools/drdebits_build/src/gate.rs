@@ -281,13 +281,12 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
-/// A minus joined to a potential operand before intervening prose.
+/// A minus followed by whitespace or the start of a group the scanner
+/// might leave before a readable calculation.
 static DANGLING_MINUS: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"[-−] +\p{L}").expect("pattern"));
-/// A complete amount or expression that could supply an operand. Bare
-/// two-part fractions can be prose. A dollar sign, percentage, quotient with
-/// other operations or numeric product can identify arithmetic. The caller
-/// checks periods separately.
+    LazyLock::new(|| regex::Regex::new(&format!(r"[-−](?: +|{OPEN_BRACKET})")).expect("pattern"));
+/// A complete amount or expression that could supply an operand. Explicit
+/// references and periods can resemble arithmetic and are checked separately.
 static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let plain = format!(r"[-−]?(?:{NUM})");
     let digits = r"\d[\d,]*(?:\.\d+)?";
@@ -317,9 +316,10 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     // A label colon or brackets identify a potential operand even when it
     // consists of a single compact division or subtraction.
     let pair = format!(r"(?:{division}|{subtraction}){grouped}");
+    let quotient = format!(r"{grouped}{division}{grouped}");
     let bracketed = format!(r"{OPEN_BRACKET}+ *{plain}(?:{pair}|{operations})? *{CLOSE_BRACKET}+");
     regex::Regex::new(&format!(
-        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{label_colon}){grouped}{pair}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{bracketed}|{marked_expression}))$"
+        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{label_colon}){grouped}{pair}|(?:{boundary}){quotient}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{bracketed}|{marked_expression}))$"
     ))
     .expect("pattern")
 });
@@ -778,15 +778,17 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
     let since_equals = before.rsplit_once('=').map_or(before, |(_, text)| text);
     if DANGLING_MINUS.find_iter(since_equals).any(|operator| {
         let amount = &since_equals[..operator.start()];
-        !amount.ends_with(' ') && ends_in_nonperiod_operand(amount)
+        let starts_group = operator.as_str().ends_with(['(', '[', '{']);
+        (starts_group || !amount.ends_with(' ')) && ends_in_nonperiod_operand(amount)
     }) {
         return true;
     }
     let prefix = before.trim_end_matches(' ');
     let separated = before.ends_with(' ') || left.starts_with(' ');
     if let Some(amount) = prefix.strip_suffix(['-', '−']) {
-        return (separated || amount.ends_with(' '))
-            && (ends_in_operand(amount) || period_at_end(amount).is_some());
+        return ((separated || amount.ends_with(' '))
+            && (ends_in_operand(amount) || period_at_end(amount).is_some()))
+            || (left.starts_with('(') && ends_in_nonperiod_operand(amount));
     }
     // Strip punctuation that frames a period label before checking for
     // an earlier subtraction.
