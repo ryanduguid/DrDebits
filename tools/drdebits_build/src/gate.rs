@@ -760,23 +760,23 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
         // Date-shaped groups can be terms in a longer operand. For compact
         // subtraction, require an operand before the first minus and keep
         // explicitly labelled dates distinct.
-        let before_operators = before_period.trim_end_matches([' ', '(', '-', '−']);
+        let before_operators = before_period.trim_end_matches([' ', '(', '[', '{', '-', '−']);
         let operator = &before_period[before_operators.len()..];
         let subtracts_date = operator.starts_with(['-', '−'])
             && period.as_str().starts_with(|c: char| c.is_ascii_digit())
-            && ends_in_operand(before_operators);
+            && ends_in_nonperiod_operand(before_operators);
         if signed_left
             && (before_operators.ends_with('/') || subtracts_date)
             && ends_in_operand(prefix)
         {
             return true;
         }
-        let operator_prefix = before_period.trim_end_matches([' ', '(', '[', ':', ',']);
+        let operator_prefix = before_period.trim_end_matches([' ', '(', '[', '{', ':', ',']);
         return operator_prefix
             .strip_suffix(['-', '−'])
             .is_some_and(|amount| {
                 (amount.ends_with(' ') || before_period[operator_prefix.len()..].starts_with(' '))
-                    && ends_in_operand(amount)
+                    && ends_in_nonperiod_operand(amount)
             });
     }
 
@@ -818,13 +818,21 @@ fn mask_prose_dates(text: &str) -> std::borrow::Cow<'_, str> {
         let before = text[..date.start()].trim_end_matches([' ', '(', '[', '{']);
         let subtraction = before
             .strip_suffix(['-', '−'])
-            .is_some_and(|amount| ends_in_operand(amount) && period_at_end(amount).is_none());
-        if valid_slash_date(date.as_str()) && !subtraction {
+            .is_some_and(ends_in_nonperiod_operand);
+        // A currency or percentage marker makes this an amount, even
+        // when the intervening slash-separated digits form a civil date.
+        let marked = before.trim_end_matches(['-', '−']).ends_with('$')
+            || text[date.end()..].starts_with('%');
+        if valid_slash_date(date.as_str()) && !subtraction && !marked {
             " ".to_string()
         } else {
             date.as_str().to_string()
         }
     })
+}
+
+fn ends_in_nonperiod_operand(text: &str) -> bool {
+    ends_in_operand(text) && period_at_end(text).is_none()
 }
 
 fn ends_in_operand(text: &str) -> bool {
