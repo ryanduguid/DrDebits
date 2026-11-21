@@ -218,6 +218,9 @@ static FIELD: LazyLock<regex::Regex> = LazyLock::new(|| {
 const NUM: &str = r"\$?\d{1,3}(?:,\d{3})+(?:\.\d+)?%?|\$?\d+(?:\.\d+)?%?";
 /// Currency with either sign order. Detection uses both; evaluation requires `-` before `$`.
 const CURRENCY_PREFIX: &str = r"(?:[-−]?\$|\$[-−])";
+// Grouping characters may mark an operand that the evaluator cannot read.
+const OPEN_BRACKET: &str = r"[(\[{]";
+const CLOSE_BRACKET: &str = r"[)\]}]";
 /// What stands before a calculation: the start of the line or a character
 /// that is not part of a word, number or date. A hyphen, which
 /// `calculations` makes of every dash, or a minus counts only when no digit
@@ -285,14 +288,14 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let plain = format!(r"[-−]?(?:{NUM})");
     let digits = r"\d[\d,]*(?:\.\d+)?";
     let marked = format!(r"(?:{CURRENCY_PREFIX}{digits}%?|[-−]?{digits}%)");
-    let grouped = format!(r"\(* *{plain} *\)*");
-    let grouped_marked = format!(r"\(* *{marked} *\)*");
+    let grouped = format!(r"{OPEN_BRACKET}* *{plain} *{CLOSE_BRACKET}*");
+    let grouped_marked = format!(r"{OPEN_BRACKET}* *{marked} *{CLOSE_BRACKET}*");
     let chain = format!(r"{grouped}(?: */ *{grouped}){{2,}}");
     // The marker can be on any term of a quotient, product or compact subtraction.
     let operator = r"(?: *[/xX] *|[-−])";
     let term = format!(r"{operator}{grouped}");
     let marked_expression = format!(
-        r"(?:{marked}|\(+ *{marked} *\)+|{grouped_marked}(?:{term})+|{grouped}(?:{term})*{operator}{grouped_marked}(?:{term})*)"
+        r"(?:{marked}|{OPEN_BRACKET}+ *{marked} *{CLOSE_BRACKET}+|{grouped_marked}(?:{term})+|{grouped}(?:{term})*{operator}{grouped_marked}(?:{term})*)"
     );
     // A colon can join a label to an amount. A digit-to-digit colon can
     // instead be part of a clock time or ratio. A marked or grouped amount
@@ -301,9 +304,9 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let boundary = r"^|[ (\[;=+×*÷|]";
     let label_colon = r"(?:^|[^\d]|[\p{L}_]\d+):";
     let attached = r"^|[^\d.,$]";
-    let parenthesised = format!(r"\(+ *{plain} *\)+");
+    let bracketed = format!(r"{OPEN_BRACKET}+ *{plain} *{CLOSE_BRACKET}+");
     regex::Regex::new(&format!(
-        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{parenthesised}|{marked_expression}))$"
+        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{bracketed}|{marked_expression}))$"
     ))
     .expect("pattern")
 });
@@ -312,7 +315,7 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
 static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let label = r"\b(?i:item|note|step|line|case|ref(?:erence)?\.?|section|paragraph)";
     let ordinal = r"\d+(?:\.\d+)*";
-    let grouped = format!(r"\( *{ordinal} *\)");
+    let grouped = format!(r"(?:\( *{ordinal} *\)|\[ *{ordinal} *\]|\{{ *{ordinal} *\}})");
     let separator = r"(?: +| *: *)";
     // A code follows "Ref " or an explicit "Reference:" label. A phrase
     // such as "Reference amount:" can still introduce an operand.
@@ -332,8 +335,8 @@ static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// joined to bare numbers on both sides, as in `8-1` and `2025-26`, is a
 /// hyphen. A closing bracket or percentage marker can end the left amount.
 static UNSPACED: LazyLock<regex::Regex> = LazyLock::new(|| {
-    let amount_end = r"\d%?(?:[ \t]*\))*";
-    let opening = r"(?:\([ \t]*)*";
+    let amount_end = format!(r"\d%?(?:[ \t]*{CLOSE_BRACKET})*");
+    let opening = format!(r"(?:{OPEN_BRACKET}[ \t]*)*");
     let quotient_or_product = format!(r"\d[ \t]*[/xX][ \t]*{CURRENCY_PREFIX}?");
     let subtraction = format!(
         r"{amount_end}(?:[ \t]*[-−][ \t]*{opening}{CURRENCY_PREFIX}|[ \t]*[-−][ \t]+{opening}[-−]?|[ \t]+[-−]{opening}[-−]?)"
@@ -369,7 +372,7 @@ static GROUPED: LazyLock<regex::Regex> =
 /// scale word, as in `$150 k` and `$150 million`.
 static JOINED_AFTER: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"^(?:[ \t]*(?:[-−][ \t]*(?:\([ \t]*)*(?:{CURRENCY_PREFIX}|[-−]?)\d|{OTHER})|[ \t]+(?:[xX/]?\$?\d|(?i:k|m|b|bn|mn|mil|thousand|million|billion|trillion)s?\b))"
+        r"^(?:[ \t]*(?:[-−][ \t]*(?:{OPEN_BRACKET}[ \t]*)*(?:{CURRENCY_PREFIX}|[-−]?)\d|{OTHER})|[ \t]+(?:[xX/]?\$?\d|(?i:k|m|b|bn|mn|mil|thousand|million|billion|trillion)s?\b))"
     ))
     .expect("pattern")
 });
@@ -386,7 +389,7 @@ static DATE: LazyLock<regex::Regex> =
 /// A named date can also use brackets, as in "Date: (30/6/2026)".
 static PERIOD_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:^|[ (\[:,−-])(?P<period>(?i:date *:[ (\[]*)?(?:{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}})|(?i:FY *|financial year +|in +|for +)\d{{4}}(?:-\d{{2}})?)$"
+        r"(?:^|[ (\[{{:,−-])(?P<period>(?i:date *:[ (\[{{]*)?(?:{SLASH_DATE}|\d{{4}}-\d{{2}}-\d{{2}})|(?i:FY *|financial year +|in +|for +)\d{{4}}(?:-\d{{2}})?)$"
     ))
     .expect("pattern")
 });
@@ -782,7 +785,7 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
 
 fn period_at_end(text: &str) -> Option<regex::Match<'_>> {
     PERIOD_END
-        .captures(text.trim_end_matches([' ', '(', ')', '[', ']', ':', ',']))
+        .captures(text.trim_end_matches([' ', '(', ')', '[', ']', '{', '}', ':', ',']))
         .and_then(|label| label.name("period"))
         .filter(|period| {
             DATE.find(period.as_str())
@@ -812,7 +815,7 @@ fn valid_slash_date(text: &str) -> bool {
 fn mask_prose_dates(text: &str) -> std::borrow::Cow<'_, str> {
     DATE.replace_all(text, |caps: &regex::Captures<'_>| {
         let date = caps.get(0).expect("a date-shaped match");
-        let before = text[..date.start()].trim_end_matches([' ', '(']);
+        let before = text[..date.start()].trim_end_matches([' ', '(', '[', '{']);
         let subtraction = before
             .strip_suffix(['-', '−'])
             .is_some_and(|amount| ends_in_operand(amount) && period_at_end(amount).is_none());
