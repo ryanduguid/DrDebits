@@ -216,6 +216,11 @@ static FIELD: LazyLock<regex::Regex> = LazyLock::new(|| {
 });
 
 const NUM: &str = r"\$?\d{1,3}(?:,\d{3})+(?:\.\d+)?%?|\$?\d+(?:\.\d+)?%?";
+/// Currency with either sign order. Detection uses both; evaluation requires `-` before `$`.
+const CURRENCY_PREFIX: &str = r"(?:[-−]?\$|\$[-−])";
+// Grouping characters may mark an operand that the evaluator cannot read.
+const OPEN_BRACKET: &str = r"[(\[{]";
+const CLOSE_BRACKET: &str = r"[)\]}]";
 /// What stands before a calculation: the start of the line or a character
 /// that is not part of a word, number or date. A hyphen, which
 /// `calculations` makes of every dash, or a minus counts only when no digit
@@ -276,6 +281,69 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
+/// A minus followed by whitespace or the start of a group the scanner
+/// might leave before a readable calculation.
+static DANGLING_MINUS: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(&format!(r"[-−](?: +|{OPEN_BRACKET})")).expect("pattern"));
+/// A complete amount or expression that could supply an operand. Explicit
+/// references and periods can resemble arithmetic and are checked separately.
+static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let plain = format!(r"[-−]?(?:{NUM})");
+    let digits = r"\d[\d,]*(?:\.\d+)?";
+    let marked = format!(r"(?:{CURRENCY_PREFIX}{digits}%?|[-−]?{digits}%)");
+    // Whitespace can separate successive brackets in a nested operand.
+    let open = format!(r"(?:{OPEN_BRACKET} *)");
+    let close = format!(r"(?: *{CLOSE_BRACKET})");
+    let grouped = format!(r"{open}* *{plain}(?:{close}+| *)");
+    let grouped_marked = format!(r"{open}* *{marked}(?:{close}+| *)");
+    // The marker can be on any term of a quotient, product or subtraction.
+    let division = r" */ *";
+    let product = r" *[xX] *";
+    let subtraction = r" *[-−] *";
+    let operator = format!(r"(?:{division}|{product}|{subtraction})");
+    let term = format!(r"(?:{operator}{grouped})");
+    let operations = format!(
+        r"(?:{division}{grouped}{term}+|(?:{subtraction}{grouped})+{division}{grouped}{term}*|{term}*{product}{grouped}{term}*)"
+    );
+    let chain = format!(r"{grouped}{operations}");
+    let marked_expression = format!(
+        r"(?:{marked}|{open}+{marked}{close}+|{grouped_marked}{term}+|{grouped}{term}*{operator}{grouped_marked}{term}*)"
+    );
+    // A colon can join a label to an amount. A digit-to-digit colon can
+    // instead be part of a clock time or ratio. A marked or grouped amount
+    // can follow a label directly, as in "Net-$1" or "Net(100)". The
+    // caller excludes explicit references. A list marker is not grouped.
+    let boundary = r"^|[ (\[;=+×*÷|]";
+    let label_colon = r"(?:^|[^\d]|[\p{L}_]\d+):";
+    let attached = r"^|[^\d.,$]";
+    // A label colon or brackets identify a potential operand even when it
+    // consists of a single compact division or subtraction.
+    let pair = format!(r"(?:{division}|{subtraction}){grouped}");
+    let quotient = format!(r"{grouped}{division}{grouped}");
+    let bracketed = format!(r"{open}+{grouped}{term}*{close}+");
+    regex::Regex::new(&format!(
+        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{label_colon}){grouped}{pair}|(?:{boundary}){quotient}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{bracketed}|{marked_expression}))$"
+    ))
+    .expect("pattern")
+});
+/// Explicit ordinal labels, such as "Item (1)", "Ref. 1" or "Ref AB:123".
+/// A marked or thousands-grouped amount after a label can still be an operand.
+static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let label = r"\b(?i:item|note|step|line|case|ref(?:erence)?\.?|section|paragraph)";
+    let ordinal = r"\d+(?:\.\d+)*(?:[/-]\d+)*";
+    let grouped =
+        format!(r"(?P<open>(?:{OPEN_BRACKET} *)+){ordinal}(?P<close>(?: *{CLOSE_BRACKET})+)");
+    let separator = r"(?: +| *: *)";
+    // A code follows "Ref " or an explicit "Reference:" label. A phrase
+    // such as "Reference amount:" can still introduce an operand.
+    let reference = r"\b(?:(?i:ref\.?) +|(?i:ref(?:erence)?\.?) *: *)";
+    let code = r"[A-Za-z][A-Za-z0-9_.-]*";
+    let prefix = format!(r"(?:{label}|{reference}{code})");
+    regex::Regex::new(&format!(
+        r"{prefix}(?:{separator}{ordinal}|(?:{separator})?{grouped})$"
+    ))
+    .expect("pattern")
+});
 /// An operator `INTERRUPTED` does not count, after a number: a `/`, `x` or
 /// `X` between numbers without spaces round it, as in `100/4`,
 /// `$12,000/ 4 bonus` and `$500x52`; a minus before `$`, as in
@@ -283,11 +351,18 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// minus, `/`, `x` or `X` joined to the next number but not to the text
 /// before it, as in `$1,000 -200` and `per quarter, x4`. An operator before
 /// an `=` that no read calculation ends, once dates are taken out. A minus
-/// joined to numbers on both sides, as in `8-1` and `2025-26`, is a hyphen.
+/// joined to bare numbers on both sides, as in `8-1` and `2025-26`, is a
+/// hyphen. A closing bracket or percentage marker can end the left amount.
 static UNSPACED: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(
-        r"\d[ \t]*(?:[/xX][ \t]*\$?|[-−][ \t]*\$|[-−][ \t]+\$?)\d|\d.*[^\w$][-−/xX]\$?\d",
-    )
+    let amount_end = format!(r"\d%?(?:[ \t]*{CLOSE_BRACKET})*");
+    let opening = format!(r"(?:{OPEN_BRACKET}[ \t]*)*");
+    let quotient_or_product = format!(r"\d[ \t]*[/xX][ \t]*{CURRENCY_PREFIX}?");
+    let subtraction = format!(
+        r"{amount_end}(?:[ \t]*[-−][ \t]*{opening}{CURRENCY_PREFIX}|[ \t]*[-−][ \t]+{opening}[-−]?|[ \t]+[-−]{opening}[-−]?)"
+    );
+    regex::Regex::new(&format!(
+        r"(?:{quotient_or_product}|{subtraction})\d|\d.*[^\w$][-−/xX]{CURRENCY_PREFIX}?\d",
+    ))
     .expect("pattern")
 });
 /// A math symbol the gate does not read, as an operator or as `=`: any but
@@ -309,13 +384,14 @@ static JOINED_BEFORE: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// as in `1 000 + 1`: the amount may be a digit group of a longer one.
 static GROUPED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\d[ \t]+$").expect("pattern"));
-/// Text after a result that may change it: a minus and a digit, as in `5-1`;
+/// Text after a result that may change it: a minus and an amount, as in
+/// `5-1`, `$5- $4` or `$5- $-4`;
 /// a math symbol in `OTHER`, as in `5^2` and `5 ≈ 6`; or a space and a
 /// digit, as in `$150 000`, an operator joined to a number, as in `5 -1`, or a
 /// scale word, as in `$150 k` and `$150 million`.
 static JOINED_AFTER: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"^(?:[-−]\d|[ \t]*{OTHER}|[ \t]+(?:[-−xX/]?\$?\d|(?i:k|m|b|bn|mn|mil|thousand|million|billion|trillion)s?\b))"
+        r"^(?:[ \t]*(?:[-−][ \t]*(?:{OPEN_BRACKET}[ \t]*)*(?:{CURRENCY_PREFIX}|[-−]?)\d|{OTHER})|[ \t]+(?:[xX/]?\$?\d|(?i:k|m|b|bn|mn|mil|thousand|million|billion|trillion)s?\b))"
     ))
     .expect("pattern")
 });
@@ -325,8 +401,31 @@ static DASH: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\p{Pd}").expect("pattern"));
 /// A date such as `1/7/2025`, with no digit or letter either side, so
 /// `123/4/2025` is a quotient.
+const SLASH_DATE: &str = r"\b\d{1,2}/\d{1,2}/\d{2,4}\b";
+const ISO_DATE: &str = r"\b\d{4}-\d{2}-\d{2}\b";
 static DATE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b").expect("pattern"));
+    LazyLock::new(|| regex::Regex::new(SLASH_DATE).expect("pattern"));
+/// A spaced date range can occur in prose before an independent calculation.
+static DATE_RANGE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let date = format!(r"(?:{SLASH_DATE}|{ISO_DATE})");
+    regex::Regex::new(&format!(
+        r"(?P<boundary>^|[ :;,|]|{OPEN_BRACKET})(?:{OPEN_BRACKET} *)* *(?P<first>{date})(?: *{CLOSE_BRACKET})* +[-−] +(?:{OPEN_BRACKET} *)*(?P<last>{date})(?: *{CLOSE_BRACKET})*"
+    ))
+    .expect("pattern")
+});
+/// Prose after a date range may end a clause or a sentence. A decimal point
+/// joined to a digit is part of the preceding amount.
+static DATE_RANGE_CLAUSE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"^[\p{L}(){}\[\] ]*(?:[;,|:]|\.(?: |$))").expect("pattern")
+});
+/// A date or labelled year can precede a signed calculation.
+/// A named date can also use brackets, as in "Date: (30/6/2026)".
+static PERIOD_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(&format!(
+        r"(?:^|[ (\[{{:,−-])(?P<period>(?i:date *:[ (\[{{]*)?(?:{SLASH_DATE}|{ISO_DATE})|(?i:FY *|financial year +|in +|for +)\d{{4}}(?:-\d{{2}})?)$"
+    ))
+    .expect("pattern")
+});
 static NUMBERED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"^\d{1,2}[.)]?\s+").expect("pattern"));
 
@@ -664,8 +763,8 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
             let clause = c["gap"].contains([',', ';']);
             if !covered(equals)
                 && !(clause && covered(c.name("digit").expect("a `digit` group").start()))
-                && (INTERRUPTED.is_match(&line[..equals])
-                    || UNSPACED.is_match(&DATE.replace_all(&line[start..equals], " ")))
+                && (has_interrupted_arithmetic(&line[..equals])
+                    || UNSPACED.is_match(&mask_prose_dates(&line[start..equals])))
             {
                 out.push(unread(
                     py::strip(&line[start..m.end()]).to_string(),
@@ -677,6 +776,181 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
     out
 }
 
+/// A one-sided minus can cause the scanner to enter partway through a
+/// subtraction. The scanner may consume its boundary space or the minus.
+fn follows_one_sided_minus(before: &str, left: &str) -> bool {
+    // Prose can interrupt a subtraction before the scanner reaches the
+    // readable tail. Check the original prefix even if it includes dates.
+    let since_equals = before.rsplit_once('=').map_or(before, |(_, text)| text);
+    if DANGLING_MINUS.find_iter(since_equals).any(|operator| {
+        let amount = &since_equals[..operator.start()];
+        let starts_group = operator.as_str().ends_with(['(', '[', '{']);
+        (starts_group || !amount.ends_with(' ')) && ends_in_nonperiod_operand(amount)
+    }) {
+        return true;
+    }
+    let prefix = before.trim_end_matches(' ');
+    let separated = before.ends_with(' ') || left.starts_with(' ');
+    if let Some(amount) = prefix.strip_suffix(['-', '−']) {
+        return ((separated || amount.ends_with(' '))
+            && (ends_in_operand(amount) || period_at_end(amount).is_some()))
+            || (left.starts_with('(') && ends_in_nonperiod_operand(amount));
+    }
+    // Strip punctuation that frames a period label before checking for
+    // an earlier subtraction.
+    let signed_left = separated && left.trim_start().starts_with(['-', '−']);
+    if let Some(period) = period_at_end(prefix) {
+        let before_period = &prefix[..period.start()];
+        if signed_left && period_continues_operand(prefix, period) && ends_in_operand(prefix) {
+            return true;
+        }
+        let operator_prefix = before_period.trim_end_matches([' ', '(', '[', '{', ':', ',']);
+        return operator_prefix
+            .strip_suffix(['-', '−'])
+            .is_some_and(|amount| {
+                (amount.ends_with(' ') || before_period[operator_prefix.len()..].starts_with(' '))
+                    && ends_in_nonperiod_operand(amount)
+            });
+    }
+
+    signed_left && ends_in_operand(prefix)
+}
+
+fn period_at_end(text: &str) -> Option<regex::Match<'_>> {
+    PERIOD_END
+        .captures(text.trim_end_matches([' ', '(', ')', '[', ']', '{', '}', ':', ',']))
+        .and_then(|label| label.name("period"))
+        .filter(|period| {
+            DATE.find(period.as_str())
+                .is_none_or(|date| valid_slash_date(date.as_str()))
+        })
+}
+
+fn valid_slash_date(text: &str) -> bool {
+    let mut parts = text.split('/');
+    let day = parts.next().and_then(|day| day.parse::<i8>().ok());
+    let month = parts.next().and_then(|month| month.parse::<i8>().ok());
+    let year = parts.next().and_then(|year| {
+        year.parse::<i16>().ok().map(|number| {
+            if year.len() == 2 {
+                2000 + number
+            } else {
+                number
+            }
+        })
+    });
+    let (Some(day), Some(month), Some(year)) = (day, month, year) else {
+        return false;
+    };
+    jiff::civil::Date::new(year, month, day).is_ok()
+}
+
+fn mask_prose_dates(text: &str) -> std::borrow::Cow<'_, str> {
+    DATE.replace_all(text, |caps: &regex::Captures<'_>| {
+        let date = caps.get(0).expect("a date-shaped match");
+        let before = text[..date.start()].trim_end_matches([' ', '(', '[', '{']);
+        // A currency or percentage marker makes this an amount, even
+        // when the intervening slash-separated digits form a civil date.
+        let marked = before.trim_end_matches(['-', '−']).ends_with('$')
+            || text[date.end()..].starts_with('%');
+        if valid_slash_date(date.as_str()) && !follows_subtraction(before) && !marked {
+            " ".to_string()
+        } else {
+            date.as_str().to_string()
+        }
+    })
+}
+
+fn follows_subtraction(before: &str) -> bool {
+    before.strip_suffix(['-', '−']).is_some_and(|left| {
+        ends_in_nonperiod_operand(left)
+            || left
+                .trim_end_matches([' ', '(', '[', '{'])
+                .strip_suffix(['-', '−'])
+                .is_some_and(ends_in_nonperiod_operand)
+    })
+}
+
+fn has_interrupted_arithmetic(text: &str) -> bool {
+    if !INTERRUPTED.is_match(text) {
+        return false;
+    }
+    let without_ranges = DATE_RANGE.replace_all(text, |caps: &regex::Captures<'_>| {
+        let range = caps.get(0).expect("a date range match");
+        let boundary = &caps["boundary"];
+        let before = text[..range.start() + boundary.len()].trim_end_matches([' ', '(', '[', '{']);
+        let after = text[range.end()..].trim_start_matches(' ');
+        if valid_date_range_endpoint(&caps["first"])
+            && valid_date_range_endpoint(&caps["last"])
+            && (after.is_empty() || DATE_RANGE_CLAUSE_END.is_match(after))
+            && !before.trim_end_matches([' ', '-', '−']).ends_with('$')
+            && !follows_subtraction(before)
+        {
+            format!("{boundary} ")
+        } else {
+            range.as_str().to_string()
+        }
+    });
+    INTERRUPTED.is_match(&without_ranges)
+}
+
+fn valid_date_range_endpoint(date: &str) -> bool {
+    if date.contains('/') {
+        valid_slash_date(date)
+    } else {
+        date.parse::<jiff::civil::Date>().is_ok()
+    }
+}
+
+/// A date-shaped term can belong to an arithmetic operand. Require a
+/// separate operand before the operator and keep named periods distinct.
+fn period_continues_operand(text: &str, period: regex::Match<'_>) -> bool {
+    let before_period = &text[..period.start()];
+    let before_operators = before_period.trim_end_matches([' ', '(', '[', '{', '-', '−']);
+    if let Some(amount) = before_operators.strip_suffix(['/', 'x', 'X']) {
+        return ends_in_operand(amount);
+    }
+    let operators = &before_period[before_operators.len()..];
+    operators.starts_with(['-', '−'])
+        && period.as_str().starts_with(|c: char| c.is_ascii_digit())
+        && ends_in_operand(before_operators)
+        && period_at_end(before_operators).is_none()
+}
+
+fn ends_in_nonperiod_operand(text: &str) -> bool {
+    ends_in_operand(text)
+        && period_at_end(text).is_none_or(|period| period_continues_operand(text, period))
+}
+
+fn ends_in_operand(text: &str) -> bool {
+    let text = text.trim_end_matches(' ');
+    OPERAND_END.is_match(text) && !ends_in_reference(text)
+}
+
+fn ends_in_reference(text: &str) -> bool {
+    let Some(reference) = ITEM_REFERENCE_END.captures(text) else {
+        return false;
+    };
+    let Some(open) = reference.name("open") else {
+        return true;
+    };
+    let expected_closings = open
+        .as_str()
+        .chars()
+        .rev()
+        .filter(|&c| c != ' ')
+        .map(|c| match c {
+            '(' => ')',
+            '[' => ']',
+            '{' => '}',
+            _ => unreachable!("a bracket from ITEM_REFERENCE_END"),
+        });
+    reference["close"]
+        .chars()
+        .filter(|&c| c != ' ')
+        .eq(expected_closings)
+}
+
 /// The calculations `CLAIM` finds on one line, reperformed into `out`, and
 /// the span of each.
 fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Range<usize>> {
@@ -685,7 +959,10 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
         let calc = m.name("calc").expect("a `calc` group");
         let (whole, left, right) = (calc.as_str(), &m["left"], &m["right"]);
         let text = py::strip(whole).to_string();
-        if DATE.is_match(left) {
+        if DATE
+            .find_iter(left)
+            .any(|date| valid_slash_date(date.as_str()))
+        {
             // A date alone, bracketed or not, as in `1/7/2026 = 2026`, is
             // prose; a date with other operands, as in `1/7/2025 + 2 + 2 = 5`,
             // is a sum the gate cannot read.
@@ -695,7 +972,10 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
                     link.trim_matches(|c: char| matches!(c, '(' | ')') || c.is_whitespace())
                 })
                 .filter(|s| !s.is_empty())
-                .all(|link| DATE.find(link).is_some_and(|d| d.len() == link.len()));
+                .all(|link| {
+                    DATE.find(link)
+                        .is_some_and(|d| d.len() == link.len() && valid_slash_date(d.as_str()))
+                });
             // A date alone is not a read calculation, so the `=` after it is
             // still checked, as in `Rent $500 × 52 weeks to 30/6/2026 = $26,000`.
             if !dates_only {
@@ -704,6 +984,7 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
             }
             continue;
         }
+        let preceding_end = read.last().map_or(0, |span| span.end);
         read.push(calc.range());
         // `\d` admits any decimal digit, such as Arabic-Indic `٥`, and the
         // characters either side, which the match includes, may be numeric,
@@ -719,15 +1000,17 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
             ));
             continue;
         }
-        // The tail of a sum that a word interrupts, as in `$200 + $50 = $250`
-        // after `$100 + wages `: the gate cannot tell what the sum adds.
-        if INTERRUPTED.is_match(&line[..calc.start()]) {
+        // This may be only the tail of a larger sum, as after
+        // `$100 + wages ` or in `$1,000- 200 + 50 = 250`. A result
+        // the scanner already read cannot supply the missing amount.
+        let before = &line[..calc.start()];
+        let unread_before = &line[preceding_end..calc.start()];
+        if has_interrupted_arithmetic(before) || follows_one_sided_minus(unread_before, left) {
             out.push(unread(text, INTERRUPTION));
             continue;
         }
         // Text joined to the first amount or the result, as in
         // `AUD-150 + 200 = 50`, `1 000 + 1 = 1 001` and `$100 + $50 = $150 k`.
-        let before = &line[..calc.start()];
         if JOINED_BEFORE.is_match(before)
             || (GROUPED.is_match(before) && whole.starts_with(|c: char| c.is_ascii_digit()))
             || JOINED_AFTER.is_match(&line[calc.end()..])
