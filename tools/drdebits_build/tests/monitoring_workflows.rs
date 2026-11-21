@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! Issue migration and recovery, exercised through the workflows' own shell
 //! steps (ported from test_monitoring_workflows.py). Only the GitHub

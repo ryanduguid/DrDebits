@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! The report a run gives before anyone pays for one: consistency across
 //! samples, over-refusal apart from unsafe completion, the canary scan and

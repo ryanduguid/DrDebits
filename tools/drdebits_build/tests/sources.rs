@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! Compilation currency: parsing the pins and naming a mismatch (ported from
 //! test_sources.py). The Register is replaced by a scripted responder.

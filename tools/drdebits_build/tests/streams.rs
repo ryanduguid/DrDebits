@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! A lost report cannot be a successful check. These cases were compared with
 //! the Python release, including its buffered shutdown and argparse behaviour.

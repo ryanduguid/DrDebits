@@ -17,6 +17,8 @@ release.
 
 ### Changed
 
+- Relicensed Ryan Duguid's original work under Apache-2.0. Earlier releases keep their original terms.
+
 - The secrets and client-identifier gate runs betterleaks 1.10.1 in place of gitleaks, in CI and in the pre-commit hook, with the same `.gitleaks.toml`. CI installs the release binary pinned by version and SHA-256, as betterleaks publishes no action, and every scan names `--config .gitleaks.toml`, as betterleaks does not load it by itself. Both scanners report nothing on `main`'s full history under this config.
 
 ### Fixed

@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! Installed bundles keep their approved bytes and never overwrite a copy
 //! (ported from test_bundle.py). Redirect and escape checks use real links
