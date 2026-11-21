@@ -304,7 +304,9 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let boundary = r"^|[ (\[;=+×*÷|]";
     let label_colon = r"(?:^|[^\d]|[\p{L}_]\d+):";
     let attached = r"^|[^\d.,$]";
-    let bracketed = format!(r"{OPEN_BRACKET}+ *{plain} *{CLOSE_BRACKET}+");
+    // A labelled bracket can introduce an unmarked arithmetic chain, too.
+    let bracketed =
+        format!(r"{OPEN_BRACKET}+ *{plain}(?:(?: */ *{grouped}){{2,}})? *{CLOSE_BRACKET}+");
     regex::Regex::new(&format!(
         r"(?:(?:{boundary}|{label_colon}){plain}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{bracketed}|{marked_expression}))$"
     ))
@@ -816,9 +818,13 @@ fn mask_prose_dates(text: &str) -> std::borrow::Cow<'_, str> {
     DATE.replace_all(text, |caps: &regex::Captures<'_>| {
         let date = caps.get(0).expect("a date-shaped match");
         let before = text[..date.start()].trim_end_matches([' ', '(', '[', '{']);
-        let subtraction = before
-            .strip_suffix(['-', '−'])
-            .is_some_and(ends_in_nonperiod_operand);
+        let subtraction = before.strip_suffix(['-', '−']).is_some_and(|left| {
+            ends_in_nonperiod_operand(left)
+                || left
+                    .trim_end_matches([' ', '(', '[', '{'])
+                    .strip_suffix(['-', '−'])
+                    .is_some_and(ends_in_nonperiod_operand)
+        });
         // A currency or percentage marker makes this an amount, even
         // when the intervening slash-separated digits form a civil date.
         let marked = before.trim_end_matches(['-', '−']).ends_with('$')

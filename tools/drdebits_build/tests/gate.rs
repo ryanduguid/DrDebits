@@ -1218,6 +1218,8 @@ fn an_unread_subtraction_cannot_hide_after_a_bracket_or_percent_sign() {
 #[test]
 fn a_slash_date_cannot_mask_a_subtraction_before_a_result() {
     for line in [
+        "($2)- [-1/2/2026] = $4",
+        "($2)- {-1/2/2026} = $4",
         "($2)- {1/2/2026} -$5 + $2 = -$3",
         "($2)- [$1/2/2026] = $4",
         "($2)- [$-1/2/2026] = $4",
@@ -1326,6 +1328,17 @@ fn an_iso_date_cannot_hide_a_compact_marked_subtraction() {
 fn a_label_cannot_hide_a_three_term_slash_chain() {
     assert_unread_tail("Gross:100/4/2- 5 + 2 = 7", "5 + 2 = 7");
     assert_unread_tail("Gross:100/4/2 -5 + 2 = -3", "-5 + 2 = -3");
+    for value in [
+        "Gross{100/4/2}",
+        "Gross[100/4/2]",
+        "Gross(100/4/2)",
+        "Gross((100/4/2))",
+        "Gross{100/(4/2)}",
+    ] {
+        assert_unread_tail(&format!("{value}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{value} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+    assert_eq!(with_line("Note[1/11] -5 + 2 = -3").verdict().1, EXIT_PASS);
 }
 
 #[test]
