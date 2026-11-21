@@ -296,10 +296,10 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let close = format!(r"(?: *{CLOSE_BRACKET})");
     let grouped = format!(r"{open}* *{plain}(?:{close}+| *)");
     let grouped_marked = format!(r"{open}* *{marked}(?:{close}+| *)");
-    // The marker can be on any term of a quotient, product or compact subtraction.
+    // The marker can be on any term of a quotient, product or subtraction.
     let division = r" */ *";
     let product = r" *[xX] *";
-    let subtraction = r"[-−]";
+    let subtraction = r" *[-−] *";
     let operator = format!(r"(?:{division}|{product}|{subtraction})");
     let term = format!(r"(?:{operator}{grouped})");
     let operations = format!(
@@ -320,7 +320,7 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     // consists of a single compact division or subtraction.
     let pair = format!(r"(?:{division}|{subtraction}){grouped}");
     let quotient = format!(r"{grouped}{division}{grouped}");
-    let bracketed = format!(r"{open}+{plain}(?:{pair}|{operations})?{close}+");
+    let bracketed = format!(r"{open}+{grouped}{term}*{close}+");
     regex::Regex::new(&format!(
         r"(?:(?:{boundary}|{label_colon}){plain}|(?:{label_colon}){grouped}{pair}|(?:{boundary}){quotient}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{bracketed}|{marked_expression}))$"
     ))
@@ -801,18 +801,7 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
     let signed_left = separated && left.trim_start().starts_with(['-', '−']);
     if let Some(period) = period_at_end(prefix) {
         let before_period = &prefix[..period.start()];
-        // Date-shaped groups can be terms in a longer operand. For compact
-        // subtraction, require an operand before the first minus and keep
-        // explicitly labelled dates distinct.
-        let before_operators = before_period.trim_end_matches([' ', '(', '[', '{', '-', '−']);
-        let operator = &before_period[before_operators.len()..];
-        let subtracts_date = operator.starts_with(['-', '−'])
-            && period.as_str().starts_with(|c: char| c.is_ascii_digit())
-            && ends_in_nonperiod_operand(before_operators);
-        if signed_left
-            && (before_operators.ends_with('/') || subtracts_date)
-            && ends_in_operand(prefix)
-        {
+        if signed_left && period_continues_operand(prefix, period) && ends_in_operand(prefix) {
             return true;
         }
         let operator_prefix = before_period.trim_end_matches([' ', '(', '[', '{', ':', ',']);
@@ -913,8 +902,24 @@ fn valid_date_range_endpoint(date: &str) -> bool {
     }
 }
 
+/// A date-shaped term can belong to an arithmetic operand. Require a
+/// separate operand before the operator and keep named periods distinct.
+fn period_continues_operand(text: &str, period: regex::Match<'_>) -> bool {
+    let before_period = &text[..period.start()];
+    let before_operators = before_period.trim_end_matches([' ', '(', '[', '{', '-', '−']);
+    if let Some(amount) = before_operators.strip_suffix(['/', 'x', 'X']) {
+        return ends_in_operand(amount);
+    }
+    let operators = &before_period[before_operators.len()..];
+    operators.starts_with(['-', '−'])
+        && period.as_str().starts_with(|c: char| c.is_ascii_digit())
+        && ends_in_operand(before_operators)
+        && period_at_end(before_operators).is_none()
+}
+
 fn ends_in_nonperiod_operand(text: &str) -> bool {
-    ends_in_operand(text) && period_at_end(text).is_none()
+    ends_in_operand(text)
+        && period_at_end(text).is_none_or(|period| period_continues_operand(text, period))
 }
 
 fn ends_in_operand(text: &str) -> bool {
