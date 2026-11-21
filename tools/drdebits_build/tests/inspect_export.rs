@@ -6,7 +6,7 @@
 
 mod common;
 
-use common::{repo_root, run_in};
+use common::{fixture, repo_root, run_in};
 use drdebits::pyjson::{self, Json};
 
 fn text<'a>(item: &'a Json, field: &str) -> &'a str {
@@ -132,4 +132,30 @@ fn an_unwritable_file_or_a_missing_tree_stops_the_export() {
         lost.stderr
     );
     assert!(!out.exists());
+}
+
+/// No published case breaks a line, so a fixture does: the export keeps one
+/// sample a line and gives the prompt back exactly, breaks and indents too.
+#[test]
+fn a_prompt_with_line_breaks_and_indents_stays_one_line_and_exact() {
+    let (dir, _) = fixture();
+    let source = dir.path().join("src/data/behaviour-tests.yaml");
+    let yaml = std::fs::read_to_string(&source).unwrap();
+    let scenario = "    scenario: \"s\"\n";
+    assert!(yaml.contains(scenario), "{yaml}");
+    let with_prompt = format!("{scenario}    prompt: \"  line one\\n  line two\\r\\n\\tend\"\n");
+    std::fs::write(&source, yaml.replacen(scenario, &with_prompt, 1)).unwrap();
+    let out = dir.path().join("out.jsonl");
+    let ran = run_in(
+        dir.path(),
+        &["inspect-export", "--out", out.to_str().unwrap()],
+        true,
+    );
+    assert_eq!(ran.code, 0, "{}", ran.stderr);
+    let body = std::fs::read_to_string(&out).unwrap();
+    assert_eq!(body.matches('\n').count(), 1, "{body}");
+    assert!(body.ends_with('\n'));
+    let sample = pyjson::loads(body.trim_end()).unwrap();
+    assert_eq!(text(&sample, "input"), "  line one\n  line two\r\n\tend");
+    assert_eq!(text(sample.get("metadata").unwrap(), "input"), "prompt");
 }

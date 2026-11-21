@@ -261,10 +261,11 @@ pub fn build_inspect(s: &Sources) -> (String, usize) {
             pyjson::dumps(&sample, false)
                 .lines()
                 .map(str::trim_start)
+                .chain(["\n"])
                 .collect::<String>()
         })
         .collect();
-    (lines.join("\n") + "\n", frozen)
+    (lines.concat(), frozen)
 }
 
 /// A validated record: its keys in file order, so a run reads as a dict.

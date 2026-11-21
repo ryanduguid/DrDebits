@@ -68,10 +68,10 @@ answers those rows.
 
 ## Inspect export
 
-`cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- inspect-export --out drdebits.jsonl --root .`
+`cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- inspect-export --out ../drdebits.jsonl --root .`
 writes every case in `cases.json` as one sample of an
 [Inspect](https://inspect.aisi.org.uk/) dataset, in JSON Lines and already in
-Inspect's `Sample` form, so `json_dataset("drdebits.jsonl")` reads it with no
+Inspect's `Sample` form, so `json_dataset("../drdebits.jsonl")` reads it with no
 field mapping. Write it outside this repository. Nothing calls a model.
 
 - `input` is the case's frozen prompt, as a system and a user message when the
