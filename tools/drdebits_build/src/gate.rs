@@ -216,6 +216,8 @@ static FIELD: LazyLock<regex::Regex> = LazyLock::new(|| {
 });
 
 const NUM: &str = r"\$?\d{1,3}(?:,\d{3})+(?:\.\d+)?%?|\$?\d+(?:\.\d+)?%?";
+/// Currency with either sign order. Detection uses both; evaluation requires `-` before `$`.
+const CURRENCY_PREFIX: &str = r"(?:[-−]?\$|\$[-−])";
 /// What stands before a calculation: the start of the line or a character
 /// that is not part of a word, number or date. A hyphen, which
 /// `calculations` makes of every dash, or a minus counts only when no digit
@@ -282,9 +284,7 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
 static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let plain = format!(r"[-−]?(?:{NUM})");
     let digits = r"\d[\d,]*(?:\.\d+)?";
-    // A partially read calculation can omit either -$100 or $-100.
-    let currency = r"(?:[-−]?\$|\$[-−])";
-    let marked = format!(r"(?:{currency}{digits}%?|[-−]?{digits}%)");
+    let marked = format!(r"(?:{CURRENCY_PREFIX}{digits}%?|[-−]?{digits}%)");
     let grouped = format!(r"\(* *{plain} *\)*");
     let grouped_marked = format!(r"\(* *{marked} *\)*");
     let chain = format!(r"{grouped}(?: */ *{grouped}){{2,}}");
@@ -331,9 +331,9 @@ static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// an `=` that no read calculation ends, once dates are taken out. A minus
 /// joined to numbers on both sides, as in `8-1` and `2025-26`, is a hyphen.
 static UNSPACED: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(
-        r"\d[ \t]*(?:[/xX][ \t]*\$?|[-−][ \t]*\$|[-−][ \t]+\$?)\d|\d.*[^\w$][-−/xX]\$?\d",
-    )
+    regex::Regex::new(&format!(
+        r"\d[ \t]*(?:[/xX][ \t]*(?:{CURRENCY_PREFIX})?|[-−](?:[ \t]*(?:\([ \t]*)*{CURRENCY_PREFIX}|[ \t]+))\d|\d.*[^\w$][-−/xX](?:{CURRENCY_PREFIX})?\d",
+    ))
     .expect("pattern")
 });
 /// A math symbol the gate does not read, as an operator or as `=`: any but
@@ -356,13 +356,13 @@ static JOINED_BEFORE: LazyLock<regex::Regex> = LazyLock::new(|| {
 static GROUPED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\d[ \t]+$").expect("pattern"));
 /// Text after a result that may change it: a minus and an amount, as in
-/// `5-1` or `$5- $4`;
+/// `5-1`, `$5- $4` or `$5- $-4`;
 /// a math symbol in `OTHER`, as in `5^2` and `5 ≈ 6`; or a space and a
 /// digit, as in `$150 000`, an operator joined to a number, as in `5 -1`, or a
 /// scale word, as in `$150 k` and `$150 million`.
 static JOINED_AFTER: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"^(?:[ \t]*(?:[-−][ \t]*(?:\([ \t]*)*[-−]?\$?\d|{OTHER})|[ \t]+(?:[xX/]?\$?\d|(?i:k|m|b|bn|mn|mil|thousand|million|billion|trillion)s?\b))"
+        r"^(?:[ \t]*(?:[-−][ \t]*(?:\([ \t]*)*(?:{CURRENCY_PREFIX}|[-−]?)\d|{OTHER})|[ \t]+(?:[xX/]?\$?\d|(?i:k|m|b|bn|mn|mil|thousand|million|billion|trillion)s?\b))"
     ))
     .expect("pattern")
 });

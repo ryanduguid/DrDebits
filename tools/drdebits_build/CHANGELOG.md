@@ -80,7 +80,9 @@ suite replays it on every platform.
   the formula in `Price $100 + 10% GST; in Excel use =A1*1.1`. Before a
   calculation the gate reads, a minus between 2 amounts with space on one
   side only also blocks, as in `$1,000- 200 + 50 = 250` or
-  `$1,000 -200 + 50 = -150`. Otherwise a minus, `x` or `/` counts as an
+  `$1,000 -200 + 50 = -150`. A continuation after a result also blocks
+  when its next amount puts the sign after the dollar sign, as in
+  `$1 + $1 = $2- $-1 = $4`. Otherwise a minus, `x` or `/` counts as an
   operator only with spaces round it, so
   dates such as `1/7/2025` and fractions such as `1/11` are not read as one,
   and nor is `$100/wages`, which reads as a rate such as `$2,000/month`.

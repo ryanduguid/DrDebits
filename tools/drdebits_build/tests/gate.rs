@@ -1186,6 +1186,35 @@ fn a_truncated_subtraction_cannot_split_a_running_total() {
 }
 
 #[test]
+fn a_currency_sign_before_the_minus_cannot_hide_a_subtraction() {
+    for line in [
+        "$1 + $1 = $2- $-1 = $4",
+        "$1 + $1 = $2- $-1 = $3",
+        "$1 + $1 = $2- ($−1) = $3",
+        "$2- $-1 = $4",
+        "$2-$-1 = $4",
+        "$2 -$-1 = $4",
+    ] {
+        let report = with_line(line);
+        assert_eq!(
+            report.verdict().1,
+            EXIT_BLOCK,
+            "{line}: {:?}",
+            report.blocks
+        );
+        assert!(
+            report
+                .blocks
+                .iter()
+                .any(|block| block.contains("could not read")),
+            "{line}: {:?}",
+            report.blocks
+        );
+    }
+    assert_eq!(with_line("$1 + $1 = $2; Ref $-1").verdict().1, EXIT_PASS);
+}
+
+#[test]
 fn a_truncated_subtraction_cannot_drop_a_compact_marked_expression() {
     for amount in [
         "$1,000-$200",
