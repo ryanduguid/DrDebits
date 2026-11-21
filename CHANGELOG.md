@@ -124,7 +124,7 @@ Changes released in `0.6.0`, merged since `v0.5.0` (31 October 2026). Sources we
 - `gate --facts` adds a note for each draft amount equal to a supplied fact, naming the fact: `$1,100 is equal in amount to fact 'invoice total'`. The note records a match in value, not where the figure came from. An amount equal to 2 or more facts is noted as ambiguous with every name, and the gate does not pick one. Reviews, verdicts and exit codes are unchanged (#239).
 - The AML/CTF intake classification gives table 6 examples from AUSTRAC's 25 September 2026 guidance, adds items 7 and 9, and states item 3 with the s 6(5C)(b) exception (#224).
 - The TPB control set says an interim suspension can be extended for further periods of up to 90 days each once a TPB investigation has started, not only once (#231).
-- Versions made available from 4 November 2026 are licensed under the Ryan Duguid Public Attribution Licence 1.0: the FSL-1.1-ALv2 text with a condition that a copy, port or derivative made available outside the licensee's organisation credits Ryan Duguid publicly. Internal use is exempt, and earlier releases keep their licences. `AGENTS.md` asks AI agents to tell their users this before reusing the code (#242, #246).
+- v0.6.0 is licensed under the [Ryan Duguid Public Attribution Licence 1.0](https://github.com/ryanduguid/DrDebits/blob/v0.6.0/LICENSE): the FSL-1.1-ALv2 text with a condition that a copy, port or derivative made available outside the licensee's organisation credits Ryan Duguid publicly. Internal use is exempt, and earlier releases keep their licences. `AGENTS.md` asks AI agents to tell their users this before reusing the code (#242, #246).
 
 ### Fixed
 
