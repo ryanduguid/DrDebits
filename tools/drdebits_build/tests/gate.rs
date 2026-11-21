@@ -1371,7 +1371,15 @@ fn a_labelled_two_term_amount_can_supply_an_operand() {
         assert_unread_tail(&format!("{value}- 5 + 2 = 7"), "5 + 2 = 7");
         assert_unread_tail(&format!("{value} -5 + 2 = -3"), "-5 + 2 = -3");
     }
-    for reference in ["Note:1/11", "Note[1/11]", "Ref AB(10-12)", "Section 2/3"] {
+    for reference in [
+        "Note:1/11",
+        "Note[1/11]",
+        "Ref AB(10-12)",
+        "Section 2/3",
+        "Ref AB:100/4/2",
+        "Note[100/4/2]",
+        "Ref INV(10-12-25)",
+    ] {
         let line = format!("{reference} -5 + 2 = -3");
         assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
     }
@@ -1383,6 +1391,10 @@ fn a_spaced_date_range_can_precede_independent_arithmetic() {
         "Period: 1/7/2025 – 30/6/2026; 5 + 2 = 7",
         "Period: 1/7/2025 – 30/6/2026 inclusive; 5 + 2 = 7",
         "Period: 1/7/2025 – 30/6/2026 inclusive. 5 + 2 = 7",
+        "Period: 1/7/2025 - 30/6/2026 (inclusive). 5 + 2 = 7",
+        "Period: 1/7/2025 - 30/6/2026 [inclusive]; 5 + 2 = 7",
+        "Period: 1/7/2025 - 30/6/2026 {inclusive}: 5 + 2 = 7",
+        "Ref AB:100/4/2- Period: 1/7/2025 - 30/6/2026 inclusive. 5 + 2 = 7",
         "Period: 2025-07-01 - 2026-06-30. 5 + 2 = 7",
         "Period: [1/7/2025 - 30/6/2026 inclusive of both days]; 5 + 2 = 7",
         "Period: 1/7/2025 - 30/6/2026 exclusive, -5 + 2 = -3",
@@ -1406,6 +1418,8 @@ fn a_spaced_date_range_can_precede_independent_arithmetic() {
         "Gross: $- 1/7/2025 - 30/6/2026; 5 + 2 = 7",
         "Gross: 1/7/2025 - 30/6/2026%; 5 + 2 = 7",
         "Gross: 1/7/2025 - 30/6/2026.5; 5 + 2 = 7",
+        "Gross:100/4- Period: 1/7/2025 - 30/6/2026 inclusive. 5 + 2 = 7",
+        "Gross:100/4- Note: 5 + 2 = 7",
         "Gross: 1/7/2025 - 30/6/2026 + 5; 5 + 2 = 7",
         "Gross: 1/7/2025 - 30/6/2026 inclusive plus $2; 5 + 2 = 7",
         "($2)- 1/7/2025 - 30/6/2026; 5 + 2 = 7",

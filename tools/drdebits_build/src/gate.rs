@@ -281,6 +281,9 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
+/// A minus joined to a potential operand before intervening prose.
+static DANGLING_MINUS: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"[-−] +\p{L}").expect("pattern"));
 /// A complete amount or expression that could supply an operand. Bare
 /// two-part fractions can be prose. A dollar sign, percentage, quotient with
 /// other operations or numeric product can identify arithmetic. The caller
@@ -324,7 +327,7 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// A marked or thousands-grouped amount after a label can still be an operand.
 static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let label = r"\b(?i:item|note|step|line|case|ref(?:erence)?\.?|section|paragraph)";
-    let ordinal = r"\d+(?:\.\d+)*(?:[/-]\d+)?";
+    let ordinal = r"\d+(?:\.\d+)*(?:[/-]\d+)*";
     let grouped = format!(r"(?:\( *{ordinal} *\)|\[ *{ordinal} *\]|\{{ *{ordinal} *\}})");
     let separator = r"(?: +| *: *)";
     // A code follows "Ref " or an explicit "Reference:" label. A phrase
@@ -407,7 +410,7 @@ static DATE_RANGE: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// Prose after a date range may end a clause or a sentence. A decimal point
 /// joined to a digit is part of the preceding amount.
 static DATE_RANGE_CLAUSE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"^[\p{L} ]*[)\]} ]*(?:[;,|:]|\.(?: |$))").expect("pattern")
+    regex::Regex::new(r"^[\p{L}(){}\[\] ]*(?:[;,|:]|\.(?: |$))").expect("pattern")
 });
 /// A date or labelled year can precede a signed calculation.
 /// A named date can also use brackets, as in "Date: (30/6/2026)".
@@ -770,6 +773,15 @@ pub fn calculations(text: &str) -> Vec<Calculation> {
 /// A one-sided minus can cause the scanner to enter partway through a
 /// subtraction. The scanner may consume its boundary space or the minus.
 fn follows_one_sided_minus(before: &str, left: &str) -> bool {
+    // Prose can interrupt a subtraction before the scanner reaches the
+    // readable tail. Check the original prefix even if it includes dates.
+    let since_equals = before.rsplit_once('=').map_or(before, |(_, text)| text);
+    if DANGLING_MINUS.find_iter(since_equals).any(|operator| {
+        let amount = &since_equals[..operator.start()];
+        !amount.ends_with(' ') && ends_in_nonperiod_operand(amount)
+    }) {
+        return true;
+    }
     let prefix = before.trim_end_matches(' ');
     let separated = before.ends_with(' ') || left.starts_with(' ');
     if let Some(amount) = prefix.strip_suffix(['-', '−']) {
