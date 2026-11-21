@@ -249,15 +249,19 @@ pub fn build_inspect(s: &Sources) -> (String, usize) {
                     .map(|(k, v)| (k.to_string(), Json::str_obj(v))),
             );
             metadata.push(("benchmark_canary".into(), Json::str_obj(BENCHMARK_CANARY)));
-            pyjson::dumps(
-                &Json::Object(vec![
-                    ("id".into(), text("id")),
-                    ("input".into(), input),
-                    ("target".into(), Json::str_obj(&target)),
-                    ("metadata".into(), Json::Object(metadata)),
-                ]),
-                false,
-            )
+            let sample = Json::Object(vec![
+                ("id".into(), text("id")),
+                ("input".into(), input),
+                ("target".into(), Json::str_obj(&target)),
+                ("metadata".into(), Json::Object(metadata)),
+            ]);
+            // `dumps` indents; JSON Lines needs one line a sample. A string
+            // holds no raw line break, as `dumps` escapes it, so each break
+            // and the indent after it are layout and can go.
+            pyjson::dumps(&sample, false)
+                .lines()
+                .map(str::trim_start)
+                .collect::<String>()
         })
         .collect();
     (lines.join("\n") + "\n", frozen)
