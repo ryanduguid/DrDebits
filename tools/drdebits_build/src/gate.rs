@@ -282,8 +282,9 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     .expect("pattern")
 });
 /// A complete amount or expression that could supply an operand. Bare
-/// two-part fractions can be prose. A dollar sign, percentage, longer slash
-/// chain or numeric product can identify arithmetic. The caller checks periods separately.
+/// two-part fractions can be prose. A dollar sign, percentage, quotient with
+/// other operations or numeric product can identify arithmetic. The caller
+/// checks periods separately.
 static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let plain = format!(r"[-−]?(?:{NUM})");
     let digits = r"\d[\d,]*(?:\.\d+)?";
@@ -291,13 +292,17 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let grouped = format!(r"{OPEN_BRACKET}* *{plain} *{CLOSE_BRACKET}*");
     let grouped_marked = format!(r"{OPEN_BRACKET}* *{marked} *{CLOSE_BRACKET}*");
     // The marker can be on any term of a quotient, product or compact subtraction.
-    let operator = r"(?: *[/xX] *|[-−])";
-    let term = format!(r"{operator}{grouped}");
-    let operations =
-        format!(r"(?:(?: */ *{grouped}){{2,}}|(?:{term})* *[xX] *{grouped}(?:{term})*)");
+    let division = r" */ *";
+    let product = r" *[xX] *";
+    let subtraction = r"[-−]";
+    let operator = format!(r"(?:{division}|{product}|{subtraction})");
+    let term = format!(r"(?:{operator}{grouped})");
+    let operations = format!(
+        r"(?:{division}{grouped}{term}+|(?:{subtraction}{grouped})+{division}{grouped}{term}*|{term}*{product}{grouped}{term}*)"
+    );
     let chain = format!(r"{grouped}{operations}");
     let marked_expression = format!(
-        r"(?:{marked}|{OPEN_BRACKET}+ *{marked} *{CLOSE_BRACKET}+|{grouped_marked}(?:{term})+|{grouped}(?:{term})*{operator}{grouped_marked}(?:{term})*)"
+        r"(?:{marked}|{OPEN_BRACKET}+ *{marked} *{CLOSE_BRACKET}+|{grouped_marked}{term}+|{grouped}{term}*{operator}{grouped_marked}{term}*)"
     );
     // A colon can join a label to an amount. A digit-to-digit colon can
     // instead be part of a clock time or ratio. A marked or grouped amount
@@ -858,9 +863,19 @@ fn has_interrupted_arithmetic(text: &str) -> bool {
         let boundary = &caps["boundary"];
         let before = text[..range.start() + boundary.len()].trim_end_matches([' ', '(', '[', '{']);
         let after = text[range.end()..].trim_start_matches(' ');
+        // A prose qualifier may follow the range in the same clause.
+        let ends_clause = after.is_empty()
+            || after
+                .split_once([';', ',', '|', ':'])
+                .is_some_and(|(qualifier, _)| {
+                    qualifier
+                        .trim_end_matches([' ', ')', ']', '}'])
+                        .chars()
+                        .all(|c| c.is_alphabetic() || c == ' ')
+                });
         if valid_date_range_endpoint(&caps["first"])
             && valid_date_range_endpoint(&caps["last"])
-            && (after.is_empty() || after.starts_with([';', ',', '|', ':']))
+            && ends_clause
             && !before.trim_end_matches([' ', '-', '−']).ends_with('$')
             && !follows_subtraction(before)
         {
