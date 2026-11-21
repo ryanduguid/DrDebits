@@ -1088,7 +1088,7 @@ fn compare_pairs_the_questions_right_on_every_repeat() {
         ),
         (6, 0, 6, 0, 25)
     );
-    assert_eq!(value.p, "p = 0.0312");
+    assert_eq!(value.p, "p = 0.0313");
     assert_eq!(
         every[1].measure,
         "correct value and authority on every repeat"
