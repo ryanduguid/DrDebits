@@ -1,29 +1,9 @@
 drdebits_build
 Copyright 2026 Ryan Duguid (https://github.com/ryanduguid)
 
-Ryan Duguid's contributions are licensed under the Ryan Duguid Public
-Attribution Licence, Version 1.0: the Functional Source License, Version 1.1,
-ALv2 Future License (FSL-1.1-ALv2) text with a Public Attribution Condition;
-see LICENSE. Retained third-party material remains under its own licence, as
-stated below.
+Ryan Duguid's original work is licensed under the Apache License, Version 2.0 (see LICENSE).
 
-Public attribution applies when you rely on the FSL grant of a version released
-with the condition (from 4 November 2026) to redistribute or make available a
-copy, modification or derivative: name Ryan Duguid and link to this repository
-in its README or main documentation and in any credits screen. Internal use is
-exempt.
-
-For each version, an additional licence under the Apache License, Version 2.0
-becomes effective on the second anniversary of the date that version was made
-available. The condition does not apply to that licence.
-
-Versions made available before the condition keep the terms they were released
-with.
-
-Redistribution under the FSL grant requires including its terms or a link to
-them and keeping the copyright notices supplied with the software.
-Redistribution under another applicable licence follows that licence's
-conditions.
+This product includes work by Ryan Duguid (https://github.com/ryanduguid/DrDebits).
 
 drdebits_build includes src/yaml.rs, a Rust port of the reader, scanner,
 parser, composer, resolver and safe constructor of PyYAML 6.0.3, made so the
@@ -54,3 +34,45 @@ SOFTWARE.
 src/pyunicode.rs holds character tables generated from the Unicode Character
 Database as distributed with CPython 3.15.0 (Unicode 17.0.0), under the
 Unicode License v3.
+
+UNICODE LICENSE V3
+
+COPYRIGHT AND PERMISSION NOTICE
+
+Copyright © 1991-2026 Unicode, Inc.
+
+NOTICE TO USER: Carefully read the following legal agreement. BY
+DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
+SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
+TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
+DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of data files and any associated documentation (the "Data Files") or
+software and any associated documentation (the "Software") to deal in the
+Data Files or Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, and/or sell
+copies of the Data Files or Software, and to permit persons to whom the
+Data Files or Software are furnished to do so, provided that either (a)
+this copyright and permission notice appear with all copies of the Data
+Files or Software, or (b) this copyright and permission notice appear in
+associated Documentation.
+
+THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+THIRD PARTY RIGHTS.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
+BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
+OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
+FILES OR SOFTWARE.
+
+Except as contained in this notice, the name of a copyright holder shall
+not be used in advertising or otherwise to promote the sale, use or other
+dealings in these Data Files or Software without prior written
+authorization of the copyright holder.
+
+Versions released before this change keep the licence they were released with.

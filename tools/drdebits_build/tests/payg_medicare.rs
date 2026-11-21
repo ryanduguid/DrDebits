@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! The PAYG withholding and Medicare levy benchmark: every key is the figure
 //! its cited source row prints, and `bench keys` recomputes each one from the

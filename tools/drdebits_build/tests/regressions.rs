@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! Ambiguous evidence, incomplete verification and source claims that only
 //! semantic review can judge (ported from test_evaluation_regressions.py and
