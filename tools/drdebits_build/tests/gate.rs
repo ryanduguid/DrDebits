@@ -1359,10 +1359,31 @@ fn a_label_cannot_hide_a_grouped_compact_product() {
 }
 
 #[test]
+fn a_labelled_two_term_amount_can_supply_an_operand() {
+    for value in [
+        "Gross:100/4",
+        "Gross: 100/4",
+        "Gross:100-4",
+        "Gross(100/4)",
+        "Gross[100-4]",
+        "Gross{100/4}",
+    ] {
+        assert_unread_tail(&format!("{value}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{value} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+    for reference in ["Note:1/11", "Note[1/11]", "Ref AB(10-12)", "Section 2/3"] {
+        let line = format!("{reference} -5 + 2 = -3");
+        assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
+    }
+}
+
+#[test]
 fn a_spaced_date_range_can_precede_independent_arithmetic() {
     for line in [
         "Period: 1/7/2025 – 30/6/2026; 5 + 2 = 7",
         "Period: 1/7/2025 – 30/6/2026 inclusive; 5 + 2 = 7",
+        "Period: 1/7/2025 – 30/6/2026 inclusive. 5 + 2 = 7",
+        "Period: 2025-07-01 - 2026-06-30. 5 + 2 = 7",
         "Period: [1/7/2025 - 30/6/2026 inclusive of both days]; 5 + 2 = 7",
         "Period: 1/7/2025 - 30/6/2026 exclusive, -5 + 2 = -3",
         "Budget $100; Period: 1/7/2025 - 30/6/2026; 5 + 2 = 7",
@@ -1384,6 +1405,7 @@ fn a_spaced_date_range_can_precede_independent_arithmetic() {
         "Gross: $ 1/7/2025 - 30/6/2026; 5 + 2 = 7",
         "Gross: $- 1/7/2025 - 30/6/2026; 5 + 2 = 7",
         "Gross: 1/7/2025 - 30/6/2026%; 5 + 2 = 7",
+        "Gross: 1/7/2025 - 30/6/2026.5; 5 + 2 = 7",
         "Gross: 1/7/2025 - 30/6/2026 + 5; 5 + 2 = 7",
         "Gross: 1/7/2025 - 30/6/2026 inclusive plus $2; 5 + 2 = 7",
         "($2)- 1/7/2025 - 30/6/2026; 5 + 2 = 7",

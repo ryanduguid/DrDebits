@@ -311,9 +311,12 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let boundary = r"^|[ (\[;=+×*÷|]";
     let label_colon = r"(?:^|[^\d]|[\p{L}_]\d+):";
     let attached = r"^|[^\d.,$]";
-    let bracketed = format!(r"{OPEN_BRACKET}+ *{plain}{operations}? *{CLOSE_BRACKET}+");
+    // A label colon or brackets identify a potential operand even when it
+    // consists of a single compact division or subtraction.
+    let pair = format!(r"(?:{division}|{subtraction}){grouped}");
+    let bracketed = format!(r"{OPEN_BRACKET}+ *{plain}(?:{pair}|{operations})? *{CLOSE_BRACKET}+");
     regex::Regex::new(&format!(
-        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{bracketed}|{marked_expression}))$"
+        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{label_colon}){grouped}{pair}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{bracketed}|{marked_expression}))$"
     ))
     .expect("pattern")
 });
@@ -321,7 +324,7 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// A marked or thousands-grouped amount after a label can still be an operand.
 static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let label = r"\b(?i:item|note|step|line|case|ref(?:erence)?\.?|section|paragraph)";
-    let ordinal = r"\d+(?:\.\d+)*";
+    let ordinal = r"\d+(?:\.\d+)*(?:[/-]\d+)?";
     let grouped = format!(r"(?:\( *{ordinal} *\)|\[ *{ordinal} *\]|\{{ *{ordinal} *\}})");
     let separator = r"(?: +| *: *)";
     // A code follows "Ref " or an explicit "Reference:" label. A phrase
@@ -400,6 +403,11 @@ static DATE_RANGE: LazyLock<regex::Regex> = LazyLock::new(|| {
         r"(?P<boundary>^|[ :;,|]|{OPEN_BRACKET}){OPEN_BRACKET}* *(?P<first>{date}) *{CLOSE_BRACKET}* +[-−] +{OPEN_BRACKET}* *(?P<last>{date}) *{CLOSE_BRACKET}*"
     ))
     .expect("pattern")
+});
+/// Prose after a date range may end a clause or a sentence. A decimal point
+/// joined to a digit is part of the preceding amount.
+static DATE_RANGE_CLAUSE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"^[\p{L} ]*[)\]} ]*(?:[;,|:]|\.(?: |$))").expect("pattern")
 });
 /// A date or labelled year can precede a signed calculation.
 /// A named date can also use brackets, as in "Date: (30/6/2026)".
@@ -863,19 +871,9 @@ fn has_interrupted_arithmetic(text: &str) -> bool {
         let boundary = &caps["boundary"];
         let before = text[..range.start() + boundary.len()].trim_end_matches([' ', '(', '[', '{']);
         let after = text[range.end()..].trim_start_matches(' ');
-        // A prose qualifier may follow the range in the same clause.
-        let ends_clause = after.is_empty()
-            || after
-                .split_once([';', ',', '|', ':'])
-                .is_some_and(|(qualifier, _)| {
-                    qualifier
-                        .trim_end_matches([' ', ')', ']', '}'])
-                        .chars()
-                        .all(|c| c.is_alphabetic() || c == ' ')
-                });
         if valid_date_range_endpoint(&caps["first"])
             && valid_date_range_endpoint(&caps["last"])
-            && ends_clause
+            && (after.is_empty() || DATE_RANGE_CLAUSE_END.is_match(after))
             && !before.trim_end_matches([' ', '-', '−']).ends_with('$')
             && !follows_subtraction(before)
         {
