@@ -291,8 +291,11 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let plain = format!(r"[-−]?(?:{NUM})");
     let digits = r"\d[\d,]*(?:\.\d+)?";
     let marked = format!(r"(?:{CURRENCY_PREFIX}{digits}%?|[-−]?{digits}%)");
-    let grouped = format!(r"{OPEN_BRACKET}* *{plain} *{CLOSE_BRACKET}*");
-    let grouped_marked = format!(r"{OPEN_BRACKET}* *{marked} *{CLOSE_BRACKET}*");
+    // Whitespace can separate successive brackets in a nested operand.
+    let open = format!(r"(?:{OPEN_BRACKET} *)");
+    let close = format!(r"(?: *{CLOSE_BRACKET})");
+    let grouped = format!(r"{open}* *{plain}(?:{close}+| *)");
+    let grouped_marked = format!(r"{open}* *{marked}(?:{close}+| *)");
     // The marker can be on any term of a quotient, product or compact subtraction.
     let division = r" */ *";
     let product = r" *[xX] *";
@@ -304,7 +307,7 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     );
     let chain = format!(r"{grouped}{operations}");
     let marked_expression = format!(
-        r"(?:{marked}|{OPEN_BRACKET}+ *{marked} *{CLOSE_BRACKET}+|{grouped_marked}{term}+|{grouped}{term}*{operator}{grouped_marked}{term}*)"
+        r"(?:{marked}|{open}+{marked}{close}+|{grouped_marked}{term}+|{grouped}{term}*{operator}{grouped_marked}{term}*)"
     );
     // A colon can join a label to an amount. A digit-to-digit colon can
     // instead be part of a clock time or ratio. A marked or grouped amount
@@ -317,7 +320,7 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     // consists of a single compact division or subtraction.
     let pair = format!(r"(?:{division}|{subtraction}){grouped}");
     let quotient = format!(r"{grouped}{division}{grouped}");
-    let bracketed = format!(r"{OPEN_BRACKET}+ *{plain}(?:{pair}|{operations})? *{CLOSE_BRACKET}+");
+    let bracketed = format!(r"{open}+{plain}(?:{pair}|{operations})?{close}+");
     regex::Regex::new(&format!(
         r"(?:(?:{boundary}|{label_colon}){plain}|(?:{label_colon}){grouped}{pair}|(?:{boundary}){quotient}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{bracketed}|{marked_expression}))$"
     ))
@@ -328,15 +331,18 @@ static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
 static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let label = r"\b(?i:item|note|step|line|case|ref(?:erence)?\.?|section|paragraph)";
     let ordinal = r"\d+(?:\.\d+)*(?:[/-]\d+)*";
-    let grouped = format!(r"(?:\( *{ordinal} *\)|\[ *{ordinal} *\]|\{{ *{ordinal} *\}})");
+    let grouped =
+        format!(r"(?P<open>(?:{OPEN_BRACKET} *)+){ordinal}(?P<close>(?: *{CLOSE_BRACKET})+)");
     let separator = r"(?: +| *: *)";
     // A code follows "Ref " or an explicit "Reference:" label. A phrase
     // such as "Reference amount:" can still introduce an operand.
     let reference = r"\b(?:(?i:ref\.?) +|(?i:ref(?:erence)?\.?) *: *)";
     let code = r"[A-Za-z][A-Za-z0-9_.-]*";
-    let numbered_label = format!(r"{label}(?:{separator}{ordinal}|(?:{separator})?{grouped})");
-    let coded = format!(r"{reference}{code}(?:{separator}{ordinal}| *:? *{grouped})");
-    regex::Regex::new(&format!(r"(?:{numbered_label}|{coded})$")).expect("pattern")
+    let prefix = format!(r"(?:{label}|{reference}{code})");
+    regex::Regex::new(&format!(
+        r"{prefix}(?:{separator}{ordinal}|(?:{separator})?{grouped})$"
+    ))
+    .expect("pattern")
 });
 /// An operator `INTERRUPTED` does not count, after a number: a `/`, `x` or
 /// `X` between numbers without spaces round it, as in `100/4`,
@@ -403,7 +409,7 @@ static DATE: LazyLock<regex::Regex> =
 static DATE_RANGE: LazyLock<regex::Regex> = LazyLock::new(|| {
     let date = format!(r"(?:{SLASH_DATE}|{ISO_DATE})");
     regex::Regex::new(&format!(
-        r"(?P<boundary>^|[ :;,|]|{OPEN_BRACKET}){OPEN_BRACKET}* *(?P<first>{date}) *{CLOSE_BRACKET}* +[-−] +{OPEN_BRACKET}* *(?P<last>{date}) *{CLOSE_BRACKET}*"
+        r"(?P<boundary>^|[ :;,|]|{OPEN_BRACKET})(?:{OPEN_BRACKET} *)* *(?P<first>{date})(?: *{CLOSE_BRACKET})* +[-−] +(?:{OPEN_BRACKET} *)*(?P<last>{date})(?: *{CLOSE_BRACKET})*"
     ))
     .expect("pattern")
 });
@@ -913,7 +919,31 @@ fn ends_in_nonperiod_operand(text: &str) -> bool {
 
 fn ends_in_operand(text: &str) -> bool {
     let text = text.trim_end_matches(' ');
-    !ITEM_REFERENCE_END.is_match(text) && OPERAND_END.is_match(text)
+    OPERAND_END.is_match(text) && !ends_in_reference(text)
+}
+
+fn ends_in_reference(text: &str) -> bool {
+    let Some(reference) = ITEM_REFERENCE_END.captures(text) else {
+        return false;
+    };
+    let Some(open) = reference.name("open") else {
+        return true;
+    };
+    let expected_closings = open
+        .as_str()
+        .chars()
+        .rev()
+        .filter(|&c| c != ' ')
+        .map(|c| match c {
+            '(' => ')',
+            '[' => ']',
+            '{' => '}',
+            _ => unreachable!("a bracket from ITEM_REFERENCE_END"),
+        });
+    reference["close"]
+        .chars()
+        .filter(|&c| c != ' ')
+        .eq(expected_closings)
 }
 
 /// The calculations `CLAIM` finds on one line, reperformed into `out`, and

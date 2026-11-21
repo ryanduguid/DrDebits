@@ -811,6 +811,9 @@ fn one_sided_subtraction_cannot_drop_a_bracketed_amount() {
         ("$1,000 -[200 + 50 = 250]", "200 + 50 = 250"),
         ("$1,000 -{200 + 50 = 250}", "200 + 50 = 250"),
         ("$1,000-[200 + 50 = 250]", "200 + 50 = 250"),
+        ("(( $1,000 ) )- $200 + $50 = $250", "$200 + $50 = $250"),
+        ("(( $1,000 ) ) -$200 + $50 = -$150", "-$200 + $50 = -$150"),
+        ("{{ 20% } }- 5% + 2% = 7%", "5% + 2% = 7%"),
         ("-$1,000- $200 + $50 = $250", "$200 + $50 = $250"),
         ("-$1,000 -$200 + $50 = -$150", "-$200 + $50 = -$150"),
     ] {
@@ -822,7 +825,35 @@ fn one_sided_subtraction_cannot_drop_a_bracketed_amount() {
             assert_eq!(with_line(&line).verdict().1, EXIT_BLOCK, "{line}");
         }
     }
-    for line in ["Note 1- [200 + 50 = 250]", "Note 1 -[200 + 50 = 250]"] {
+    for line in [
+        "Note ( [ 1 } ) -200 + 50 = -150",
+        "( { [ $1,000 ] } )-[200 + 50 = 250]",
+    ] {
+        assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+    }
+    let brackets = [('(', ')'), ('[', ']'), ('{', '}')];
+    for (outer_open, outer_close) in brackets {
+        for (inner_open, inner_close) in brackets {
+            for open_space in ["", " "] {
+                for close_space in ["", " "] {
+                    let line = format!(
+                        "{outer_open}{open_space}{inner_open} $1,000 {inner_close}{close_space}{outer_close}- $200 + $50 = $250"
+                    );
+                    assert_eq!(with_line(&line).verdict().1, EXIT_BLOCK, "{line}");
+                }
+            }
+        }
+    }
+    for line in [
+        "Note 1- [200 + 50 = 250]",
+        "Note 1 -[200 + 50 = 250]",
+        "Note (( 1 ) ) -200 + 50 = -150",
+        "Note ((1)) -200 + 50 = -150",
+        "Item [ [ 12.5 ] ] -200 + 50 = -150",
+        "Ref AB: { [ ( 100/4/2 ) ] } -200 + 50 = -150",
+        "At [ [ 2026-06-30 ] ] -200 + 50 = -150",
+        "Period (( 30/6/2026 ) ) -200 + 50 = -150",
+    ] {
         assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
     }
 }
@@ -1422,11 +1453,15 @@ fn a_spaced_date_range_can_precede_independent_arithmetic() {
         "Period: 2025-07-01 - 2026-06-30; 5 + 2 = 7",
         "Period: 2025-07-01 - 30/6/2026; 5 + 2 = 7",
         "Period: 29/2/24 - 28/2/2025; 5 + 2 = 7",
+        "Period (( 30/6/2026 ) ) - [ [ 1/7/2026 ] ]. 200 + 50 = 250",
+        "Period ({ 2026-06-30 } ) - ( [ 2026-07-01 ] ) (inclusive). 200 + 50 = 250",
+        "Note (( 1 ) )- Period (( 30/6/2026 ) ) - [ [ 1/7/2026 ] ]. 200 + 50 = 250",
     ] {
         assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
     }
     for line in [
         "Period: 29/2/25 - 28/2/2025; 5 + 2 = 7",
+        "$1,000- Period (( 30/6/2026 ) ) - [ [ 1/7/2026 ] ]. 200 + 50 = 250",
         "Period: 1/7/2025 - 31/6/2026; 5 + 2 = 7",
         "Period: 2025-02-29 - 2026-06-30; 5 + 2 = 7",
         "Gross: $1/7/2025 - 30/6/2026; 5 + 2 = 7",
