@@ -247,9 +247,11 @@ static NOT_AN_AMOUNT: LazyLock<regex::Regex> = LazyLock::new(|| {
 });
 /// A provision of an Act at the end of the text: `s 104-10`, `ss 8-1`,
 /// `s. 6D(4)`, `§ 8-1`, `Sec 109RB`, `subsection 9-5(1)` and `para 45`. This
-/// is narrower than the authorities check. `s` and `ss` are lower case, the
-/// longer words take a capital first letter at most, and a number has 4
-/// digits at most and no comma, so `S 1,000` and `SEC 30` stay amounts.
+/// is not the authorities check. It is wider in one way: a paragraph needs
+/// no bracketed part. Otherwise it is narrower: `s` and `ss` are lower
+/// case, the longer words take a capital first letter at most, and a number
+/// has 4 digits at most and no comma, so `S 1,000` and `SEC 30` stay
+/// amounts.
 static PROVISION_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     let word = r"(?:ss?|[Ss]ub-ss?|(?:[Ss]ub-?)?(?:[Ss]ecs?|[Ss]ections?|[Pp]ara(?:graph)?s?))";
     let number = r"\d{1,4}[A-Z]{0,3}(?:-(?:\d{1,4}[A-Z]{0,3}|[A-Z]{1,2}))?";
