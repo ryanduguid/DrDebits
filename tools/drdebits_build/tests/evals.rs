@@ -735,3 +735,11 @@ fn the_mismatch_screens_together_count_no_more_than_the_responses() {
     );
     assert!(results(&root).is_ok());
 }
+
+#[test]
+fn an_empty_case_list_exports_no_inspect_samples() {
+    let (_dir, root) = fixture();
+    let mut sources = builder::load_sources(&root).unwrap();
+    sources.behaviour.clear();
+    assert_eq!(evals::build_inspect(&sources), (String::new(), 0));
+}
