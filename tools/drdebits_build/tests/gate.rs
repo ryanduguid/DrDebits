@@ -1552,7 +1552,7 @@ fn any_word_with_a_digit_before_a_one_sided_minus_is_an_amount() {
         "1000 x4",
         "Net-1000x-4",
         "A1x2",
-        "123)",
+        "1234)",
         "Net 10)",
         "Net: 1)",
         "(see 3)",
@@ -1589,8 +1589,40 @@ fn a_word_with_a_digit_that_is_not_an_amount_does_not_supply_an_operand() {
         "Total 1000.",
         "Total 1000,",
         "Gross: 1,000;",
+        "100)",
     ] {
         assert_reads_whole(&format!("{word} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn words_that_describe_an_amount_do_not_hide_it_from_a_one_sided_minus() {
+    // A spaced minus blocks whatever stands between it and an amount. So
+    // does a one-sided minus, up to the punctuation that closes a clause.
+    for prefix in [
+        "Gross amount $1,000 (GST exclusive)",
+        "$500 wages",
+        "Paid 3 instalments",
+        "$1,000 per Item 3",
+        "$1,000 on INV-1042",
+        "On 30/6/2026 $500 net",
+    ] {
+        assert_unread_tail(&format!("{prefix}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{prefix} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+    assert_unread_tail("$1,000 total -200 adjustment 5 + 2 = 7", "5 + 2 = 7");
+    // No amount stands in the clause: punctuation has closed it, or the
+    // number is a date, a year, a list marker, a reference or a code.
+    for prefix in [
+        "Opening balance $500, movement",
+        "Rate 5% p.a.",
+        "On 30/6/2026 net",
+        "In 2025 total",
+        "1) total",
+        "Step 2 result",
+        "Invoice INV-1042 total",
+    ] {
+        assert_reads_whole(&format!("{prefix} -5 + 2 = -3"), "-5 + 2 = -3");
     }
 }
 

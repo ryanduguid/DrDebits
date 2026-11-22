@@ -225,7 +225,7 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
 });
 /// A list marker that is the whole of the text before a minus, as in `1)`.
 static LIST_MARKER: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"^\d{1,2}\)$").expect("pattern"));
+    LazyLock::new(|| regex::Regex::new(r"^\d{1,3}\)$").expect("pattern"));
 /// A word that holds a digit and is not an amount: a code, as in `A1`,
 /// `v1.2`, `INV#12` and `#123`; a clock time or ratio, as in `12:30` and
 /// `Time:09:05`; an ordinal, as in `2nd`; a compound, as in `3-year`; or a
@@ -856,23 +856,41 @@ fn ends_in_nonperiod_operand(text: &str) -> bool {
         && period_at_end(text).is_none_or(|period| period_continues_operand(text, period))
 }
 
-/// Whether the text ends in what may be an amount. Any last word that
-/// holds a digit is one unless it is known not to be: a clause that
-/// punctuation has closed, an explicit reference, a list marker, a code or
-/// a clock time. A form this does not know therefore blocks.
+/// Whether the text ends in what may be an amount, alone or with words
+/// after it that describe it, as in `$1,000 (GST exclusive)`. A word that
+/// holds a digit is an amount unless it is known not to be: a code, a clock
+/// time, an ordinal, a compound or a provision. Those, an explicit reference
+/// and a word without a digit are read past. A list marker or a clause that
+/// punctuation has closed ends the search. A form this does not know
+/// therefore blocks.
 fn ends_in_operand(text: &str) -> bool {
-    let text = text.trim_end_matches(' ');
-    if text.ends_with([',', ';', '.', ':']) || ends_in_reference(text) || LIST_MARKER.is_match(text)
-    {
-        return false;
+    let whole = text.trim_end_matches(' ');
+    let mut text = whole;
+    loop {
+        if text.ends_with([',', ';', '.', ':']) || LIST_MARKER.is_match(text) {
+            return false;
+        }
+        if ends_in_reference(text) {
+            let reference = ITEM_REFERENCE_END.find(text).expect("a reference");
+            text = text[..reference.start()].trim_end_matches(' ');
+            continue;
+        }
+        let bare = text.trim_end_matches([' ', ')', ']', '}']);
+        let start = bare.rfind(' ').map_or(0, |at| at + 1);
+        let word = bare[start..].trim_start_matches(['(', '[', '{']);
+        if word.contains(char::is_numeric)
+            && (!NOT_AN_AMOUNT.is_match(word) || PRODUCT.is_match(word))
+        {
+            // The callers check a period that ends the whole text. One found
+            // further back is a date or year unless it continues an operand.
+            return text.len() == whole.len()
+                || period_at_end(text).is_none_or(|period| period_continues_operand(text, period));
+        }
+        if start == 0 {
+            return false;
+        }
+        text = bare[..start].trim_end_matches(' ');
     }
-    let word = text
-        .trim_end_matches([' ', ')', ']', '}'])
-        .rsplit(' ')
-        .next()
-        .unwrap_or_default()
-        .trim_start_matches(['(', '[', '{']);
-    word.contains(char::is_numeric) && (!NOT_AN_AMOUNT.is_match(word) || PRODUCT.is_match(word))
 }
 
 fn ends_in_reference(text: &str) -> bool {
