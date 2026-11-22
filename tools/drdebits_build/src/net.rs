@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! What the network commands share: URL parts as `urllib.parse` reads them,
 //! `ipaddress`'s idea of a global address, and percent-quoting.

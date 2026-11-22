@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! The published benchmark's keys, and a scorer that keeps a wrong citation
 //! apart from a wrong figure.
@@ -1028,4 +1028,206 @@ fn compare_names_the_file_it_refuses() {
         assert_eq!(refused.code, 2, "{}", refused.stdout);
         assert!(refused.stderr.ends_with(&expected), "{}", refused.stderr);
     }
+}
+
+fn baseline(name: &str) -> Json {
+    let body = std::fs::read_to_string(repo_root().join(DIR).join("baselines").join(name)).unwrap();
+    pyjson::loads(&body).unwrap()
+}
+
+/// A question counts on every repeat only when each repeat's answer holds the
+/// measure: weekdays-only is right on value and authority for 7 questions,
+/// calendar-days for none, and answering by position gives no citation.
+#[test]
+fn a_question_counts_on_every_repeat_only_when_no_repeat_misses_it() {
+    let keys = keys();
+    let marked = |file: &Json| bench::score(&keys, file).unwrap();
+    let weekdays = marked(&baseline("weekdays-only.json"));
+    let calendar = marked(&baseline("calendar-days.json"));
+    let held = |runs: &[Vec<Scored>]| -> Vec<usize> {
+        bench::every_repeat(runs).iter().map(|(_, n)| *n).collect()
+    };
+    let names: Vec<&str> = bench::every_repeat(&[]).iter().map(|(m, _)| *m).collect();
+    assert_eq!(
+        names,
+        [
+            "value correct on every repeat",
+            "correct value and authority on every repeat"
+        ]
+    );
+    assert_eq!(held(&[]), [0, 0]);
+    assert_eq!(held(std::slice::from_ref(&weekdays)), [7, 7]);
+    let again = marked(&baseline("weekdays-only.json"));
+    assert_eq!(held(&[weekdays, again]), [7, 7]);
+    let weekdays = marked(&baseline("weekdays-only.json"));
+    assert_eq!(held(&[weekdays, calendar]), [0, 0]);
+    let first_six = marked(&answering(&keys, 0..6));
+    let first_three = marked(&answering(&keys, 0..3));
+    assert_eq!(held(&[first_six, first_three]), [3, 0]);
+    // Right on value both times, but cited only the first time.
+    let cited = mark(
+        r#"{"answers": {"D7A-001": {"value": "8.77",
+        "authorities": ["s 109N(2) of the Income Tax Assessment Act 1936"]}}}"#,
+    )
+    .unwrap();
+    let uncited = mark(r#"{"answers": {"D7A-001": {"value": "8.77"}}}"#).unwrap();
+    assert_eq!(held(&[cited, uncited]), [1, 0]);
+}
+
+/// With repeats, compare adds the every-repeat measures, each question one
+/// pair of yes or no: a is right on 6 questions in both repeats, b on none.
+#[test]
+fn compare_pairs_the_questions_right_on_every_repeat() {
+    let keys = keys();
+    let a = [answering(&keys, 0..6), answering(&keys, 0..6)];
+    let b = [answering(&keys, 0..3), answering(&keys, 6..7)];
+    let paired = bench::compare(&keys, &a, &b).unwrap();
+    let every: Vec<_> = paired.iter().filter(|p| p.every_repeat).collect();
+    assert_eq!(every.len(), 2);
+    let value = every[0];
+    assert_eq!(value.measure, "value correct on every repeat");
+    assert_eq!(
+        (
+            value.a_total,
+            value.b_total,
+            value.a_higher,
+            value.b_higher,
+            value.ties
+        ),
+        (6, 0, 6, 0, 25)
+    );
+    assert_eq!(value.p, "p = 0.0313");
+    assert_eq!(
+        every[1].measure,
+        "correct value and authority on every repeat"
+    );
+    assert_eq!((every[1].a_total, every[1].ties), (0, 31));
+
+    let once = bench::compare(&keys, &a[..1], &b[..1]).unwrap();
+    assert!(once.iter().all(|p| !p.every_repeat));
+    assert_eq!(once.len(), 5);
+}
+
+#[test]
+fn score_reports_each_repeat_and_the_questions_right_on_every_one() {
+    let root = repo_root();
+    let weekdays = format!("{DIR}/baselines/weekdays-only.json");
+    let calendar = format!("{DIR}/baselines/calendar-days.json");
+    let dir = tempfile::tempdir().unwrap();
+    let copy = dir.path().join("weekdays-again.json");
+    std::fs::copy(root.join(&weekdays), &copy).unwrap();
+    let copy = copy.to_str().unwrap();
+
+    let text = run_in(&root, &["bench", "score", &weekdays, copy], true);
+    assert_eq!(text.code, 0, "{}", text.stderr);
+    let out = &text.stdout;
+    assert!(
+        out.starts_with(&format!(
+            "repeat 1: {weekdays}\ncases: 31\nvalue correct: 7\n"
+        )),
+        "{out}"
+    );
+    assert!(
+        out.contains(&format!("repeat 2: {copy}\ncases: 31\nvalue correct: 7\n")),
+        "{out}"
+    );
+    assert!(
+        out.ends_with(
+            "across 2 repeats of 31 questions:\n\
+             value correct on every repeat: 7\n\
+             correct value and authority on every repeat: 7\n"
+        ),
+        "{out}"
+    );
+
+    let mixed = run_in(
+        &root,
+        &["bench", "score", &weekdays, &calendar, "--json"],
+        true,
+    );
+    assert_eq!(mixed.code, 0, "{}", mixed.stderr);
+    let payload = pyjson::loads(&mixed.stdout).unwrap();
+    let every = payload.get("every_repeat").unwrap();
+    assert_eq!(every.get("repeats"), Some(&Json::Int(2.into())));
+    assert_eq!(
+        every.get("value_correct_on_every_repeat"),
+        Some(&Json::Int(0.into()))
+    );
+    let Some(Json::Array(repeats)) = payload.get("repeats") else {
+        panic!("{}", mixed.stdout)
+    };
+    assert_eq!(
+        repeats[1].get("file").and_then(Json::as_str),
+        Some(calendar.as_str())
+    );
+    assert_eq!(
+        repeats[0]
+            .get("totals")
+            .and_then(|t| t.get("value_correct")),
+        Some(&Json::Int(7.into()))
+    );
+
+    let twice = run_in(
+        &root,
+        &["bench", "score", &weekdays, &format!("./{weekdays}")],
+        true,
+    );
+    assert_eq!(twice.code, 2);
+    assert!(
+        twice.stderr.contains("is given more than once"),
+        "{}",
+        twice.stderr
+    );
+    let broken = dir.path().join("broken.json");
+    std::fs::write(&broken, "{\"answers\": ").unwrap();
+    let broken = broken.to_str().unwrap();
+    let refused = run_in(&root, &["bench", "score", &weekdays, broken], true);
+    assert_eq!(refused.code, 2);
+    assert!(
+        refused.stderr.ends_with(&format!("({broken})\n")),
+        "{}",
+        refused.stderr
+    );
+}
+
+#[test]
+fn compare_prints_the_every_repeat_rows_only_for_repeats() {
+    let root = repo_root();
+    let file = |name: &str| format!("{DIR}/baselines/{name}");
+    let dir = tempfile::tempdir().unwrap();
+    let again = |name: &str| {
+        let copy = dir.path().join(name);
+        std::fs::copy(root.join(file(name)), &copy).unwrap();
+        copy.to_str().unwrap().to_string()
+    };
+    let (weekdays, calendar) = (again("weekdays-only.json"), again("calendar-days.json"));
+    let output = run_in(
+        &root,
+        &[
+            "bench",
+            "compare",
+            "--a",
+            &file("weekdays-only.json"),
+            &weekdays,
+            "--b",
+            &file("calendar-days.json"),
+            &calendar,
+        ],
+        true,
+    );
+    assert_eq!(output.code, 0, "{}", output.stderr);
+    let out = &output.stdout;
+    assert!(
+        out.starts_with("bench compare: 31 questions paired by question; answers files per condition: 2\n\
+         value correct: a 14 (mean 7.00), b 0 (mean 0.00); a higher on 7, b higher on 0, ties 24; two-sided sign test p = 0.0156\n"),
+        "{out}"
+    );
+    assert!(
+        out.ends_with(
+            "value correct on every repeat: a 7, b 0 of 31 questions; a higher on 7, b higher on 0, ties 24; two-sided sign test p = 0.0156\n\
+             correct value and authority on every repeat: a 7, b 0 of 31 questions; a higher on 7, b higher on 0, ties 24; two-sided sign test p = 0.0156\n"
+        ),
+        "{out}"
+    );
+    assert_eq!(out.lines().count(), 8, "{out}");
 }

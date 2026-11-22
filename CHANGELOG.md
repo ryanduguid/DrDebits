@@ -10,12 +10,16 @@ release.
 
 ### Added
 
+- `inspect-export --out <file>` writes every behaviour case as an Inspect dataset in JSON Lines, already in Inspect's `Sample` form: the frozen prompt (with any system instruction as a system message) or, where a case has none, its scenario, flagged in `metadata.input`; the rubric as `target`; and the guide version, both digests and the canary in each sample's metadata. Nothing calls a model.
 - Model results for the Payday Super and Division 7A benchmark, in `benchmarks/payday-div7a/results-2026-11-14.md`: Opus 5.5 with and without the guide, 10 primary repeats each, and 4 Codex models with and without it, 3 repeats each, scored offline. All 10 primary Opus calls and all 12 Codex calls with the guide abstained on all 31 questions.
 - A PAYG withholding and Medicare levy benchmark in `benchmarks/payg-medicare/`: 20 questions, each key the figure a cited row of Schedule 1 to the Taxation Administration (Withholding Schedules) Instrument 2026 or an ATO Medicare levy example prints. `bench keys --topic payg-medicare` recomputes all 20 from the Schedule 1 coefficients or the Medicare Levy Act thresholds, and `bench score --topic payg-medicare` scores answers as before. `--topic` defaults to `payday-div7a`. No model has been run on these questions.
+- `bench score` takes one answers file per repeat and, given several, prints each repeat's totals and how many questions were correct on every repeat, on value and on value with the right authority. `bench compare` with more than one repeat a condition adds both counts as rows paired question by question, with the same sign test. One file a condition prints as before.
 - `bench compare --a <files> --b <files>`: pairs 2 conditions question by question across equal repeats and prints, for each measure, both totals and means, the questions each side leads on, the ties and an exact two-sided sign test, and says when too few questions are untied for any split to give p below 0.05. It refuses a side with no file, unequal repeats and a file named twice, names any file it refuses, and takes `--topic` like `bench keys` and `bench score`.
 - SRC-007 and SRC-008, behaviour tests with frozen prompts, bringing the suite to 113: an overseas rule supplied as the only source for an Australian resident's income, with a benign contrast that asks only for a summary of it. Neither has a recorded model result.
 
 ### Changed
+
+- Relicensed Ryan Duguid's original work under Apache-2.0. Earlier releases keep their original terms.
 
 - The secrets and client-identifier gate runs betterleaks 1.10.1 in place of gitleaks, in CI and in the pre-commit hook, with the same `.gitleaks.toml`. CI installs the release binary pinned by version and SHA-256, as betterleaks publishes no action, and every scan names `--config .gitleaks.toml`, as betterleaks does not load it by itself. Both scanners report nothing on `main`'s full history under this config.
 
@@ -126,7 +130,7 @@ Changes released in `0.6.0`, merged since `v0.5.0` (31 October 2026). Sources we
 - `gate --facts` adds a note for each draft amount equal to a supplied fact, naming the fact: `$1,100 is equal in amount to fact 'invoice total'`. The note records a match in value, not where the figure came from. An amount equal to 2 or more facts is noted as ambiguous with every name, and the gate does not pick one. Reviews, verdicts and exit codes are unchanged (#239).
 - The AML/CTF intake classification gives table 6 examples from AUSTRAC's 25 September 2026 guidance, adds items 7 and 9, and states item 3 with the s 6(5C)(b) exception (#224).
 - The TPB control set says an interim suspension can be extended for further periods of up to 90 days each once a TPB investigation has started, not only once (#231).
-- Versions made available from 4 November 2026 are licensed under the Ryan Duguid Public Attribution Licence 1.0: the FSL-1.1-ALv2 text with a condition that a copy, port or derivative made available outside the licensee's organisation credits Ryan Duguid publicly. Internal use is exempt, and earlier releases keep their licences. `AGENTS.md` asks AI agents to tell their users this before reusing the code (#242, #246).
+- v0.6.0 is licensed under the [Ryan Duguid Public Attribution Licence 1.0](https://github.com/ryanduguid/DrDebits/blob/v0.6.0/LICENSE): the FSL-1.1-ALv2 text with a condition that a copy, port or derivative made available outside the licensee's organisation credits Ryan Duguid publicly. Internal use is exempt, and earlier releases keep their licences. `AGENTS.md` asks AI agents to tell their users this before reusing the code (#242, #246).
 
 ### Fixed
 

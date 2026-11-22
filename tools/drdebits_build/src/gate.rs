@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! A deterministic gate a host runs on a high-impact draft before showing or
 //! acting on it.
@@ -107,67 +107,9 @@
 //! right, whether a source is current, whether a refusal was required, or
 //! whether the free-text scope, reason and next human step are adequate.
 //!
-//! With `--facts FILE`, each dollar amount (`$1,100.50`) and percentage
-//! (`12%`) in the draft must be a supplied fact or the written result of a
-//! calculation that reperforms and whose dollar and percentage inputs are
-//! facts or results of earlier calculations; a running total in a chain counts
-//! as a result. A result written without `$` is dollars when its expression
-//! leaves no doubt: dollars plus or minus dollars, or dollars times or divided
-//! by a plain number or percentage; dollars divided by dollars is a ratio.
-//! Anything else asks for REVIEW, and so does any amount-like text the gate
-//! cannot read whole, such as `$1.2 million`, `$5k`, `$ 1,200`, `$1 200`,
-//! `.5%` or `10 %`; it is never matched by a readable prefix. This check
-//! never blocks. Values compare exactly by magnitude: a sign, `$`, commas and
-//! trailing zeros do not matter, a percentage matches only a percentage, and
-//! a rounded mention of a fact does not match it. Plain numbers such as `11`
-//! or `12` months are not amounts and are not checked, so a calculation from
-//! plain numbers alone, such as `30 × 40 = $1,200`, supports its result.
-//! Other currencies' symbols are not read. The check flags amounts it cannot
-//! trace; an amount it traces is not thereby correct. For each amount equal
-//! to a supplied fact, a note names that fact: a match in value, not evidence
-//! that the figure came from it. An amount equal to 2 or more facts is noted
-//! as ambiguous with every name, and the gate does not pick one.
-//!
-//! With `--authorities FILE`, each authority the draft cites in one of 2
-//! forms must be in the file's closed list: a section of an Act named in
-//! full, `s 8-1 of the Income Tax Assessment Act 1997` (`section`, `sec`,
-//! `s.` or `§` may replace `s`, and `s8-1` needs no space), or one
-//! subsection, paragraph or subparagraph of it with its bracketed part
-//! (`subsection 8-1(1)`, `subs`, `sub-s`, `subsec`, `sub-sec`,
-//! `paragraph 8-1(1)(a)`, `para`, `subparagraph`, `subpara`), and a
-//! ruling id in one of the series `SERIES` lists, such as `TR 2006/10`,
-//! `LCR 2026/D1` or `TPB(GS) 55/2026`. A composite citation such as
-//! `paragraph (a) of subsection 9-5(1) of the ...` is read as the numbered
-//! provision that ends it.
-//! A citation may wrap across lines. A citation is listed when the list holds
-//! it or a provision containing it, whitespace and line breaks aside: `s 8-1`
-//! lists `subsection 8-1(1)` and `s 8-1(1)` lists `paragraph 8-1(1)(a)`, but
-//! `s 8-1(1)` lists neither `s 8-1` nor `s 8-1(2)`, and the withdrawal
-//! `TR 2010/3W` is not `TR 2010/3`. A citation not in the
-//! list asks for REVIEW, and so does section-like or ruling-like text the gate
-//! cannot read whole, such as `s 8-1 ITAA 1997`, `ss 30-35 and 30-40`,
-//! `subsections 8-1(1) and (2)`, sibling parts after the Act such as
-//! `, (2) and (3)`, a part named without its section, such as
-//! `subsection (2)`, or `TR 2024`. A part named without its section asks for
-//! REVIEW even in discussion after a full citation, as in
-//! `subsection (1) allows`: the gate cannot tell which section it belongs to.
-//! A
-//! possessive such as `the client's 2 trusts` is not a section. Divisions,
-//! Parts, Schedules, cases, bare Act names and other series are not read, so
-//! a PASS does not show that every authority the draft cites was checked.
-//! This check never blocks, and a listed authority is not thereby current or
-//! correctly applied.
-//!
-//! With `--source FILE`, repeated for each source, each quoted span in the
-//! draft must appear verbatim in a supplied source. A span is text of 2 or
-//! more words in double quotes or single quotes, straight or curly, or a
-//! Markdown blockquote; a single quoted word is a term, not a quotation, and
-//! is not read. Punctuation ending a span is tried without it. A span that
-//! matches only after whitespace or typography is normalised, a span not
-//! found and a quotation whose end cannot be found each ask for REVIEW, and
-//! so does a quotation shortened with an ellipsis, because the gate looks for
-//! it whole. This check never blocks. A span found is text membership only: it
-//! does not show that the source applies or supports the claim.
+//! The `--facts`, `--authorities` and `--source` checks only ask for REVIEW,
+//! never block. README.md specifies them under 'Gate each high-impact
+//! draft'; the parsers below document their edge cases.
 
 use std::sync::LazyLock;
 

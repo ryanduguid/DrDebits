@@ -1,5 +1,5 @@
 # Copyright 2026 Ryan Duguid
-# SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+# SPDX-License-Identifier: Apache-2.0
 
 """Skip a workflow's jobs on documentation-only pull requests, and check the gate.
 

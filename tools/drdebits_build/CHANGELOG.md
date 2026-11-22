@@ -1,3 +1,7 @@
+# Unreleased
+
+- Relicensed Ryan Duguid's original work under Apache-2.0. Earlier releases keep their original terms.
+
 # drdebits_build changes
 
 ## 1.0.0 (unreleased)

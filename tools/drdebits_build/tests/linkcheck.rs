@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! URL collection, outcome classification and the destination guard, tested
 //! offline against a scripted network (ported from test_linkcheck.py).

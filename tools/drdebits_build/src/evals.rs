@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! Evaluation records for the behaviour tests.
 //!
@@ -186,6 +186,86 @@ pub fn build_cases(s: &Sources) -> String {
         ("cases".into(), Json::Array(cases)),
     ]);
     pyjson::dumps(&payload, false) + "\n"
+}
+
+/// The behaviour cases as an Inspect dataset: JSON Lines of samples already
+/// in Inspect's `Sample` form, so `json_dataset(path)` reads them with no
+/// field mapping. `input` is the case's frozen prompt, after its system
+/// instruction when it has one, or else its scenario, which the evaluation
+/// protocol says to turn into a direct request first; `metadata.input`
+/// says which. `target` holds the rubric a person judges against. Each
+/// sample carries the guide version, both digests and the canary, so a log
+/// names the cases it ran. Returns the lines and the number of samples
+/// whose input is a frozen prompt.
+pub fn build_inspect(s: &Sources) -> (String, usize) {
+    let mut frozen = 0;
+    let digests = builder::build_digests(s);
+    let lines: Vec<String> = s
+        .behaviour
+        .iter()
+        .map(|r| {
+            let text = |f: &str| Json::str_obj(r.get(f));
+            let message = |role: &str, content: &str| {
+                Json::Object(vec![
+                    ("role".into(), Json::str_obj(role)),
+                    ("content".into(), Json::str_obj(content)),
+                ])
+            };
+            let (input, source) = match (&r.prompt, &r.system_instruction) {
+                (Some(prompt), Some(system)) => (
+                    Json::Array(vec![message("system", system), message("user", prompt)]),
+                    "prompt",
+                ),
+                (Some(prompt), None) => (Json::str_obj(prompt), "prompt"),
+                (None, _) => (text("scenario"), "scenario"),
+            };
+            frozen += usize::from(source == "prompt");
+            let target = ["expected_status", "required_behaviour", "side_effect_check"]
+                .map(|f| format!("{f}: {}", r.get(f)))
+                .join("\n");
+            let mut metadata: Vec<(String, Json)> = [
+                "scenario",
+                "expected_status",
+                "required_behaviour",
+                "side_effect_check",
+            ]
+            .iter()
+            .map(|f| (f.to_string(), text(f)))
+            .collect();
+            if let Some(labels) = r.prohibited_anywhere.as_ref().filter(|l| !l.is_empty()) {
+                metadata.push((
+                    "prohibited_anywhere".into(),
+                    Json::Array(labels.iter().map(|l| Json::str_obj(l)).collect()),
+                ));
+            }
+            metadata.push(("input".into(), Json::str_obj(source)));
+            metadata.push((
+                "guide_version".into(),
+                Json::str_obj(s.meta("guide_version")),
+            ));
+            metadata.extend(
+                digests
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), Json::str_obj(v))),
+            );
+            metadata.push(("benchmark_canary".into(), Json::str_obj(BENCHMARK_CANARY)));
+            let sample = Json::Object(vec![
+                ("id".into(), text("id")),
+                ("input".into(), input),
+                ("target".into(), Json::str_obj(&target)),
+                ("metadata".into(), Json::Object(metadata)),
+            ]);
+            // `dumps` indents; JSON Lines needs one line a sample. A string
+            // holds no raw line break, as `dumps` escapes it, so each break
+            // and the indent after it are layout and can go.
+            pyjson::dumps(&sample, false)
+                .lines()
+                .map(str::trim_start)
+                .chain(["\n"])
+                .collect::<String>()
+        })
+        .collect();
+    (lines.concat(), frozen)
 }
 
 /// A validated record: its keys in file order, so a run reads as a dict.

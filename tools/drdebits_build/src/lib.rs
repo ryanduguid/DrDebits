@@ -1,5 +1,5 @@
 // Copyright 2026 Ryan Duguid
-// SPDX-License-Identifier: LicenseRef-Duguid-Public-Attribution-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 //! drdebits_build: build, verify and evaluate the DrDebits guide.
 //!
@@ -172,6 +172,13 @@ enum Command {
     Gate(gate::Args),
     /// Reproduce the benchmark's keys, or mark a file of answers.
     Bench(bench::Args),
+    /// Write the behaviour cases as an Inspect dataset in JSON Lines, for a
+    /// run outside this repository. Nothing calls a model.
+    InspectExport {
+        /// The file to write; an existing file is replaced.
+        #[arg(long)]
+        out: String,
+    },
 }
 
 /// The root a command works in: `--root`, or the DrDebits tree above the current directory.
@@ -256,6 +263,31 @@ fn run_digests(root: &PyPath) -> u8 {
     }
 }
 
+fn run_inspect_export(root: Option<&str>, out: &str) -> u8 {
+    let result = (|| -> Result<String, Fail> {
+        let s = builder::load_sources(&root_for(root)?)?;
+        let (lines, frozen) = evals::build_inspect(&s);
+        let path = PyPath::new(out);
+        std::fs::write(path.fs(), lines.as_bytes())
+            .map_err(|e| Fail::Os(py::oserror_str(&e, &path.display(), py::OsStyle::Errno)))?;
+        Ok(format!(
+            "inspect-export: wrote {} samples to {out}: {frozen} with a frozen prompt, {} with only a scenario",
+            s.behaviour.len(),
+            s.behaviour.len() - frozen
+        ))
+    })();
+    match result {
+        Ok(line) => {
+            outln!("{line}");
+            EXIT_OK
+        }
+        Err(e) => {
+            errln!("inspect-export: {e}");
+            EXIT_COULD_NOT_RUN
+        }
+    }
+}
+
 fn run_verify(root: &PyPath) -> u8 {
     match verify::run_verify(root, py::Date::today()) {
         Ok(failures) => {
@@ -317,6 +349,7 @@ fn dispatch(cli: Cli) -> u8 {
         Command::Quote(args) => quotecheck::main(args),
         Command::Gate(args) => gate::main(cli.root.as_deref(), args),
         Command::Bench(args) => bench::main(cli.root.as_deref(), args),
+        Command::InspectExport { out } => run_inspect_export(cli.root.as_deref(), &out),
     }
 }
 
