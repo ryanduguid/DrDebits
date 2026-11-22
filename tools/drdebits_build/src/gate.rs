@@ -245,6 +245,21 @@ static NOT_AN_AMOUNT: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
+/// A provision of an Act at the end of the text: `s 104-10`, `ss 8-1`,
+/// `s. 6D(4)`, `§ 8-1`, `Sec 109RB`, `subsection 9-5(1)` and `para 45`. This
+/// is not the authorities check. It is wider in one way: a paragraph needs
+/// no bracketed part. Otherwise it is narrower: `s` and `ss` are lower
+/// case, the longer words take a capital first letter at most, and a number
+/// has 4 digits at most and no comma, so `S 1,000` and `SEC 30` stay
+/// amounts.
+static PROVISION_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let word = r"(?:ss?|[Ss]ub-ss?|(?:[Ss]ub-?)?(?:[Ss]ecs?|[Ss]ections?|[Pp]ara(?:graph)?s?))";
+    let number = r"\d{1,4}[A-Z]{0,3}(?:-(?:\d{1,4}[A-Z]{0,3}|[A-Z]{1,2}))?";
+    regex::Regex::new(&format!(
+        r"(?:§§? *|\b{word}(?:\. *| +)){number}(?: *{PART})*$"
+    ))
+    .expect("pattern")
+});
 /// A date written with a month, as in `1 July`, `1st Jul 2026` and
 /// `June 2026`.
 static PROSE_DATE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
@@ -863,9 +878,16 @@ fn period_continues_operand(text: &str, period: regex::Match<'_>) -> bool {
         && period_at_end(before_operators).is_none()
 }
 
+/// Whether an amount stands before a minus that a period label may also
+/// stand before. The label is not the amount, as in `FY2025-(200 + 50)`,
+/// but one earlier in its clause is, as in `$1,000 in 2025-(200 + 50)`.
 fn ends_in_nonperiod_operand(text: &str) -> bool {
-    ends_in_operand(text)
-        && period_at_end(text).is_none_or(|period| period_continues_operand(text, period))
+    match period_at_end(text) {
+        Some(period) if !period_continues_operand(text, period) => {
+            amount_in_clause(&text[..period.start()], true)
+        }
+        _ => ends_in_operand(text),
+    }
 }
 
 /// Whether the text ends in what may be an amount, alone or with words
@@ -924,8 +946,27 @@ fn amount_in_clause(text: &str, mut further_back: bool) -> bool {
     }
 }
 
-/// Where an explicit reference that ends the text starts.
+/// Where a provision that ends the text starts. A possessive is not a
+/// section, as in `client's 2`.
+fn provision_at_end(text: &str) -> Option<usize> {
+    PROVISION_END
+        .find(text)
+        .map(|provision| provision.start())
+        .filter(|&start| !text[..start].ends_with(['\'', '’']))
+}
+
+/// Where an explicit reference or a provision that ends the text starts.
 fn reference_at_end(text: &str) -> Option<usize> {
+    let provision = provision_at_end(text).or_else(|| {
+        // A provision that closes a bracket, as in `(see s 8-1)`.
+        let inner = text.strip_suffix(')')?;
+        let start = provision_at_end(inner)?;
+        let open = inner[..start].rfind('(')?;
+        (!inner[open..start].contains(')')).then_some(start)
+    });
+    if provision.is_some() {
+        return provision;
+    }
     let reference = ITEM_REFERENCE_END.captures(text)?;
     let start = reference.get(0).map(|whole| whole.start());
     let Some(open) = reference.name("open") else {
