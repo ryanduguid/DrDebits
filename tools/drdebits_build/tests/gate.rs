@@ -1497,15 +1497,16 @@ fn a_spaced_date_range_can_precede_independent_arithmetic() {
 
 #[test]
 fn a_hyphen_joined_to_both_an_amount_and_a_period_is_not_a_spaced_minus() {
-    for line in [
-        "Ref 1000-Date:(30/6/2026), $5 + $2 = $7",
-        "Gross $1000-Date:(30/6/2026) -5 + 2 = -3",
-    ] {
-        let found = calculations(line);
-        assert_eq!(found.len(), 1, "{line}");
-        assert!(found[0].matches, "{line}: {}", found[0].computed);
-        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
-    }
+    let line = "Ref 1000-Date:(30/6/2026), $5 + $2 = $7";
+    let found = calculations(line);
+    assert_eq!(found.len(), 1, "{line}");
+    assert!(found[0].matches, "{line}: {}", found[0].computed);
+    assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+    // The hyphen is still not a minus, and the label is still not an
+    // operand. A signed calculation after them blocks all the same when an
+    // amount stands in the clause, and passes when none does.
+    assert_unread_tail("Gross $1000-Date:(30/6/2026) -5 + 2 = -3", "-5 + 2 = -3");
+    assert_reads_whole("Gross-Date:(30/6/2026) -5 + 2 = -3", "-5 + 2 = -3");
 }
 
 fn assert_unread_tail(line: &str, tail: &str) {
@@ -1521,6 +1522,144 @@ fn assert_unread_tail(line: &str, tail: &str) {
         found[0].computed
     );
     assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+}
+
+fn assert_reads_whole(line: &str, text: &str) {
+    let found = calculations(line);
+    assert_eq!(found.len(), 1, "{line}");
+    assert_eq!(found[0].text, text, "{line}");
+    assert!(found[0].matches, "{line}: {}", found[0].computed);
+    assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+}
+
+#[test]
+fn any_word_with_a_digit_before_a_one_sided_minus_is_an_amount() {
+    // The tail reperforms alone, so only the amount before the minus shows
+    // that the sum is longer. The gate does not list the ways an amount can
+    // be written: a last word that holds a digit is one unless it is a form
+    // the next test names, so a form nobody thought of blocks.
+    for amount in [
+        "1,000)",
+        "(1,000)%",
+        "\"1,000\"",
+        "5M",
+        "40B",
+        "Net-1000",
+        "Net−1000",
+        "Net,1000",
+        "pre-2020",
+        "104-10",
+        "x4",
+        "1000 x4",
+        "Net-1000x-4",
+        "A1x2",
+        "1234)",
+        "Net 10)",
+        "Net: 1)",
+        "(see 3)",
+        "$12:30",
+        "3-year%",
+        "１０００",
+        "Net ١٠٠٠",
+    ] {
+        assert_unread_tail(&format!("{amount}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn a_word_with_a_digit_that_is_not_an_amount_does_not_supply_an_operand() {
+    // A code, a code in capitals joined by a hyphen or comma, a clock time,
+    // an ordinal, a compound, a provision and a clause that punctuation has
+    // closed.
+    for word in [
+        "Co-op A1",
+        "Release v1.2",
+        "Invoice #123",
+        "Invoice INV#12",
+        "Invoice INV-1042",
+        "Batch A1,234",
+        "FY2025-26",
+        "At 12:30",
+        "Cutoff Time:09:05",
+        "The 2nd",
+        "3-year",
+        "Div 7A",
+        "Div (7A)",
+        "s 109RB",
+        "Total 1000.",
+        "Total 1000,",
+        "Gross: 1,000;",
+        "100)",
+    ] {
+        assert_reads_whole(&format!("{word} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn words_that_describe_an_amount_do_not_hide_it_from_a_one_sided_minus() {
+    // A spaced minus blocks whatever stands between it and an amount. So
+    // does a one-sided minus, up to the punctuation that closes a clause.
+    for prefix in [
+        "Gross amount $1,000 (GST exclusive)",
+        "$500 wages",
+        "Paid 3 instalments",
+        "$1,000 per Item 3",
+        "$1,000 on INV-1042",
+        "On 30/6/2026 $500 net",
+        "Gross amount $1,000 as at 30/6/2026 net",
+        "Gross amount $1,000 as at 30/6/2026",
+        "$1,000 at 2026-06-30 net",
+        "Paid $50 in 2025",
+        "Paid $50 on 1 July",
+        "Paid $50 on 1st Jul 2026 net",
+        "$5 from 1/7/2025 - 30/6/2026",
+    ] {
+        assert_unread_tail(&format!("{prefix}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{prefix} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+    assert_unread_tail("$1,000 total -200 adjustment 5 + 2 = 7", "5 + 2 = 7");
+    // No amount stands in the clause: punctuation has closed it, or the
+    // number is a date, a year, a list marker, a reference or a code.
+    for prefix in [
+        "Opening balance $500, movement",
+        "Rate 5% p.a.",
+        "On 30/6/2026 net",
+        "In 2025 total",
+        "1) total",
+        "Step 2 result",
+        "Invoice INV-1042 total",
+        "On 1 July",
+        "On 30 June 2026 net",
+        "On 2026-06-30 net",
+        "1/7/2025 - 30/6/2026",
+    ] {
+        assert_reads_whole(&format!("{prefix} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn a_minus_joined_to_a_number_after_an_amount_is_an_operator_mid_sentence() {
+    for line in [
+        "$1,000 -200 adjustment 5 + 2 = 7",
+        "Net 1,000 -$200 less 5 + 2 = 7",
+        "(1,000) −200, then 5 + 2 = 7",
+        "20% -AUD200 fee 5 + 2 = 7",
+        "Gross:1000 -.5 fee 5 + 2 = 7",
+        "1,000) -(200) fee 5 + 2 = 7",
+        "(1,000)%- adjustment 5 + 2 = 7",
+    ] {
+        assert_unread_tail(line, "5 + 2 = 7");
+    }
+    // A dash joined to a word that holds no digit is prose, and so is one
+    // after a word that is not an amount.
+    for line in [
+        "Paid $50 -see note; 5 + 2 = 7",
+        "Paid $50 −see note 3; 5 + 2 = 7",
+        "Div 7A -200 adjustment 5 + 2 = 7",
+    ] {
+        assert_reads_whole(line, "5 + 2 = 7");
+    }
 }
 
 #[test]
