@@ -144,11 +144,18 @@ jobs:
 
   # The upload runs apart from the tests so the OIDC token is never available
   # while test code runs. It is exempt from verify-gates: main requires
-  # Codecov's own project check, which codecov.yml holds at 100%.
+  # Codecov's own project check, which codecov.yml holds at 100%. A
+  # documentation-only pull request runs no tests, so it sends an empty upload
+  # instead, which passes Codecov's checks without a report; otherwise the
+  # required check would never arrive.
   codecov:
     name: upload coverage to Codecov
-    needs: verify
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: [changes, verify]
+    if: >-
+      !cancelled() && needs.changes.result == 'success'
+      && (needs.verify.result == 'success'
+      || (needs.verify.result == 'skipped' && needs.changes.outputs.docs-only == 'true'))
+      && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -159,18 +166,28 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.verify.result == 'success'
         with:
           pattern: coverage-codecov-*
           merge-multiple: true
       - name: Check both coverage reports are present
+        if: needs.verify.result == 'success'
         run: |
           test -s coverage-Linux.lcov
           test -s coverage-Windows.lcov
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        if: needs.verify.result == 'success'
         with:
           use_oidc: true
           files: coverage-Linux.lcov,coverage-Windows.lcov
           disable_search: true
+          fail_ci_if_error: true
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        if: needs.verify.result == 'skipped'
+        with:
+          use_oidc: true
+          run_command: empty-upload
+          force: true
           fail_ci_if_error: true
 
   fuzzing:
