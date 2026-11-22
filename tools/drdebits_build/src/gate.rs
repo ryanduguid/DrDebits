@@ -223,51 +223,41 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
-/// A minus followed by whitespace or the start of a group the scanner
-/// might leave before a readable calculation.
-static DANGLING_MINUS: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(&format!(r"[-−](?: +|{OPEN_BRACKET})")).expect("pattern"));
-/// A complete amount or expression that could supply an operand. Explicit
-/// references and periods can resemble arithmetic and are checked separately.
-static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
-    let plain = format!(r"[-−]?(?:{NUM})");
-    let digits = r"\d[\d,]*(?:\.\d+)?";
-    let marked = format!(r"(?:{CURRENCY_PREFIX}{digits}%?|[-−]?{digits}%)");
-    // Whitespace can separate successive brackets in a nested operand.
-    let open = format!(r"(?:{OPEN_BRACKET} *)");
-    let close = format!(r"(?: *{CLOSE_BRACKET})");
-    let grouped = format!(r"{open}* *{plain}(?:{close}+| *)");
-    let grouped_marked = format!(r"{open}* *{marked}(?:{close}+| *)");
-    // The marker can be on any term of a quotient, product or subtraction.
-    let division = r" */ *";
-    let product = r" *[xX] *";
-    let subtraction = r" *[-−] *";
-    let operator = format!(r"(?:{division}|{product}|{subtraction})");
-    let term = format!(r"(?:{operator}{grouped})");
-    let operations = format!(
-        r"(?:{division}{grouped}{term}+|(?:{subtraction}{grouped})+{division}{grouped}{term}*|{term}*{product}{grouped}{term}*)"
-    );
-    let chain = format!(r"{grouped}{operations}");
-    let marked_expression = format!(
-        r"(?:{marked}|{open}+{marked}{close}+|{grouped_marked}{term}+|{grouped}{term}*{operator}{grouped_marked}{term}*)"
-    );
-    // A colon can join a label to an amount. A digit-to-digit colon can
-    // instead be part of a clock time or ratio. A marked or grouped amount
-    // can follow a label directly, as in "Net-$1" or "Net(100)". The
-    // caller excludes explicit references. A list marker is not grouped.
-    let boundary = r"^|[ (\[;=+×*÷|]";
-    let label_colon = r"(?:^|[^\d]|[\p{L}_]\d+):";
-    let attached = r"^|[^\d.,$]";
-    // A label colon or brackets identify a potential operand even when it
-    // consists of a single compact division or subtraction.
-    let pair = format!(r"(?:{division}|{subtraction}){grouped}");
-    let quotient = format!(r"{grouped}{division}{grouped}");
-    let bracketed = format!(r"{open}+{grouped}{term}*{close}+");
+/// A list marker that is the whole of the text before a minus, as in `1)`.
+static LIST_MARKER: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^\d{1,3}\)$").expect("pattern"));
+/// A word that holds a digit and is not an amount: a code, as in `A1`,
+/// `v1.2`, `INV#12` and `#123`; a clock time or ratio, as in `12:30` and
+/// `Time:09:05`; an ordinal, as in `2nd`; a compound, as in `3-year`; or a
+/// provision, as in `7A`. A hyphen or comma joins the parts of a code in
+/// capitals, as in `AB-123`, and otherwise joins a label to an amount, as
+/// in `Net-1000`. So does a colon after a label, as in `Gross2:1000`. A
+/// magnitude letter belongs to an amount, as in `5M`.
+static NOT_AN_AMOUNT: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let code = r"(?:#[\p{L}\d_]+|[\p{L}_][\p{L}\d_]*)(?:[.#][\p{L}\d_]+)*";
+    let capitals = r"[\p{Lu}_][\p{Lu}\d_]*(?:[,.#−-][\p{L}\d_]+)*";
+    let clock = r"(?:[^$%]*[^\p{L}\d_$%])?\d+:\d+";
+    let ordinal = r"\d+(?:st|nd|rd|th)";
+    let compound = r"\d+[−-]\p{L}[\p{L}−-]*";
+    let provision = r"\d{1,3}[AC-JLN-SU-Z][A-Z]?";
     regex::Regex::new(&format!(
-        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{label_colon}){grouped}{pair}|(?:{boundary}){quotient}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{bracketed}|{marked_expression}))$"
+        "^(?:{code}|{capitals}|{clock}|{ordinal}|{compound}|{provision})$"
     ))
     .expect("pattern")
 });
+/// A date written with a month, as in `1 July`, `1st Jul 2026` and
+/// `June 2026`.
+static PROSE_DATE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let month = r"(?i:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
+    regex::Regex::new(&format!(
+        r"(?:^| )(?:\d{{1,2}}(?:st|nd|rd|th)? +{month}(?: +\d{{4}})?|{month} +\d{{4}})$"
+    ))
+    .expect("pattern")
+});
+/// A product, as in `100x4` or the `x4` that ends `100 x4`, which is not a
+/// code.
+static PRODUCT: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"(?:^|\d)[xX][−-]?\d").expect("pattern"));
 /// Explicit ordinal labels, such as "Item (1)", "Ref. 1" or "Ref AB:123".
 /// A marked or thousands-grouped amount after a label can still be an operand.
 static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
@@ -724,10 +714,21 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
     // Prose can interrupt a subtraction before the scanner reaches the
     // readable tail. Check the original prefix even if it includes dates.
     let since_equals = before.rsplit_once('=').map_or(before, |(_, text)| text);
-    if DANGLING_MINUS.find_iter(since_equals).any(|operator| {
-        let amount = &since_equals[..operator.start()];
-        let starts_group = operator.as_str().ends_with(['(', '[', '{']);
-        (starts_group || !amount.ends_with(' ')) && ends_in_nonperiod_operand(amount)
+    // A minus that opens a group, has a space after it only, or has a
+    // space before it only and joins a word that holds a digit, is an
+    // operator when an amount stands before it. One joined to a word
+    // without a digit, as in `-see note`, is a dash. The minus that ends
+    // the prefix is checked below, with the calculation it meets.
+    if since_equals.match_indices(['-', '−']).any(|(at, minus)| {
+        let amount = &since_equals[..at];
+        let after = &since_equals[at + minus.len()..];
+        let joined = after.split(' ').next().unwrap_or_default();
+        let operator = if amount.ends_with(' ') {
+            joined.contains(char::is_numeric)
+        } else {
+            after.starts_with(' ')
+        };
+        (operator || after.starts_with(['(', '[', '{'])) && ends_in_nonperiod_operand(amount)
     }) {
         return true;
     }
@@ -743,7 +744,10 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
     let signed_left = separated && left.trim_start().starts_with(['-', '−']);
     if let Some(period) = period_at_end(prefix) {
         let before_period = &prefix[..period.start()];
-        if signed_left && period_continues_operand(prefix, period) && ends_in_operand(prefix) {
+        if signed_left
+            && (amount_in_clause(before_period, true)
+                || period_continues_operand(prefix, period) && ends_in_operand(prefix))
+        {
             return true;
         }
         let operator_prefix = before_period.trim_end_matches([' ', '(', '[', '{', ':', ',']);
@@ -864,17 +868,68 @@ fn ends_in_nonperiod_operand(text: &str) -> bool {
         && period_at_end(text).is_none_or(|period| period_continues_operand(text, period))
 }
 
+/// Whether the text ends in what may be an amount, alone or with words
+/// after it that describe it, as in `$1,000 (GST exclusive)`.
 fn ends_in_operand(text: &str) -> bool {
-    let text = text.trim_end_matches(' ');
-    OPERAND_END.is_match(text) && !ends_in_reference(text)
+    amount_in_clause(text, false)
 }
 
-fn ends_in_reference(text: &str) -> bool {
-    let Some(reference) = ITEM_REFERENCE_END.captures(text) else {
-        return false;
-    };
+/// Whether an amount stands in the clause the text ends in. A word that
+/// holds a digit is an amount unless it is known not to be: a code, a clock
+/// time, an ordinal, a compound or a provision. Those, an explicit
+/// reference, a date, a year and a word without a digit are read past. A
+/// list marker or a clause that punctuation has closed ends the search. A
+/// form this does not know therefore blocks.
+///
+/// The callers check a period that ends the text, and a year that ends it
+/// is an amount to them. `further_back` says the text is what stood before
+/// such a period, so a date or year in it is read past from the start.
+fn amount_in_clause(text: &str, mut further_back: bool) -> bool {
+    let mut text = text.trim_end_matches(' ');
+    loop {
+        if further_back {
+            // A dangling minus or opening bracket belongs to what followed.
+            text = text.trim_end_matches([' ', '(', '[', '{', '-', '−']);
+        }
+        if text.ends_with([',', ';', '.', ':']) || LIST_MARKER.is_match(text) {
+            return false;
+        }
+        let not_an_amount = reference_at_end(text)
+            .or_else(|| {
+                PROSE_DATE_END
+                    .find(text)
+                    .filter(|date| further_back || !date.as_str().ends_with(char::is_numeric))
+                    .map(|date| date.start())
+            })
+            .or_else(|| {
+                period_at_end(text)
+                    .filter(|&period| further_back && !period_continues_operand(text, period))
+                    .map(|period| period.start())
+            });
+        let bare = text.trim_end_matches([' ', ')', ']', '}']);
+        let word_start = bare.rfind(' ').map_or(0, |at| at + 1);
+        let word = bare[word_start..].trim_start_matches(['(', '[', '{']);
+        if not_an_amount.is_none()
+            && word.contains(char::is_numeric)
+            && (!NOT_AN_AMOUNT.is_match(word) || PRODUCT.is_match(word))
+        {
+            return true;
+        }
+        let start = not_an_amount.unwrap_or(word_start);
+        if start == 0 {
+            return false;
+        }
+        text = &text[..start];
+        further_back = true;
+    }
+}
+
+/// Where an explicit reference that ends the text starts.
+fn reference_at_end(text: &str) -> Option<usize> {
+    let reference = ITEM_REFERENCE_END.captures(text)?;
+    let start = reference.get(0).map(|whole| whole.start());
     let Some(open) = reference.name("open") else {
-        return true;
+        return start;
     };
     let expected_closings = open
         .as_str()
@@ -891,6 +946,8 @@ fn ends_in_reference(text: &str) -> bool {
         .chars()
         .filter(|&c| c != ' ')
         .eq(expected_closings)
+        .then_some(start)
+        .flatten()
 }
 
 /// The calculations `CLAIM` finds on one line, reperformed into `out`, and
