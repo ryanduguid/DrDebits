@@ -1497,15 +1497,16 @@ fn a_spaced_date_range_can_precede_independent_arithmetic() {
 
 #[test]
 fn a_hyphen_joined_to_both_an_amount_and_a_period_is_not_a_spaced_minus() {
-    for line in [
-        "Ref 1000-Date:(30/6/2026), $5 + $2 = $7",
-        "Gross $1000-Date:(30/6/2026) -5 + 2 = -3",
-    ] {
-        let found = calculations(line);
-        assert_eq!(found.len(), 1, "{line}");
-        assert!(found[0].matches, "{line}: {}", found[0].computed);
-        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
-    }
+    let line = "Ref 1000-Date:(30/6/2026), $5 + $2 = $7";
+    let found = calculations(line);
+    assert_eq!(found.len(), 1, "{line}");
+    assert!(found[0].matches, "{line}: {}", found[0].computed);
+    assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+    // The hyphen is still not a minus, and the label is still not an
+    // operand. A signed calculation after them blocks all the same when an
+    // amount stands in the clause, and passes when none does.
+    assert_unread_tail("Gross $1000-Date:(30/6/2026) -5 + 2 = -3", "-5 + 2 = -3");
+    assert_reads_whole("Gross-Date:(30/6/2026) -5 + 2 = -3", "-5 + 2 = -3");
 }
 
 fn assert_unread_tail(line: &str, tail: &str) {
@@ -1606,6 +1607,13 @@ fn words_that_describe_an_amount_do_not_hide_it_from_a_one_sided_minus() {
         "$1,000 per Item 3",
         "$1,000 on INV-1042",
         "On 30/6/2026 $500 net",
+        "Gross amount $1,000 as at 30/6/2026 net",
+        "Gross amount $1,000 as at 30/6/2026",
+        "$1,000 at 2026-06-30 net",
+        "Paid $50 in 2025",
+        "Paid $50 on 1 July",
+        "Paid $50 on 1st Jul 2026 net",
+        "$5 from 1/7/2025 - 30/6/2026",
     ] {
         assert_unread_tail(&format!("{prefix}- 5 + 2 = 7"), "5 + 2 = 7");
         assert_unread_tail(&format!("{prefix} -5 + 2 = -3"), "-5 + 2 = -3");
@@ -1621,6 +1629,10 @@ fn words_that_describe_an_amount_do_not_hide_it_from_a_one_sided_minus() {
         "1) total",
         "Step 2 result",
         "Invoice INV-1042 total",
+        "On 1 July",
+        "On 30 June 2026 net",
+        "On 2026-06-30 net",
+        "1/7/2025 - 30/6/2026",
     ] {
         assert_reads_whole(&format!("{prefix} -5 + 2 = -3"), "-5 + 2 = -3");
     }

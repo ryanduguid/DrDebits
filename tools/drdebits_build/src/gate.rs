@@ -245,6 +245,15 @@ static NOT_AN_AMOUNT: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
+/// A date written with a month, as in `1 July`, `1st Jul 2026` and
+/// `June 2026`.
+static PROSE_DATE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let month = r"(?i:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
+    regex::Regex::new(&format!(
+        r"(?:^| )(?:\d{{1,2}}(?:st|nd|rd|th)? +{month}(?: +\d{{4}})?|{month} +\d{{4}})$"
+    ))
+    .expect("pattern")
+});
 /// A product, as in `100x4` or the `x4` that ends `100 x4`, which is not a
 /// code.
 static PRODUCT: LazyLock<regex::Regex> =
@@ -735,7 +744,10 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
     let signed_left = separated && left.trim_start().starts_with(['-', '−']);
     if let Some(period) = period_at_end(prefix) {
         let before_period = &prefix[..period.start()];
-        if signed_left && period_continues_operand(prefix, period) && ends_in_operand(prefix) {
+        if signed_left
+            && (amount_in_clause(before_period, true)
+                || period_continues_operand(prefix, period) && ends_in_operand(prefix))
+        {
             return true;
         }
         let operator_prefix = before_period.trim_end_matches([' ', '(', '[', '{', ':', ',']);
@@ -857,48 +869,67 @@ fn ends_in_nonperiod_operand(text: &str) -> bool {
 }
 
 /// Whether the text ends in what may be an amount, alone or with words
-/// after it that describe it, as in `$1,000 (GST exclusive)`. A word that
-/// holds a digit is an amount unless it is known not to be: a code, a clock
-/// time, an ordinal, a compound or a provision. Those, an explicit reference
-/// and a word without a digit are read past. A list marker or a clause that
-/// punctuation has closed ends the search. A form this does not know
-/// therefore blocks.
+/// after it that describe it, as in `$1,000 (GST exclusive)`.
 fn ends_in_operand(text: &str) -> bool {
-    let whole = text.trim_end_matches(' ');
-    let mut text = whole;
+    amount_in_clause(text, false)
+}
+
+/// Whether an amount stands in the clause the text ends in. A word that
+/// holds a digit is an amount unless it is known not to be: a code, a clock
+/// time, an ordinal, a compound or a provision. Those, an explicit
+/// reference, a date, a year and a word without a digit are read past. A
+/// list marker or a clause that punctuation has closed ends the search. A
+/// form this does not know therefore blocks.
+///
+/// The callers check a period that ends the text, and a year that ends it
+/// is an amount to them. `further_back` says the text is what stood before
+/// such a period, so a date or year in it is read past from the start.
+fn amount_in_clause(text: &str, mut further_back: bool) -> bool {
+    let mut text = text.trim_end_matches(' ');
     loop {
+        if further_back {
+            // A dangling minus or opening bracket belongs to what followed.
+            text = text.trim_end_matches([' ', '(', '[', '{', '-', '−']);
+        }
         if text.ends_with([',', ';', '.', ':']) || LIST_MARKER.is_match(text) {
             return false;
         }
-        if ends_in_reference(text) {
-            let reference = ITEM_REFERENCE_END.find(text).expect("a reference");
-            text = text[..reference.start()].trim_end_matches(' ');
-            continue;
-        }
+        let not_an_amount = reference_at_end(text)
+            .or_else(|| {
+                PROSE_DATE_END
+                    .find(text)
+                    .filter(|date| further_back || !date.as_str().ends_with(char::is_numeric))
+                    .map(|date| date.start())
+            })
+            .or_else(|| {
+                period_at_end(text)
+                    .filter(|&period| further_back && !period_continues_operand(text, period))
+                    .map(|period| period.start())
+            });
         let bare = text.trim_end_matches([' ', ')', ']', '}']);
-        let start = bare.rfind(' ').map_or(0, |at| at + 1);
-        let word = bare[start..].trim_start_matches(['(', '[', '{']);
-        if word.contains(char::is_numeric)
+        let word_start = bare.rfind(' ').map_or(0, |at| at + 1);
+        let word = bare[word_start..].trim_start_matches(['(', '[', '{']);
+        if not_an_amount.is_none()
+            && word.contains(char::is_numeric)
             && (!NOT_AN_AMOUNT.is_match(word) || PRODUCT.is_match(word))
         {
-            // The callers check a period that ends the whole text. One found
-            // further back is a date or year unless it continues an operand.
-            return text.len() == whole.len()
-                || period_at_end(text).is_none_or(|period| period_continues_operand(text, period));
+            return true;
         }
+        let start = not_an_amount.unwrap_or(word_start);
         if start == 0 {
             return false;
         }
-        text = bare[..start].trim_end_matches(' ');
+        text = &text[..start];
+        further_back = true;
     }
 }
 
-fn ends_in_reference(text: &str) -> bool {
-    let Some(reference) = ITEM_REFERENCE_END.captures(text) else {
-        return false;
-    };
+/// Where an explicit reference that ends the text starts.
+fn reference_at_end(text: &str) -> Option<usize> {
+    let reference = ITEM_REFERENCE_END.captures(text)?;
+    let start = reference.get(0).map(|whole| whole.start());
     let Some(open) = reference.name("open") else {
-        return true;
+        return start;
     };
     let expected_closings = open
         .as_str()
@@ -915,6 +946,8 @@ fn ends_in_reference(text: &str) -> bool {
         .chars()
         .filter(|&c| c != ' ')
         .eq(expected_closings)
+        .then_some(start)
+        .flatten()
 }
 
 /// The calculations `CLAIM` finds on one line, reperformed into `out`, and

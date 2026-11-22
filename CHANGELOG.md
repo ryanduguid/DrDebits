@@ -35,8 +35,9 @@ release.
   It matched each way of writing an amount and passed the ways it did not
   list. Only a code, clock time, ordinal, compound such as `3-year`, provision
   such as `7A`, list marker, explicit reference or word closed by punctuation
-  is not an amount. Words that describe the amount do not hide it, as in
-  `$1,000 (GST exclusive) -5 + 2 = -3`; punctuation that closes its clause
+  is not an amount. Words or a date after the amount do not hide it, as in
+  `$1,000 (GST exclusive) -5 + 2 = -3` and
+  `$1,000 as at 30/6/2026 -5 + 2 = -3`; punctuation that closes its clause
   does. A minus with a space before it only and a number after it is an
   operator mid sentence too, as in `$1,000 -200 adjustment 5 + 2 = 7`.
 - `sources` reports a pinned compilation as superseded when the Register's current version is an amendment in force that it has not compiled yet, and names the amending title, where it reported the check incomplete. A current record with no compilation and no reason naming what changed is still incomplete.

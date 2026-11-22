@@ -92,8 +92,9 @@ suite replays it on every platform.
   `1,000)- 5 + 2 = 7` and `Net-1000- 5 + 2 = 7`, unless it is a code such as
   `A1` or `INV-1042`, a clock time, an ordinal, a compound such as `3-year`,
   a provision such as `7A`, a list marker, an explicit reference or closed
-  by punctuation. Words that describe the amount do not hide it, as in
-  `$1,000 (GST exclusive) -5 + 2 = -3`, up to the punctuation that closes
+  by punctuation. Words or a date after the amount do not hide it, as in
+  `$1,000 (GST exclusive) -5 + 2 = -3` and
+  `$1,000 as at 30/6/2026 -5 + 2 = -3`, up to the punctuation that closes
   its clause. A minus with a space before it only and a number after it
   is an operator mid sentence too, as in `$1,000 -200 adjustment 5 + 2 = 7`.
   Otherwise a minus, `x` or `/` counts as an
