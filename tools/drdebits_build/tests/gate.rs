@@ -746,6 +746,16 @@ fn a_calculation_the_gate_cannot_read_whole_blocks() {
         // amount only, before an `=` no read calculation ends.
         ("$1,000 -200 = $900", true),
         ("$1,000- 200 = $900", true),
+        // A one-sided minus can also precede a calculation the gate reads.
+        ("$1,000- 200 + 50 = 250", true),
+        ("$1,000- $200 + $50 = $250", true),
+        ("$1,000 -200 + 50 = -150", true),
+        ("$1,000 -$200 + $50 = -$150", true),
+        ("20%- 5% + 2% = 7%", true),
+        ("20% -5% + 2% = -3%", true),
+        ("$1,000 - 200 + 50 = $850", false),
+        ("In 2026, -200 + 50 = -150", false),
+        ("In 2025-26 $200 + $50 = $250", false),
         ("$12,000/4 = $3,000 per quarter, x4 = $13,000", true),
         ("$1,000 -200 = $800", true),
         ("$3,000 per quarter, x4 = $12,000", true),
@@ -785,6 +795,732 @@ fn a_calculation_the_gate_cannot_read_whole_blocks() {
         })
         .collect();
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+#[test]
+fn one_sided_subtraction_cannot_drop_a_bracketed_amount() {
+    for (line, tail) in [
+        ("(20%)- 5% + 2% = 7%", "5% + 2% = 7%"),
+        ("(20%) -5% + 2% = -3%", "-5% + 2% = -3%"),
+        ("($1,000)- $200 + $50 = $250", "$200 + $50 = $250"),
+        ("($1,000) -$200 + $50 = -$150", "-$200 + $50 = -$150"),
+        ("(-$1,000)– $200 + $50 = $250", "$200 + $50 = $250"),
+        ("$1,000− $200 + $50 = $250", "$200 + $50 = $250"),
+        ("$1,000- [200 + 50 = 250]", "200 + 50 = 250"),
+        ("$1,000- {200 + 50 = 250}", "200 + 50 = 250"),
+        ("$1,000 -[200 + 50 = 250]", "200 + 50 = 250"),
+        ("$1,000 -{200 + 50 = 250}", "200 + 50 = 250"),
+        ("$1,000-[200 + 50 = 250]", "200 + 50 = 250"),
+        ("(( $1,000 ) )- $200 + $50 = $250", "$200 + $50 = $250"),
+        ("(( $1,000 ) ) -$200 + $50 = -$150", "-$200 + $50 = -$150"),
+        ("{{ 20% } }- 5% + 2% = 7%", "5% + 2% = 7%"),
+        ("(100 -4)- 5 + 2 = 7", "5 + 2 = 7"),
+        ("((100 -4) )- 5 + 2 = 7", "5 + 2 = 7"),
+        ("(100 -4-1)- 5 + 2 = 7", "5 + 2 = 7"),
+        ("([ 100 ] -4-1)- 5 + 2 = 7", "5 + 2 = 7"),
+        ("(100/4 -2)- 5 + 2 = 7", "5 + 2 = 7"),
+        ("$100,000x(1/7/2025) -5 + 2 = -3", "-5 + 2 = -3"),
+        ("$100,000x(1/7/2025)- adjustment 5 + 2 = 7", "5 + 2 = 7"),
+        ("$100,000/(1/7/2025)- adjustment 5 + 2 = 7", "5 + 2 = 7"),
+        ("-$1,000- $200 + $50 = $250", "$200 + $50 = $250"),
+        ("-$1,000 -$200 + $50 = -$150", "-$200 + $50 = -$150"),
+    ] {
+        assert_unread_tail(line, tail);
+    }
+    for (open, close) in [('(', ')'), ('[', ']'), ('{', '}')] {
+        for minus in ["-", "- ", " -", " - "] {
+            let line = format!("$1,000{minus}{open}200 + 50 = 250{close}");
+            assert_eq!(with_line(&line).verdict().1, EXIT_BLOCK, "{line}");
+        }
+    }
+    for line in [
+        "Note ( [ 1 } ) -200 + 50 = -150",
+        "( { [ $1,000 ] } )-[200 + 50 = 250]",
+    ] {
+        assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+    }
+    let brackets = [('(', ')'), ('[', ']'), ('{', '}')];
+    for (outer_open, outer_close) in brackets {
+        for (inner_open, inner_close) in brackets {
+            for open_space in ["", " "] {
+                for close_space in ["", " "] {
+                    let line = format!(
+                        "{outer_open}{open_space}{inner_open} $1,000 {inner_close}{close_space}{outer_close}- $200 + $50 = $250"
+                    );
+                    assert_eq!(with_line(&line).verdict().1, EXIT_BLOCK, "{line}");
+                }
+            }
+        }
+    }
+    for line in [
+        "Note 1- [200 + 50 = 250]",
+        "Note 1 -[200 + 50 = 250]",
+        "Note (( 1 ) ) -200 + 50 = -150",
+        "Note ((1)) -200 + 50 = -150",
+        "Item [ [ 12.5 ] ] -200 + 50 = -150",
+        "Ref AB: { [ ( 100/4/2 ) ] } -200 + 50 = -150",
+        "At [ [ 2026-06-30 ] ] -200 + 50 = -150",
+        "Box (1/7/2025) -5 + 2 = -3",
+        "Tax (1/7/2025) -5 + 2 = -3",
+        "Reference: (100-4) -5 + 2 = -3",
+        "Period (( 30/6/2026 ) ) -200 + 50 = -150",
+    ] {
+        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+    }
+}
+
+#[test]
+fn a_date_or_financial_year_can_label_a_signed_calculation() {
+    for (line, equation) in [
+        ("At 30/6/2026 -200 + 50 = -150", "-200 + 50 = -150"),
+        ("At (30/6/2026) -200 + 50 = -150", "-200 + 50 = -150"),
+        ("At 2026-06-30 -200 + 50 = -150", "-200 + 50 = -150"),
+        ("In 2025-26 -5 + 2 = -3", "-5 + 2 = -3"),
+        ("For 2025-26 -5 + 2 = -3", "-5 + 2 = -3"),
+        ("In 2026 -5 + 2 = -3", "-5 + 2 = -3"),
+        ("For 2026 -5 + 2 = -3", "-5 + 2 = -3"),
+        ("At 30/6/2026 (-5 + 2 = -3)", "(-5 + 2 = -3"),
+        ("FY2025-26 (-5 + 2 = -3)", "(-5 + 2 = -3"),
+        ("FY 2026 -5 + 2 = -3", "-5 + 2 = -3"),
+        ("Financial year 2026 -5 + 2 = -3", "-5 + 2 = -3"),
+        ("FY2025-26\t-5% + 2% = -3%", "-5% + 2% = -3%"),
+        ("FY 2025–26 −5% + 2% = −3%", "−5% + 2% = −3%"),
+    ] {
+        let found = calculations(line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert_eq!(found[0].text, equation, "{line}");
+        assert!(found[0].matches, "{line}: {}", found[0].computed);
+    }
+}
+
+#[test]
+fn a_period_cannot_hide_a_one_sided_minus() {
+    for line in ["FY2025-26- 5 + 2 = 7", "2025-99-99- 5 + 2 = 7"] {
+        assert_unread_tail(line, "5 + 2 = 7");
+    }
+    assert_unread_tail("80/30/6/2026 -5 + 2 = -3", "-5 + 2 = -3");
+    let labels = [
+        "30/6/2026",
+        "2026-06-30",
+        "Date:30/6/2026",
+        "Date: 2026-06-30",
+        "Date:(30/6/2026)",
+        "Date:[30/6/2026]",
+        "Date: ( [2026-06-30] )",
+        "FY2025-26",
+        "FY 2026",
+        "Financial year 2026",
+        "In 2025-26",
+        "For 2025-26",
+        "In 2026",
+        "For 2026",
+        "(30/6/2026)",
+        "[FY2025-26]",
+    ];
+    let steps = [
+        ("-5 + 2 = -3", "-5 + 2 = -3"),
+        ("5 + 2 = 7", "5 + 2 = 7"),
+        ("(-5 + 2 = -3)", "(-5 + 2 = -3"),
+        ("$5 + $2 = $7", "$5 + $2 = $7"),
+    ];
+    for label in labels {
+        for delimiter in [" ", ": ", ", ", ":"] {
+            for (expression, tail) in steps {
+                // A bare number after a digit can still trigger the existing
+                // grouped-number check. Test standalone forms that it reads.
+                if !expression.starts_with(|c: char| c.is_ascii_digit()) {
+                    let standalone = format!("{label}{delimiter}{expression}");
+                    let found = calculations(&standalone);
+                    assert_eq!(found.len(), 1, "{standalone}");
+                    assert_eq!(found[0].text, tail, "{standalone}");
+                    assert!(found[0].matches, "{standalone}: {}", found[0].computed);
+                }
+
+                for before in ["$1,000- ", "$1,000 -", "($1,000)− ", "($1,000) −"] {
+                    let line = format!("{before}{label}{delimiter}{expression}");
+                    assert_unread_tail(&line, tail);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn a_colon_can_join_a_date_label_to_its_value() {
+    let line = "Date:30/6/2026 -5 + 2 = -3";
+    let found = calculations(line);
+    assert_eq!(found.len(), 1, "{line}");
+    assert_eq!(found[0].text, "-5 + 2 = -3", "{line}");
+    assert!(found[0].matches, "{line}: {}", found[0].computed);
+}
+
+#[test]
+fn a_named_bracketed_date_cannot_hide_a_right_spaced_minus() {
+    assert_unread_tail("$1,000- Date:(30/6/2026), $5 + $2 = $7", "$5 + $2 = $7");
+}
+
+#[test]
+fn a_named_bracketed_date_cannot_hide_a_left_spaced_minus() {
+    assert_unread_tail("$1,000 -Date:[30/6/2026]: -$5 + $2 = -$3", "-$5 + $2 = -$3");
+}
+
+#[test]
+fn a_finished_calculation_does_not_supply_an_operand_to_the_next() {
+    for period in ["Date:(30/6/2026)", "Date:[30/6/2026]"] {
+        for sum in ["-5 + 2 = -3", "5 + 2 = 7"] {
+            let line = format!("2 + 2 = 4-{period}, {sum}");
+            let found = calculations(&line);
+            assert_eq!(found.len(), 2, "{line}");
+            assert_eq!(found[0].text, "2 + 2 = 4", "{line}");
+            assert_eq!(found[1].text, sum, "{line}");
+            for calc in found {
+                assert!(calc.matches, "{line}: {}", calc.computed);
+            }
+            assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
+        }
+    }
+}
+
+#[test]
+fn a_finished_calculation_cannot_hide_a_new_operand_before_a_period() {
+    let line = "2 + 2 = 4, $1,000- Date:(30/6/2026), $5 + $2 = $7";
+    let found = calculations(line);
+    assert_eq!(found.len(), 2, "{line}");
+    assert!(found[0].matches, "{line}");
+    assert!(!found[1].matches, "{line}");
+    assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+}
+
+#[test]
+fn numeric_suffixes_of_references_and_fractions_are_not_operands() {
+    let mut failures = Vec::new();
+    for (line, expected) in [
+        ("Ref A1 -5 + 2 = -3", 1),
+        ("2 + 2 = 4, Ref A1 -5 + 2 = -3", 2),
+        ("Ref A1-Date:(30/6/2026), $5 + $2 = $7", 1),
+        ("Ref A1,234 -5 + 2 = -3", 1),
+        ("Ref AB-123 -5 + 2 = -3", 1),
+        ("Ref AB−123 -5 + 2 = -3", 1),
+        ("Ref AB#123 -5 + 2 = -3", 1),
+        ("Ref AB:123 -5 + 2 = -3", 1),
+        ("Note 1/11 -5 + 2 = -3", 1),
+        ("Ref AB-123 -Date:(30/6/2026), $5 + $2 = $7", 1),
+        ("Note 1/11- Date:(30/6/2026), $5 + $2 = $7", 1),
+    ] {
+        let found = calculations(line);
+        let exit = with_line(line).verdict().1;
+        if found.len() != expected || found.iter().any(|calc| !calc.matches) || exit != EXIT_PASS {
+            let output: Vec<_> = found.iter().map(|calc| &calc.computed).collect();
+            failures.push(format!("{line}: exit {exit}, {output:?}"));
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn a_numbered_list_marker_does_not_supply_an_operand() {
+    for marker in ["1)", "2.", "12)", "Item (1)", "Note (2)"] {
+        let line = format!("{marker} -5 + 2 = -3");
+        let found = calculations(&line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert_eq!(found[0].text, "-5 + 2 = -3", "{line}");
+        assert!(found[0].matches, "{line}: {}", found[0].computed);
+        assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
+    }
+}
+
+#[test]
+fn a_plain_numbered_reference_does_not_supply_an_operand() {
+    for marker in [
+        "Ref 1",
+        "Ref. 1",
+        "Ref: 1",
+        "Ref:(1)",
+        "Ref AB:123",
+        "Ref AB:(123)",
+        "Ref AB(1)",
+        "Ref AB (1)",
+        "Ref AB 2",
+        "Ref ab(1)",
+        "Reference: AB(1)",
+        "Ref:AB:123",
+        "ref AB: 123",
+        "Reference: AZ:12",
+        "Ref ab:123",
+        "Reference: ab:123",
+        "Ref INV-1:2",
+        "Ref file_id:3",
+        "Reference: (1)",
+        "Item 1",
+        "Step 2",
+        "Section 1.2",
+    ] {
+        let line = format!("{marker} -5 + 2 = -3");
+        let found = calculations(&line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert_eq!(found[0].text, "-5 + 2 = -3", "{line}");
+        assert!(found[0].matches, "{line}: {}", found[0].computed);
+        assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
+    }
+    assert_unread_tail("Ref: $1000 -$5 + $2 = -$3", "-$5 + $2 = -$3");
+    assert_unread_tail("Ref AB:$1000 -$5 + $2 = -$3", "-$5 + $2 = -$3");
+    assert_unread_tail("Ref AB:1,000 -5 + 2 = -3", "-5 + 2 = -3");
+    assert_unread_tail("Ref AB($1,000) -5 + 2 = -3", "-5 + 2 = -3");
+    assert_unread_tail("Reference amount(1000) -5 + 2 = -3", "-5 + 2 = -3");
+}
+
+#[test]
+fn a_colon_can_join_a_label_to_an_unmarked_number() {
+    for amount in [
+        "Gross:1,000",
+        "Gross:1000",
+        "Gross:1,000.50",
+        "Gross:10.25",
+        "Gross2:1,000",
+        "Gross (AUD):1000",
+        "Line total:1000",
+        "Case amount:1200",
+        "Reference amount:1200",
+        "REFERENCE AMOUNT:1000",
+    ] {
+        assert_unread_tail(&format!("{amount}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn numeric_colons_do_not_supply_an_operand() {
+    for label in ["Time:12:30", "At 12:30", "Ratio 2:1", "Cutoff 09:05"] {
+        let line = format!("{label} -5 + 2 = -3");
+        let found = calculations(&line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert_eq!(found[0].text, "-5 + 2 = -3", "{line}");
+        assert!(found[0].matches, "{line}: {}", found[0].computed);
+        assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
+    }
+}
+
+#[test]
+fn a_colon_can_join_a_label_to_a_grouped_operand() {
+    for amount in ["Gross:(1,000)", "Gross:((-20))", "Gross:( 1,000 )"] {
+        assert_unread_tail(&format!("{amount}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn a_one_sided_minus_cannot_drop_an_amount_joined_to_a_label() {
+    for amount in [
+        "Net-$1",
+        "Net–$1,000",
+        "Net$1,000",
+        "Net-($1,000)",
+        "Net-(1,000)",
+        "Net(1,000)",
+        "Net-1000/4/2",
+        "Net A$1,000",
+        "Net:$-1000",
+        "Net A$−1,000",
+        "Net:($-1,000)",
+        "Net-$1,000/4",
+        "Net-$1,000x4",
+        "Rate-20%",
+    ] {
+        assert_unread_tail(&format!("{amount}- 2 + 3 = 5"), "2 + 3 = 5");
+        assert_unread_tail(&format!("{amount} -2 + 3 = 1"), "-2 + 3 = 1");
+    }
+}
+
+#[test]
+fn a_one_sided_minus_cannot_drop_a_compact_currency_product() {
+    for amount in ["$1000x4", "$1,000X 4", "1000 x$4", "Gross:(1000X$4)"] {
+        assert_unread_tail(&format!("{amount}- $5 + $2 = $7"), "$5 + $2 = $7");
+        assert_unread_tail(&format!("{amount} -$5 + $2 = -$3"), "-$5 + $2 = -$3");
+    }
+}
+
+#[test]
+fn a_one_sided_minus_cannot_drop_a_currency_quotient() {
+    assert_unread_tail("$1,000/4- $200 + $50 = $250", "$200 + $50 = $250");
+    assert_unread_tail("$1,000/4 -$200 + $50 = -$150", "-$200 + $50 = -$150");
+    assert_unread_tail("($1,000/ 4)- $200 + $50 = $250", "$200 + $50 = $250");
+    assert_unread_tail("( $1,000 /4 ) -$200 + $50 = -$150", "-$200 + $50 = -$150");
+    assert_unread_tail("Gross:$1,000/ 4- $200 + $50 = $250", "$200 + $50 = $250");
+}
+
+#[test]
+fn a_one_sided_minus_cannot_drop_a_grouped_currency_slash_chain() {
+    let mut failures = Vec::new();
+    for first_slash in ["/", "/ ", " /"] {
+        for second_slash in ["/", "/ ", " /"] {
+            for amount in [
+                format!("$1,000{first_slash}4{second_slash}2"),
+                format!("($1,000{first_slash}4{second_slash}2)"),
+                format!("($1,000{first_slash}4){second_slash}2"),
+                format!("$1,000{first_slash}(4{second_slash}2)"),
+            ] {
+                for suffix in ["- $200 + $50 = $250", " -$200 + $50 = -$150"] {
+                    let line = format!("{amount}{suffix}");
+                    let tail = if suffix.starts_with(' ') {
+                        suffix.trim_start()
+                    } else {
+                        &suffix[2..]
+                    };
+                    let found = calculations(&line);
+                    if !matches!(found.as_slice(), [calc] if calc.text == tail
+                        && !calc.matches && calc.computed.contains("it may be the tail of a longer sum"))
+                        || with_line(&line).verdict().1 != EXIT_BLOCK
+                    {
+                        failures.push(line);
+                    }
+                }
+            }
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn a_one_sided_minus_cannot_drop_a_mixed_space_numeric_slash_chain() {
+    for amount in ["120/ 3/2", "120/3 /2", "(120/ 3) /2", "120/(3/ 2)"] {
+        assert_unread_tail(&format!("{amount}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn a_slash_date_cannot_hide_an_earlier_division() {
+    for line in [
+        "$1,000,000/ 1/7/2025 -$5 + $2 = -$3",
+        "$1,000,000/1/7/2025 -$5 + $2 = -$3",
+        "1000/ 1/7/2025 -$5 + $2 = -$3",
+    ] {
+        assert_unread_tail(line, "-$5 + $2 = -$3");
+    }
+    for amount in ["1000/(1/7/2025)", "1000/-1/7/2025", "1000/ ((-1/7/2025))"] {
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn a_one_sided_minus_cannot_drop_a_quotient_with_a_currency_divisor() {
+    for amount in ["1000/$4", "1000/ $4", "(1000 /$4)", "Gross:1000/$4"] {
+        assert_unread_tail(&format!("{amount}- $200 + $50 = $250"), "$200 + $50 = $250");
+        assert_unread_tail(
+            &format!("{amount} -$200 + $50 = -$150"),
+            "-$200 + $50 = -$150",
+        );
+    }
+}
+
+#[test]
+fn a_truncated_subtraction_cannot_drop_a_percentage_quotient() {
+    for amount in ["20%/4", "20/4%", "(20% /4)", "Rate:20%/4"] {
+        assert_unread_tail(&format!("{amount}- 5% + 2% = 7%"), "5% + 2% = 7%");
+        assert_unread_tail(&format!("{amount} -5% + 2% = -3%"), "-5% + 2% = -3%");
+    }
+}
+
+#[test]
+fn a_truncated_subtraction_cannot_drop_a_labelled_percentage() {
+    assert_unread_tail("Rate:20%- 5% + 2% = 7%", "5% + 2% = 7%");
+    assert_unread_tail("Rate:20% -5% + 2% = -3%", "-5% + 2% = -3%");
+}
+
+#[test]
+fn a_truncated_subtraction_cannot_split_a_running_total() {
+    for line in [
+        "2 + 3 = 5- 4 + 1 = 5",
+        "$2 + $3 = $5- $4 + $1 = $5",
+        "2 + 3 = 5- (4 + 1) + 1 = 6",
+    ] {
+        let found = calculations(line);
+        assert_eq!(found.len(), 2, "{line}");
+        assert!(!found[0].matches, "{line}");
+        assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+    }
+}
+
+#[test]
+fn an_unread_subtraction_cannot_hide_after_a_bracket_or_percent_sign() {
+    for line in [
+        "($2)- $-1 = $4",
+        "($1,000)- $200 = $900",
+        "($1,000) -$200 = $900",
+        "(( $1,000 ))- ($200) = $900",
+        "(−$1,000)- $200 = -$900",
+        "20%- 5% = 16%",
+        "20% -5% = 16%",
+        "Rate:20%- (5%) = 16%",
+    ] {
+        let report = with_line(line);
+        assert_eq!(
+            report.verdict().1,
+            EXIT_BLOCK,
+            "{line}: {:?}",
+            report.blocks
+        );
+        assert!(
+            report
+                .blocks
+                .iter()
+                .any(|block| block.contains("could not read")),
+            "{line}: {:?}",
+            report.blocks
+        );
+    }
+}
+
+#[test]
+fn a_slash_date_cannot_mask_a_subtraction_before_a_result() {
+    for line in [
+        "($2)- [-1/2/2026] = $4",
+        "($2)- {-1/2/2026} = $4",
+        "($2)- {1/2/2026} -$5 + $2 = -$3",
+        "($2)- [$1/2/2026] = $4",
+        "($2)- [$-1/2/2026] = $4",
+        "($2)- [1/2/2026%] = $4",
+        "١/2/2026 = $4",
+        "($2)- [1/2/2026] = $4",
+        "[$2]- [$-1] = $4",
+        "{$2}- {99/99/9999} = $4",
+        "($2)- 99/99/9999 = $4",
+        "($2)- 31/2/2026 = $4",
+        "($2)- 1/2/2026 = $4",
+        "$2- (1/2/2026) = $4",
+        "20%- 1/2/2026 = 4%",
+    ] {
+        let report = with_line(line);
+        assert_eq!(
+            report.verdict().1,
+            EXIT_BLOCK,
+            "{line}: {:?}",
+            report.blocks
+        );
+        assert!(
+            report
+                .blocks
+                .iter()
+                .any(|block| block.contains("could not read")),
+            "{line}: {:?}",
+            report.blocks
+        );
+    }
+    for line in [
+        "Date: [1/7/2025]- [30/6/2026] = FY 2026",
+        "Date: {1/7/2025}- {30/6/2026} = FY 2026",
+        "1/7/2025- 30/6/2026 = FY 2026",
+        "Date: {1/7/2025}- {30/6/2026} -5 + 2 = -3",
+        "Date: [1/7/2025]- [30/6/2026] -5 + 2 = -3",
+        "1/7/2025- 30/6/2026 -5 + 2 = -3",
+        "29/2/2024 = leap day 2024",
+        "29/2/24 = leap day 2024",
+        "Date: 1/2/2026 -5 + 2 = -3",
+    ] {
+        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+    }
+}
+
+#[test]
+fn a_currency_sign_before_the_minus_cannot_hide_a_subtraction() {
+    for line in [
+        "$1 + $1 = $2- $-1 = $4",
+        "$1 + $1 = $2- $-1 = $3",
+        "$1 + $1 = $2- ($−1) = $3",
+        "$2- $-1 = $4",
+        "$2-$-1 = $4",
+        "$2 -$-1 = $4",
+    ] {
+        let report = with_line(line);
+        assert_eq!(
+            report.verdict().1,
+            EXIT_BLOCK,
+            "{line}: {:?}",
+            report.blocks
+        );
+        assert!(
+            report
+                .blocks
+                .iter()
+                .any(|block| block.contains("could not read")),
+            "{line}: {:?}",
+            report.blocks
+        );
+    }
+    assert_eq!(with_line("$1 + $1 = $2; Ref $-1").verdict().1, EXIT_PASS);
+}
+
+#[test]
+fn a_truncated_subtraction_cannot_drop_a_compact_marked_expression() {
+    for amount in [
+        "$1,000-$200",
+        "1,000-$200",
+        "$1,000-200",
+        "Gross:$1,000-$200",
+    ] {
+        assert_unread_tail(&format!("{amount}- $5 + $2 = $7"), "$5 + $2 = $7");
+        assert_unread_tail(&format!("{amount} -$5 + $2 = -$3"), "-$5 + $2 = -$3");
+    }
+}
+
+#[test]
+fn a_date_cannot_hide_a_compact_marked_subtraction() {
+    for amount in ["$1000-1/7/2025", "20%-(1/7/2025)", "$1000-(-1/7/2025)"] {
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn a_currency_quotient_cannot_be_lost_before_a_date_shaped_term() {
+    assert_unread_tail("$100/4-1/7/2025 -$5 + $2 = -$3", "-$5 + $2 = -$3");
+}
+
+#[test]
+fn an_iso_date_cannot_hide_a_compact_marked_subtraction() {
+    assert_unread_tail("$100-2026-06-30 -$5 + $2 = -$3", "-$5 + $2 = -$3");
+}
+
+#[test]
+fn a_label_cannot_hide_a_three_term_slash_chain() {
+    assert_unread_tail("Gross:100/4/2- 5 + 2 = 7", "5 + 2 = 7");
+    assert_unread_tail("Gross:100/4/2 -5 + 2 = -3", "-5 + 2 = -3");
+    for value in [
+        "Gross{100/4/2}",
+        "Gross[100/4/2]",
+        "Gross(100/4/2)",
+        "Gross((100/4/2))",
+        "Gross{100/(4/2)}",
+        "Gross(100/4-2)",
+        "Gross[100-4/2]",
+        "Gross{100-(4/2)-3}",
+        "Gross{100-4/2-3}",
+    ] {
+        assert_unread_tail(&format!("{value}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{value} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+    assert_eq!(with_line("Note[1/11] -5 + 2 = -3").verdict().1, EXIT_PASS);
+}
+
+#[test]
+fn a_label_cannot_hide_a_grouped_compact_product() {
+    for value in [
+        "Gross:100x4",
+        "Gross(100x4)",
+        "Gross[100X4]",
+        "Gross{100x(4/2)}",
+    ] {
+        assert_unread_tail(&format!("{value}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{value} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+#[test]
+fn a_labelled_two_term_amount_can_supply_an_operand() {
+    for value in [
+        "Gross:100/4",
+        "Gross: 100/4",
+        "Gross 100/4",
+        "Gross:100-4",
+        "Gross(100/4)",
+        "Gross[100-4]",
+        "Gross{100/4}",
+    ] {
+        assert_unread_tail(&format!("{value}- 5 + 2 = 7"), "5 + 2 = 7");
+        assert_unread_tail(&format!("{value} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+    for reference in [
+        "Note:1/11",
+        "Note[1/11]",
+        "Ref AB(10-12)",
+        "Section 2/3",
+        "Ref AB:100/4/2",
+        "Note[100/4/2]",
+        "Ref INV(10-12-25)",
+    ] {
+        let line = format!("{reference} -5 + 2 = -3");
+        assert_eq!(with_line(&line).verdict().1, EXIT_PASS, "{line}");
+    }
+}
+
+#[test]
+fn a_spaced_date_range_can_precede_independent_arithmetic() {
+    for line in [
+        "Period: 1/7/2025 – 30/6/2026; 5 + 2 = 7",
+        "Period: 1/7/2025 – 30/6/2026 inclusive; 5 + 2 = 7",
+        "Period: 1/7/2025 – 30/6/2026 inclusive. 5 + 2 = 7",
+        "Period: 1/7/2025 - 30/6/2026 (inclusive). 5 + 2 = 7",
+        "Period: 1/7/2025 - 30/6/2026 [inclusive]; 5 + 2 = 7",
+        "Period: 1/7/2025 - 30/6/2026 {inclusive}: 5 + 2 = 7",
+        "Ref AB:100/4/2- Period: 1/7/2025 - 30/6/2026 inclusive. 5 + 2 = 7",
+        "Ref AB:100/4/2- (Period: 1/7/2025 - 30/6/2026 inclusive). 5 + 2 = 7",
+        "Period: 2025-07-01 - 2026-06-30. 5 + 2 = 7",
+        "Period: [1/7/2025 - 30/6/2026 inclusive of both days]; 5 + 2 = 7",
+        "Period: 1/7/2025 - 30/6/2026 exclusive, -5 + 2 = -3",
+        "Budget $100; Period: 1/7/2025 - 30/6/2026; 5 + 2 = 7",
+        "Period: [1/7/2025] - {30/6/2026}, -5 + 2 = -3",
+        "Period (1/7/2025 - 30/6/2026); $5 + $2 = $7",
+        "Period (1/7/2025 - 30/6/2026) -5 + 2 = -3",
+        "Period[1/7/2025 - 30/6/2026]; 5 + 2 = 7",
+        "Period: 2025-07-01 - 2026-06-30; 5 + 2 = 7",
+        "Period: 2025-07-01 - 30/6/2026; 5 + 2 = 7",
+        "Period: 29/2/24 - 28/2/2025; 5 + 2 = 7",
+        "Period (( 30/6/2026 ) ) - [ [ 1/7/2026 ] ]. 200 + 50 = 250",
+        "Period ({ 2026-06-30 } ) - ( [ 2026-07-01 ] ) (inclusive). 200 + 50 = 250",
+        "Note (( 1 ) )- Period (( 30/6/2026 ) ) - [ [ 1/7/2026 ] ]. 200 + 50 = 250",
+    ] {
+        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+    }
+    for line in [
+        "Period: 29/2/25 - 28/2/2025; 5 + 2 = 7",
+        "$1,000- Period (( 30/6/2026 ) ) - [ [ 1/7/2026 ] ]. 200 + 50 = 250",
+        "Period: 1/7/2025 - 31/6/2026; 5 + 2 = 7",
+        "Period: 2025-02-29 - 2026-06-30; 5 + 2 = 7",
+        "Gross: $1/7/2025 - 30/6/2026; 5 + 2 = 7",
+        "Gross: $ 1/7/2025 - 30/6/2026; 5 + 2 = 7",
+        "Gross: $- 1/7/2025 - 30/6/2026; 5 + 2 = 7",
+        "Gross: 1/7/2025 - 30/6/2026%; 5 + 2 = 7",
+        "Gross: 1/7/2025 - 30/6/2026.5; 5 + 2 = 7",
+        "Gross:100/4- Period: 1/7/2025 - 30/6/2026 inclusive. 5 + 2 = 7",
+        "Gross:100/4- (Period: 1/7/2025 - 30/6/2026 inclusive). 5 + 2 = 7",
+        "Gross:100/4- [Period: 1/7/2025 - 30/6/2026 inclusive]. 5 + 2 = 7",
+        "Gross:100/4- {Period: 1/7/2025 - 30/6/2026 inclusive}; 5 + 2 = 7",
+        "Gross:100/4- Note: 5 + 2 = 7",
+        "Gross: 1/7/2025 - 30/6/2026 + 5; 5 + 2 = 7",
+        "Gross: 1/7/2025 - 30/6/2026 inclusive plus $2; 5 + 2 = 7",
+        "($2)- 1/7/2025 - 30/6/2026; 5 + 2 = 7",
+        "($2)-[ 1/7/2025 - 30/6/2026]; 5 + 2 = 7",
+        "($2)- [-1/7/2025 - 30/6/2026]; 5 + 2 = 7",
+    ] {
+        assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
+    }
+}
+
+#[test]
+fn a_hyphen_joined_to_both_an_amount_and_a_period_is_not_a_spaced_minus() {
+    for line in [
+        "Ref 1000-Date:(30/6/2026), $5 + $2 = $7",
+        "Gross $1000-Date:(30/6/2026) -5 + 2 = -3",
+    ] {
+        let found = calculations(line);
+        assert_eq!(found.len(), 1, "{line}");
+        assert!(found[0].matches, "{line}: {}", found[0].computed);
+        assert_eq!(with_line(line).verdict().1, EXIT_PASS, "{line}");
+    }
+}
+
+fn assert_unread_tail(line: &str, tail: &str) {
+    let found = calculations(line);
+    assert_eq!(found.len(), 1, "{line}");
+    assert_eq!(found[0].text, tail, "{line}");
+    assert!(!found[0].matches, "{line}");
+    assert!(
+        found[0]
+            .computed
+            .contains("it may be the tail of a longer sum"),
+        "{line}: {}",
+        found[0].computed
+    );
+    assert_eq!(with_line(line).verdict().1, EXIT_BLOCK, "{line}");
 }
 
 #[test]
