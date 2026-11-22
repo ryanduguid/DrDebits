@@ -448,7 +448,8 @@ impl Value {
                 (Ok(i), Err(f)) | (Err(f), Ok(i)) => {
                     f.is_finite()
                         && f.fract() == 0.0
-                        && <BigInt as num_traits::FromPrimitive>::from_f64(f).is_some_and(|g| g == i)
+                        && <BigInt as num_traits::FromPrimitive>::from_f64(f)
+                            .is_some_and(|g| g == i)
                 }
             };
         }
