@@ -25,6 +25,7 @@ release.
 
 ### Fixed
 
+- A documentation-only pull request sends Codecov an empty upload, so its required `codecov/project` check arrives. It skips the tests, so no upload ran and the check never came.
 - `gate` refuses a sum it can read only from the second amount after a minus
   spaced on one side, including bracketed amounts, as in `$1,000- 200 + 50 = 250`.
   It also blocks a running total such as `$1 + $1 = $2- $-1 = $4`
