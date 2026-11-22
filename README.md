@@ -29,7 +29,7 @@ Load [drdebits.md](./drdebits.md) as project context, then give the model that r
 
 **Human decision:** the registered practitioner assesses the position from those facts. The guide routes the work to that decision.
 
-The 113 cases are in [tests/behaviour-tests.md](./tests/behaviour-tests.md). The only [recorded run](./evals/RESULTS.md), Claude Opus 5 against guide 0.3.3 on 8 September 2026, passed 19 of the 25 cases it covered; one of those passes also breached the guide elsewhere in its response, leaving 18 without it. No confirmed run covers the current guide revision, so the example above states the expected behaviour, not a measured one. See [evaluation notes](EVALUATION-NOTES.md) for the failures, test limitations and pending rerun of the revised wording.
+The 113 cases are in [tests/behaviour-tests.md](./tests/behaviour-tests.md). No confirmed run covers the current guide revision, so the example above states the expected behaviour, not a measured one. See [evaluation notes](EVALUATION-NOTES.md) for the failures, test limitations and pending rerun of the revised wording.
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
 >
@@ -206,8 +206,6 @@ Pin the approved release tag, retrieve `SHA256SUMS` at that tag and verify each 
 
 ## Alternatives
 
-DrDebits is an operating guide for Australian practice, with 51 benchmark questions beside it: [31 on Payday Super and Division 7A](./benchmarks/payday-div7a/README.md) and [20 on PAYG withholding and the Medicare levy](./benchmarks/payg-medicare/README.md), on which no model has been run.
-
 Examples of open tax-related benchmarks in other jurisdictions include:
 
 - [column-tax/tax-calc-bench](https://github.com/column-tax/tax-calc-bench): a US return
@@ -222,8 +220,7 @@ datasets; its code and data were not opened. All 4 were read on 5 November 2026.
 
 ## Contributing and maintenance
 
-The guide, reference files, behaviour tests, `evals/cases.json` and `evals/RESULTS.md` are generated. Edit their sources under `src/` and run `cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- build`; CI rejects hand edits to generated files. People write and maintain the records in `evals/results/*.json`; keep historical result records unchanged. Proposed verdicts nobody has confirmed go in `evals/observations/*.json`; none is committed yet. The table shows them separately and never counts them as passes. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to submit a change and the checks it must pass, and `MAINTENANCE.md` for the release protocol.
-
+The guide, reference files, behaviour tests, `evals/cases.json` and `evals/RESULTS.md` are generated from sources under `src/`. People write and maintain the records in `evals/results/*.json`; keep historical result records unchanged. Proposed verdicts nobody has confirmed go in `evals/observations/*.json`; none is committed yet. The table shows them separately and never counts them as passes. See [CONTRIBUTING.md](CONTRIBUTING.md) for the build command, how to submit a change and the checks it must pass, and `MAINTENANCE.md` for the release protocol.
 
 ## Licence
 
