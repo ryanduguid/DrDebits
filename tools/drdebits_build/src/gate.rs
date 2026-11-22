@@ -223,51 +223,32 @@ static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
-/// A minus followed by whitespace or the start of a group the scanner
-/// might leave before a readable calculation.
-static DANGLING_MINUS: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(&format!(r"[-−](?: +|{OPEN_BRACKET})")).expect("pattern"));
-/// A complete amount or expression that could supply an operand. Explicit
-/// references and periods can resemble arithmetic and are checked separately.
-static OPERAND_END: LazyLock<regex::Regex> = LazyLock::new(|| {
-    let plain = format!(r"[-−]?(?:{NUM})");
-    let digits = r"\d[\d,]*(?:\.\d+)?";
-    let marked = format!(r"(?:{CURRENCY_PREFIX}{digits}%?|[-−]?{digits}%)");
-    // Whitespace can separate successive brackets in a nested operand.
-    let open = format!(r"(?:{OPEN_BRACKET} *)");
-    let close = format!(r"(?: *{CLOSE_BRACKET})");
-    let grouped = format!(r"{open}* *{plain}(?:{close}+| *)");
-    let grouped_marked = format!(r"{open}* *{marked}(?:{close}+| *)");
-    // The marker can be on any term of a quotient, product or subtraction.
-    let division = r" */ *";
-    let product = r" *[xX] *";
-    let subtraction = r" *[-−] *";
-    let operator = format!(r"(?:{division}|{product}|{subtraction})");
-    let term = format!(r"(?:{operator}{grouped})");
-    let operations = format!(
-        r"(?:{division}{grouped}{term}+|(?:{subtraction}{grouped})+{division}{grouped}{term}*|{term}*{product}{grouped}{term}*)"
-    );
-    let chain = format!(r"{grouped}{operations}");
-    let marked_expression = format!(
-        r"(?:{marked}|{open}+{marked}{close}+|{grouped_marked}{term}+|{grouped}{term}*{operator}{grouped_marked}{term}*)"
-    );
-    // A colon can join a label to an amount. A digit-to-digit colon can
-    // instead be part of a clock time or ratio. A marked or grouped amount
-    // can follow a label directly, as in "Net-$1" or "Net(100)". The
-    // caller excludes explicit references. A list marker is not grouped.
-    let boundary = r"^|[ (\[;=+×*÷|]";
-    let label_colon = r"(?:^|[^\d]|[\p{L}_]\d+):";
-    let attached = r"^|[^\d.,$]";
-    // A label colon or brackets identify a potential operand even when it
-    // consists of a single compact division or subtraction.
-    let pair = format!(r"(?:{division}|{subtraction}){grouped}");
-    let quotient = format!(r"{grouped}{division}{grouped}");
-    let bracketed = format!(r"{open}+{grouped}{term}*{close}+");
+/// A list marker that is the whole of the text before a minus, as in `1)`.
+static LIST_MARKER: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^\d{1,2}\)$").expect("pattern"));
+/// A word that holds a digit and is not an amount: a code, as in `A1`,
+/// `v1.2`, `INV#12` and `#123`; a clock time or ratio, as in `12:30` and
+/// `Time:09:05`; an ordinal, as in `2nd`; a compound, as in `3-year`; or a
+/// provision, as in `7A`. A hyphen or comma joins the parts of a code in
+/// capitals, as in `AB-123`, and otherwise joins a label to an amount, as
+/// in `Net-1000`. So does a colon after a label, as in `Gross2:1000`. A
+/// magnitude letter belongs to an amount, as in `5M`.
+static NOT_AN_AMOUNT: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let code = r"(?:#[\p{L}\d_]+|[\p{L}_][\p{L}\d_]*)(?:[.#][\p{L}\d_]+)*";
+    let capitals = r"[\p{Lu}_][\p{Lu}\d_]*(?:[,.#−-][\p{L}\d_]+)*";
+    let clock = r"(?:[^$%]*[^\p{L}\d_$%])?\d+:\d+";
+    let ordinal = r"\d+(?:st|nd|rd|th)";
+    let compound = r"\d+[−-]\p{L}[\p{L}−-]*";
+    let provision = r"\d{1,3}[AC-JLN-SU-Z][A-Z]?";
     regex::Regex::new(&format!(
-        r"(?:(?:{boundary}|{label_colon}){plain}|(?:{label_colon}){grouped}{pair}|(?:{boundary}){quotient}|(?:{boundary}|[:−-]){chain}|(?:{attached})(?:{bracketed}|{marked_expression}))$"
+        "^(?:{code}|{capitals}|{clock}|{ordinal}|{compound}|{provision})$"
     ))
     .expect("pattern")
 });
+/// A product, as in `100x4` or the `x4` that ends `100 x4`, which is not a
+/// code.
+static PRODUCT: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"(?:^|\d)[xX][−-]?\d").expect("pattern"));
 /// Explicit ordinal labels, such as "Item (1)", "Ref. 1" or "Ref AB:123".
 /// A marked or thousands-grouped amount after a label can still be an operand.
 static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
@@ -724,10 +705,21 @@ fn follows_one_sided_minus(before: &str, left: &str) -> bool {
     // Prose can interrupt a subtraction before the scanner reaches the
     // readable tail. Check the original prefix even if it includes dates.
     let since_equals = before.rsplit_once('=').map_or(before, |(_, text)| text);
-    if DANGLING_MINUS.find_iter(since_equals).any(|operator| {
-        let amount = &since_equals[..operator.start()];
-        let starts_group = operator.as_str().ends_with(['(', '[', '{']);
-        (starts_group || !amount.ends_with(' ')) && ends_in_nonperiod_operand(amount)
+    // A minus that opens a group, has a space after it only, or has a
+    // space before it only and joins a word that holds a digit, is an
+    // operator when an amount stands before it. One joined to a word
+    // without a digit, as in `-see note`, is a dash. The minus that ends
+    // the prefix is checked below, with the calculation it meets.
+    if since_equals.match_indices(['-', '−']).any(|(at, minus)| {
+        let amount = &since_equals[..at];
+        let after = &since_equals[at + minus.len()..];
+        let joined = after.split(' ').next().unwrap_or_default();
+        let operator = if amount.ends_with(' ') {
+            joined.contains(char::is_numeric)
+        } else {
+            after.starts_with(' ')
+        };
+        (operator || after.starts_with(['(', '[', '{'])) && ends_in_nonperiod_operand(amount)
     }) {
         return true;
     }
@@ -864,9 +856,23 @@ fn ends_in_nonperiod_operand(text: &str) -> bool {
         && period_at_end(text).is_none_or(|period| period_continues_operand(text, period))
 }
 
+/// Whether the text ends in what may be an amount. Any last word that
+/// holds a digit is one unless it is known not to be: a clause that
+/// punctuation has closed, an explicit reference, a list marker, a code or
+/// a clock time. A form this does not know therefore blocks.
 fn ends_in_operand(text: &str) -> bool {
     let text = text.trim_end_matches(' ');
-    OPERAND_END.is_match(text) && !ends_in_reference(text)
+    if text.ends_with([',', ';', '.', ':']) || ends_in_reference(text) || LIST_MARKER.is_match(text)
+    {
+        return false;
+    }
+    let word = text
+        .trim_end_matches([' ', ')', ']', '}'])
+        .rsplit(' ')
+        .next()
+        .unwrap_or_default()
+        .trim_start_matches(['(', '[', '{']);
+    word.contains(char::is_numeric) && (!NOT_AN_AMOUNT.is_match(word) || PRODUCT.is_match(word))
 }
 
 fn ends_in_reference(text: &str) -> bool {

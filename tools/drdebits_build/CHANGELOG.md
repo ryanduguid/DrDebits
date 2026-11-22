@@ -88,6 +88,12 @@ suite replays it on every platform.
   when its next amount puts the sign after the dollar sign, as in
   `$1 + $1 = $2- $-1 = $4`. An unread subtraction can also follow a bracket
   or percent sign, as in `($1,000)- $200 = $900` and `20%- 5% = 16%`.
+  The amount before such a minus is any word that holds a digit, as in
+  `1,000)- 5 + 2 = 7` and `Net-1000- 5 + 2 = 7`, unless it is a code such as
+  `A1` or `INV-1042`, a clock time, an ordinal, a compound such as `3-year`,
+  a provision such as `7A`, a list marker, an explicit reference or closed
+  by punctuation. A minus with a space before it only and a number after it
+  is an operator mid sentence too, as in `$1,000 -200 adjustment 5 + 2 = 7`.
   Otherwise a minus, `x` or `/` counts as an
   operator only with spaces round it, so
   dates such as `1/7/2025` and fractions such as `1/11` are not read as one,
