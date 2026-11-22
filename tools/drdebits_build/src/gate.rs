@@ -884,8 +884,8 @@ fn ends_in_reference(text: &str) -> bool {
         .map(|c| match c {
             '(' => ')',
             '[' => ']',
-            '{' => '}',
-            _ => unreachable!("a bracket from ITEM_REFERENCE_END"),
+            // `OPEN_BRACKET` admits only `(`, `[` and `{`.
+            _ => '}',
         });
     reference["close"]
         .chars()
