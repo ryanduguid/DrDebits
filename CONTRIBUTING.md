@@ -52,3 +52,8 @@ New or changed behaviour in `tools/drdebits_build` needs a test in
 at 92% line coverage, so a large untested change fails the coverage
 report. A test for a fix should fail on the base commit and pass with the
 change.
+
+Codecov's `codecov/project` check, which main requires, holds coverage at
+100% (see [codecov.yml](codecov.yml)). If it stays pending after Codecov shows
+the commit as processed, rerun the 'upload coverage to Codecov' job in
+[verify.yml](.github/workflows/verify.yml); the new upload posts the status.
