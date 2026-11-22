@@ -1639,6 +1639,139 @@ fn words_that_describe_an_amount_do_not_hide_it_from_a_one_sided_minus() {
 }
 
 #[test]
+fn a_provision_of_an_act_does_not_supply_an_operand() {
+    // Cited as the authorities check reads one.
+    for citation in [
+        "s 104-10",
+        "ss 8-1",
+        "s. 6D(4)",
+        "§ 8-1",
+        "under s 8-1(1)(a)",
+        "sec 109RB",
+        "Subsection 9-5(1)",
+        "sub-s 9-5 (1)",
+        "s 328-D",
+        "para 45",
+        "Paragraphs 8-1(1)(a)",
+        "s 1317E",
+    ] {
+        assert_reads_whole(&format!("{citation} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+    // An amount before the provision still stands in the clause, and a
+    // possessive, a capital, a comma or a fifth digit is not a provision.
+    for amount in [
+        "$1,000 under s 8-1",
+        "client's 2",
+        "S 1000",
+        "s 1,000",
+        "s 10000",
+        "subs 1200",
+        "s 100x4",
+    ] {
+        assert_unread_tail(&format!("{amount} -5 + 2 = -3"), "-5 + 2 = -3");
+    }
+}
+
+/// The words, references and dates the gate reads past when it looks for
+/// an amount before a one-sided minus.
+const NOT_AMOUNTS: [&str; 16] = [
+    "wages",
+    "(GST exclusive)",
+    "Co-op A1",
+    "Invoice INV-1042",
+    "at 12:30",
+    "the 2nd",
+    "3-year",
+    "Div 7A",
+    "under s 104-10",
+    "Section 8-1",
+    "per Item (1)",
+    "Ref AB:123",
+    "as at 30/6/2026",
+    "on 1 July",
+    "in 2025",
+    "for FY2025-26",
+];
+
+#[test]
+fn an_amount_in_the_clause_before_a_one_sided_minus_always_blocks() {
+    // Every amount, with nothing or any 1 or 2 of the phrases after it,
+    // before every one-sided or bracket-opening minus. The tail reperforms
+    // alone, so a pass here is a truncated subtraction let through.
+    let amounts = [
+        "$1,000",
+        "1,000",
+        "(1,000)",
+        "1,000)",
+        "20%",
+        "1000/4",
+        "Gross:1000",
+        "Net-1000",
+        "10k",
+        "3 units",
+        "１０００",
+    ];
+    let tails = [
+        ("- 5 + 2 = 7", "5 + 2 = 7"),
+        (" -5 + 2 = -3", "-5 + 2 = -3"),
+        (" −5 + 2 = -3", "−5 + 2 = -3"),
+        ("-(200) + 50 = 250", "200) + 50 = 250"),
+    ];
+    let mut after = vec![String::new()];
+    for first in NOT_AMOUNTS {
+        after.push(format!(" {first}"));
+        for second in NOT_AMOUNTS {
+            after.push(format!(" {first} {second}"));
+        }
+    }
+    let mut passed = Vec::new();
+    for amount in amounts {
+        for words in &after {
+            for (minus, _) in tails {
+                let line = format!("{amount}{words}{minus}");
+                // One that does not reperform blocks the draft.
+                if calculations(&line).iter().all(|found| found.matches) {
+                    passed.push(line);
+                }
+            }
+        }
+    }
+    assert!(
+        passed.is_empty(),
+        "{} pass:\n{}",
+        passed.len(),
+        passed.join("\n")
+    );
+    // The message names the unread sum for the simplest of them.
+    for (minus, tail) in &tails[..2] {
+        assert_unread_tail(&format!("$1,000 wages{minus}"), tail);
+    }
+}
+
+#[test]
+fn a_clause_with_no_amount_before_a_signed_calculation_always_passes() {
+    // Any 1 or 2 of the phrases, with no amount before them, leave the
+    // calculation independent: a block here asks an author to rewrite a
+    // line that hides nothing.
+    let mut blocked = Vec::new();
+    for first in NOT_AMOUNTS {
+        for second in std::iter::once("").chain(NOT_AMOUNTS) {
+            let line = format!("{first} {second} -5 + 2 = -3").replace("  ", " ");
+            let found = calculations(&line);
+            if found.len() != 1 || !found[0].matches || with_line(&line).verdict().1 != EXIT_PASS {
+                blocked.push(line);
+            }
+        }
+    }
+    assert!(
+        blocked.is_empty(),
+        "{} block:\n{}",
+        blocked.len(),
+        blocked.join("\n")
+    );
+}
+
+#[test]
 fn a_minus_joined_to_a_number_after_an_amount_is_an_operator_mid_sentence() {
     for line in [
         "$1,000 -200 adjustment 5 + 2 = 7",

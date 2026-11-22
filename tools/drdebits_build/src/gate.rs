@@ -245,6 +245,18 @@ static NOT_AN_AMOUNT: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
+/// A provision of an Act at the end of the text, cited as the authorities
+/// check reads one: `s 104-10`, `ss 8-1`, `s. 6D(4)`, `§ 8-1`, `sec 109RB`,
+/// `subsection 9-5(1)` and `para 45`. `s` and `ss` are lower case, and a
+/// number has 4 digits at most and no comma, so `S 1,000` stays an amount.
+static PROVISION_END: LazyLock<regex::Regex> = LazyLock::new(|| {
+    let word = r"(?:ss?|(?i:(?:sub-?)?(?:secs?|sections?|para(?:graph)?s?)|sub-ss?))";
+    let number = r"\d{1,4}[A-Z]{0,3}(?:-(?:\d{1,4}[A-Z]{0,3}|[A-Z]{1,2}))?";
+    regex::Regex::new(&format!(
+        r"(?:§§? *|\b{word}(?:\. *| +)){number}(?: *{PART})*$"
+    ))
+    .expect("pattern")
+});
 /// A date written with a month, as in `1 July`, `1st Jul 2026` and
 /// `June 2026`.
 static PROSE_DATE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
@@ -924,8 +936,16 @@ fn amount_in_clause(text: &str, mut further_back: bool) -> bool {
     }
 }
 
-/// Where an explicit reference that ends the text starts.
+/// Where an explicit reference or a provision that ends the text starts.
 fn reference_at_end(text: &str) -> Option<usize> {
+    // A possessive is not a section, as in `client's 2`.
+    let provision = PROVISION_END
+        .find(text)
+        .map(|provision| provision.start())
+        .filter(|&start| !text[..start].ends_with(['\'', '’']));
+    if provision.is_some() {
+        return provision;
+    }
     let reference = ITEM_REFERENCE_END.captures(text)?;
     let start = reference.get(0).map(|whole| whole.start());
     let Some(open) = reference.name("open") else {

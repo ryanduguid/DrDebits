@@ -36,7 +36,9 @@ release.
   It matched each way of writing an amount and passed the ways it did not
   list. Only a code, clock time, ordinal, compound such as `3-year`, provision
   such as `7A`, list marker, explicit reference or word closed by punctuation
-  is not an amount. Words or a date after the amount do not hide it, as in
+  is not an amount. A provision of an Act is such a reference, cited as the
+  authorities check reads one, so `s 104-10 -5 + 2 = -3` and
+  `subsection 9-5(1) -5 + 2 = -3` pass. Words or a date after the amount do not hide it, as in
   `$1,000 (GST exclusive) -5 + 2 = -3` and
   `$1,000 as at 30/6/2026 -5 + 2 = -3`; punctuation that closes its clause
   does. A minus with a space before it only and a number after it is an
