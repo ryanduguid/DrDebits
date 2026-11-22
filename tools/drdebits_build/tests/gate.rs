@@ -1640,7 +1640,7 @@ fn words_that_describe_an_amount_do_not_hide_it_from_a_one_sided_minus() {
 
 #[test]
 fn a_provision_of_an_act_does_not_supply_an_operand() {
-    // Cited as the authorities check reads one.
+    // Alone, or closing a bracket opened before it.
     for citation in [
         "s 104-10",
         "ss 8-1",
@@ -1648,20 +1648,29 @@ fn a_provision_of_an_act_does_not_supply_an_operand() {
         "§ 8-1",
         "under s 8-1(1)(a)",
         "sec 109RB",
+        "Sec 30",
         "Subsection 9-5(1)",
         "sub-s 9-5 (1)",
         "s 328-D",
         "para 45",
         "Paragraphs 8-1(1)(a)",
         "s 1317E",
+        "(s 8-1)",
+        "(see s 8-1(1))",
     ] {
         assert_reads_whole(&format!("{citation} -5 + 2 = -3"), "-5 + 2 = -3");
     }
     // An amount before the provision still stands in the clause, and a
-    // possessive, a capital, a comma or a fifth digit is not a provision.
+    // possessive, a capital, a comma, a fifth digit or a bracket nothing
+    // opened is not a provision.
     for amount in [
         "$1,000 under s 8-1",
+        "$1,000 (see s 8-1)",
+        "s 8-1)",
+        "(1) s 8-1)",
         "client's 2",
+        "(client's 2)",
+        "SEC 30",
         "S 1000",
         "s 1,000",
         "s 10000",
@@ -1672,9 +1681,37 @@ fn a_provision_of_an_act_does_not_supply_an_operand() {
     }
 }
 
+#[test]
+fn a_period_label_before_a_minus_does_not_hide_an_earlier_amount() {
+    // The label is not the amount, but one earlier in its clause is.
+    for line in [
+        "$1,000 in 2025-(200 + 50 = 250)",
+        "$1,000 wages for FY2025-26-(200 + 50 = 250)",
+        "$1,000 in 2025 -200 adjustment 5 + 2 = 7",
+        "$1,000 (FY2025)- 200 adjustment 5 + 2 = 7",
+    ] {
+        assert!(
+            calculations(line).iter().any(|found| !found.matches),
+            "{line}"
+        );
+    }
+    // No amount, or one in a clause that punctuation has closed.
+    for line in [
+        "in 2025-(200 + 50 = 250)",
+        "wages for FY2025-26-(200 + 50 = 250)",
+        "$1,000, in 2025-(200 + 50 = 250)",
+    ] {
+        let found = calculations(line);
+        assert!(
+            !found.is_empty() && found.iter().all(|found| found.matches),
+            "{line}"
+        );
+    }
+}
+
 /// The words, references and dates the gate reads past when it looks for
 /// an amount before a one-sided minus.
-const NOT_AMOUNTS: [&str; 16] = [
+const NOT_AMOUNTS: [&str; 20] = [
     "wages",
     "(GST exclusive)",
     "Co-op A1",
@@ -1684,6 +1721,10 @@ const NOT_AMOUNTS: [&str; 16] = [
     "3-year",
     "Div 7A",
     "under s 104-10",
+    "s 8",
+    "para 45",
+    "Sec 30",
+    "(see s 8-1)",
     "Section 8-1",
     "per Item (1)",
     "Ref AB:123",
@@ -1696,8 +1737,9 @@ const NOT_AMOUNTS: [&str; 16] = [
 #[test]
 fn an_amount_in_the_clause_before_a_one_sided_minus_always_blocks() {
     // Every amount, with nothing or any 1 or 2 of the phrases after it,
-    // before every one-sided or bracket-opening minus. The tail reperforms
-    // alone, so a pass here is a truncated subtraction let through.
+    // before every one-sided or bracket-opening minus. Each tail passes
+    // after a phrase with no amount before it, so a pass here is a
+    // truncated subtraction let through.
     let amounts = [
         "$1,000",
         "1,000",
@@ -1715,8 +1757,18 @@ fn an_amount_in_the_clause_before_a_one_sided_minus_always_blocks() {
         ("- 5 + 2 = 7", "5 + 2 = 7"),
         (" -5 + 2 = -3", "-5 + 2 = -3"),
         (" −5 + 2 = -3", "−5 + 2 = -3"),
-        ("-(200) + 50 = 250", "200) + 50 = 250"),
+        ("-(200 + 50 = 250)", "200 + 50 = 250)"),
+        (" -(200 + 50 = 250)", "(200 + 50 = 250)"),
     ];
+    for (minus, _) in tails {
+        assert!(
+            NOT_AMOUNTS.iter().any(|phrase| {
+                let found = calculations(&format!("{phrase}{minus}"));
+                !found.is_empty() && found.iter().all(|found| found.matches)
+            }),
+            "{minus}"
+        );
+    }
     let mut after = vec![String::new()];
     for first in NOT_AMOUNTS {
         after.push(format!(" {first}"));

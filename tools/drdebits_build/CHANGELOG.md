@@ -92,9 +92,14 @@ suite replays it on every platform.
   `1,000)- 5 + 2 = 7` and `Net-1000- 5 + 2 = 7`, unless it is a code such as
   `A1` or `INV-1042`, a clock time, an ordinal, a compound such as `3-year`,
   a provision such as `7A`, a list marker, an explicit reference or closed
-  by punctuation. A provision of an Act is such a reference, cited as the
-  authorities check reads one: `s 104-10`, `ss 8-1`, `s. 6D(4)`, `§ 8-1`,
-  `subsection 9-5(1)` and `para 45`. Words or a date after the amount do not hide it, as in
+  by punctuation. A provision of an Act is such a reference, alone or
+  closing a bracket: `s 104-10`, `ss 8-1`, `s. 6D(4)`, `§ 8-1`,
+  `subsection 9-5(1)`, `para 45` and `(see s 8-1)`. The pattern is narrower
+  than the authorities check: `S 1000`, `SEC 30` and `s 1,000` stay amounts.
+  A period label before a bracket-opening minus, or before a minus in the
+  middle of the text, no longer hides an amount earlier in its clause, as in
+  `$1,000 in 2025-(200 + 50 = 250)`.
+  Words or a date after the amount do not hide it, as in
   `$1,000 (GST exclusive) -5 + 2 = -3` and
   `$1,000 as at 30/6/2026 -5 + 2 = -3`, up to the punctuation that closes
   its clause. A minus with a space before it only and a number after it
