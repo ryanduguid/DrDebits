@@ -75,15 +75,21 @@
 //! `$3,000 per quarter, x4 = $12,000` block. A math symbol the gate does not
 //! read, which is any but `+`, `×`, `÷`, `=`, `−`, `|`, `<` and `>`, and `·`
 //! and `^`, counts both as an operator and as an `=`, so `5 · 3 = 15`,
-//! `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block. A calculation blocks, right or wrong,
+//! `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block; other symbols in `\p{So}`, bullets `•`,
+//! fullwidth `＊` and `／` and LaTeX commands such as `\times` and `\cdot`
+//! count as operators before an `=` or calculation only, so `5 • 3 = 16`,
+//! `5 ✕ 3 = 16`, `5 ➕ 3 = 9`, `5 ＊ 3 = 16`, `10 ／ 2 = 4` and
+//! `5 \times 3 = 16` block. A calculation blocks, right or wrong,
 //! when text joined to it may belong to it: before the first amount, a
 //! hyphen or dash joined to a word, which may be a sign or a hyphen, as in
-//! `AUD-150 + 200 = 50` and `Quarterly-$12,000/4 = $3,000`, a dash after
-//! `:`, `=`, `(` or the start of the line, which may be a sign, as in
-//! `Net: – 150 + 200 = 50`, or a number and a space before an amount
+//! `AUD-150 + 200 = 50` and `Quarterly-$12,000/4 = $3,000`, a dash after any
+//! non-word, non-space character or the start of the line, which may be a
+//! sign, as in `Net: – 150 + 200 = 50`, `| – 150 + 200 = 350 |` and
+//! `Net, – 150 + 200 = 350`, or a number and a space before an amount
 //! without `$`, which may be a digit group, as in `1 000 + 1 = 1 001`; after
-//! the result, a space and a digit, as in `$150 000`, a minus and a digit,
-//! as in `5-1` and `5 -1`, a scale word, as in `$150 k` and `$150 million`,
+//! the result, a space and a digit, as in `$150 000`, a minus and an amount,
+//! as in `5-1`, `5 -1` and `$150-$10`, a spaced `%`, as in `2 + 3 = 5 %`, a scale
+//! word, as in `$150 k`, `$150 bln`, `$150 million` and `$150-million`,
 //! or a math symbol the gate does not read, as in `5^2`. A dash and a word
 //! after a result are prose, as in `$150—the total` and `$150-ish`, and so is
 //! a dash after a word and a space, as in `Fees – $100 + $50 = $150`. A
@@ -212,14 +218,15 @@ static BRACKETED: LazyLock<regex::Regex> =
 /// When an amount and, after it, an operator stand before a calculation with
 /// no `=` between that amount and the calculation, the calculation may be the
 /// tail of a longer sum, as after `$100 + wages `, `$100 + $20 wages `,
-/// `$500 wages + ` and `$100 + ... `; `+`, `×`, `*`, `÷` and every math
-/// symbol in `OTHER` are operators
-/// wherever they stand, and a minus, `x`, `X` and `/` only with whitespace
-/// round them, since they also mark hyphens, words, dates such as
-/// `1/7/2025`, fractions such as `1/11` and rates such as `$2,000/month`.
+/// `$500 wages + ` and `$100 + ... `; `+`, `×`, `*`, `÷`, every math symbol in
+/// `OTHER`, other symbols in `\p{So}`, bullets `•`, fullwidth `＊` and `／`,
+/// and LaTeX commands such as `\times` and `\cdot` are operators wherever they
+/// stand, and a minus, `x`, `X` and `/` only with whitespace round them, since
+/// they also mark hyphens, words, dates such as `1/7/2025`, fractions such as
+/// `1/11` and rates such as `$2,000/month`.
 static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:{NUM})[^=]*(?:[+×*÷]|{OTHER}|[ \t][-−xX/](?:[ \t]|$))[^=]*$"
+        r"(?:{NUM})[^=]*(?:[+×*÷\p{{So}}•＊／]|{OTHER}|\\[A-Za-z]+|[ \t][-−xX/](?:[ \t]|$))[^=]*$"
     ))
     .expect("pattern")
 });
@@ -320,25 +327,28 @@ const OTHER: &str = r"[\p{Sm}·^&&[^+×÷=−|<>]]";
 /// Text before a calculation that may belong to its first amount: a hyphen,
 /// which `calculations` makes of every dash, that the calculation does not
 /// take as a sign, joined to a word, as in `AUD-150`, which may be a sign or
-/// a hyphen, or after `:`, `=`, `(` or the start of the line, as in
-/// `Net: – 150`, which may be a sign. After a word and a space it separates,
-/// as in `Fees – $100`. `CLAIM` takes a sign joined to the amount, as in
-/// `Net: -150`.
+/// a hyphen, or after any non-word, non-space character or the start of the
+/// line, as in `Net: – 150`, `| – 150` and `Net, – 150`, which may be a sign.
+/// After a word and a space it separates, as in `Fees – $100`. `CLAIM` takes a
+/// sign joined to the amount, as in `Net: -150`.
 static JOINED_BEFORE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"(?:[^\W\d]|(?:^|[:=(])[ \t]*)[-−][ \t]*$").expect("pattern")
+    regex::Regex::new(r"(?:[^\W\d]|(?:^|[^\w\s])[ \t]*)[-−][ \t]*$").expect("pattern")
 });
 /// A number and a space before a calculation whose first amount has no `$`,
 /// as in `1 000 + 1`: the amount may be a digit group of a longer one.
 static GROUPED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\d[ \t]+$").expect("pattern"));
+const SCALE_WORD: &str =
+    r"(?i:k|m|b|bn|bln|mn|mln|mil|mill|tn|thousand|million|billion|trillion)s?\b";
 /// Text after a result that may change it: a minus and an amount, as in
-/// `5-1`, `$5- $4` or `$5- $-4`;
-/// a math symbol in `OTHER`, as in `5^2` and `5 ≈ 6`; or a space and a
-/// digit, as in `$150 000`, an operator joined to a number, as in `5 -1`, or a
-/// scale word, as in `$150 k` and `$150 million`.
+/// `5-1`, `$5- $4`, `$5- $-4` or `$150-$10`;
+/// a math symbol in `OTHER`, as in `5^2` and `5 ≈ 6`; a spaced `%`, as in
+/// `2 + 3 = 5 %`; a hyphenated scale word, as in `$150-million`; or a space
+/// and a digit, as in `$150 000`, an operator joined to a number, as in
+/// `5 -1`, or a scale word, as in `$150 k`, `$150 bln` and `$150 million`.
 static JOINED_AFTER: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"^(?:[ \t]*(?:[-−][ \t]*(?:{OPEN_BRACKET}[ \t]*)*(?:{CURRENCY_PREFIX}|[-−]?)\d|{OTHER})|[ \t]+(?:[xX/]?\$?\d|(?i:k|m|b|bn|mn|mil|thousand|million|billion|trillion)s?\b))"
+        r"^(?:[ \t]*(?:[-−][ \t]*(?:{OPEN_BRACKET}[ \t]*)*(?:{CURRENCY_PREFIX}|[-−]?)\d|{OTHER})|[-−]{SCALE_WORD}|[ \t]+(?:[xX/]?\$?\d|%|{SCALE_WORD}))"
     ))
     .expect("pattern")
 });

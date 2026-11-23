@@ -118,14 +118,21 @@ suite replays it on every platform.
   `$1,000 -200 = $800` and `per quarter, x4 = $12,000`. A math symbol the
   gate does not read, any but `+`, `×`, `÷`, `=`, `−`, `|`, `<` and `>`, and
   also `·` and `^`, counts as an operator and as an `=`, so `5 · 3 = 15`,
-  `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block. Text joined to a calculation that may
-  belong to it blocks it: a hyphen joined to a word, or a dash after `:`,
-  `=`, `(` or the start of the line, before the first amount, as in
-  `AUD-150 + 200 = 50`, `Quarterly-$12,000/4 = $3,000` and
-  `Net: – 150 + 200 = 50` (a list marker's `- ` aside), a number and a space before a first amount
-  without `$`, as in `1 000 + 1 = 1 001`, and, after the result, a space and
-  a digit, a minus and a digit, a scale word or such a symbol, as in
-  `$150 000`, `5-1`, `5 -1`, `$150 k`, `$150 million` and `5^2`. A dash and
+  `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block; other symbols in `\p{So}`, bullets `•`,
+  fullwidth `＊` and `／` and LaTeX commands such as `\times` and `\cdot`
+  count as operators before an `=` or calculation only, so `5 • 3 = 16`,
+  `5 ✕ 3 = 16`, `5 ➕ 3 = 9`, `5 ＊ 3 = 16`, `10 ／ 2 = 4` and
+  `5 \times 3 = 16` block. Text joined to a calculation that may
+  belong to it blocks it: a hyphen joined to a word, or a dash after any
+  non-word, non-space character or the start of the line, before the first
+  amount, as in `AUD-150 + 200 = 50`, `Quarterly-$12,000/4 = $3,000`,
+  `Net: – 150 + 200 = 50`, `| – 150 + 200 = 350 |` and
+  `Net, – 150 + 200 = 350` (a list marker's `- ` aside), a number and a space
+  before a first amount without `$`, as in `1 000 + 1 = 1 001`, and, after
+  the result, a space and a digit, a minus and an amount, a spaced `%`, a scale word
+  (including `bln`, `mln`, `mill`, `tn` and hyphenated forms) or such a
+  symbol, as in `$150 000`, `5-1`, `5 -1`, `$150-$10`, `2 + 3 = 5 %`,
+  `$150 k`, `$150 bln`, `$150 million`, `$150-million` and `5^2`. A dash and
   a word after a result are prose, as in `$150—the total` and `$150-ish`,
   and so is a dash after a word and a space, as in `Net — 150 + 200 = 350`.
   Arrows are math symbols, so `FY2025 → FY2026: $500 × 2 = $1,000` blocks,
