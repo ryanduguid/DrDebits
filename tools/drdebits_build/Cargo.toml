@@ -36,6 +36,7 @@ tempfile = "3.27.0"
 [profile.release]
 codegen-units = 1
 lto = true
+strip = "symbols"
 
 [lints.clippy]
 ref_option = "warn"
