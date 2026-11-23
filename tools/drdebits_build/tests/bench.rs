@@ -1282,7 +1282,7 @@ fn eras_are_validated_and_reported_per_slice() {
     assert_eq!(slices.len(), 3);
     assert_eq!(
         (slices[0].era, slices[0].cases, slices[0].value_correct),
-        (bench::Era::Pre2025, 9, 0)
+        (bench::Era::Pre2025, 7, 0)
     );
     assert_eq!(
         (slices[1].era, slices[1].cases, slices[1].value_correct),
@@ -1295,7 +1295,7 @@ fn eras_are_validated_and_reported_per_slice() {
             slices[2].value_correct,
             slices[2].correct_value_right_authority
         ),
-        (bench::Era::Post1Jul2026, 21, 7, 7)
+        (bench::Era::Post1Jul2026, 23, 7, 7)
     );
 
     // payg-medicare has only 2025-26 and post-1-Jul-2026.
@@ -1368,7 +1368,7 @@ fn wilson_ci95_and_fabricated_citation_rate_report_in_text_and_json() {
     );
     assert_eq!(text.code, 0, "{}", text.stderr);
     assert!(
-        text.stdout.contains("era pre-2025: 0/9 value correct"),
+        text.stdout.contains("era pre-2025: 0/7 value correct"),
         "{}",
         text.stdout
     );

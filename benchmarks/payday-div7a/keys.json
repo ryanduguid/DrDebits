@@ -706,7 +706,7 @@
     },
     {
       "id": "D7A-014",
-      "era": "pre-2025",
+      "era": "post-1-Jul-2026",
       "kind": "text",
       "value": "NOT_COMPLYING",
       "authorities": [
@@ -750,7 +750,7 @@
     },
     {
       "id": "D7A-016",
-      "era": "pre-2025",
+      "era": "post-1-Jul-2026",
       "kind": "text",
       "value": "NONE",
       "authorities": [
