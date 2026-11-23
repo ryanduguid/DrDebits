@@ -21,11 +21,13 @@ permissions:
   contents: read
 
 concurrency:
-  # Keyed on the commit for a push: every pushed revision gets its own audit.
-  # Keying on the ref would let a rapid second push cancel the first one's
-  # audit, and that commit would then never be scanned.
-  group: attribution-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
+  # As release-policy's docs/attribution-consumers.md gives the caller: pull request
+  # events queue per pull request and are never cancelled, since a cancelled run
+  # leaves a cancelled check on the head (readying a PR cancelled the synchronize
+  # run this way); each push or dispatch gets its own run key, so no audit of a
+  # pushed range is dropped.
+  group: attribution-${{ github.event_name }}-${{ github.event_name == 'pull_request_target' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   policy:
