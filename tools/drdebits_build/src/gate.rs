@@ -75,8 +75,8 @@
 //! `$3,000 per quarter, x4 = $12,000` block. A math symbol the gate does not
 //! read, which is any but `+`, `×`, `÷`, `=`, `−`, `|`, `<` and `>`, and `·`
 //! and `^`, counts both as an operator and as an `=`, so `5 · 3 = 15`,
-//! `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block; other symbols in `\p{So}`, bullets `•`,
-//! fullwidth `＊` and `／` and LaTeX commands such as `\times` and `\cdot`
+//! `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block; extra operator symbols (`•`, `⁎`, `✕`,
+//! `✖`, `✱`, `➕`, `➖`, `➗`, `﹡`, `＊`, `／`) and LaTeX operator commands such as `\times` and `\cdot`
 //! count as operators before an `=` or calculation only, so `5 • 3 = 16`,
 //! `5 ✕ 3 = 16`, `5 ➕ 3 = 9`, `5 ＊ 3 = 16`, `10 ／ 2 = 4` and
 //! `5 \times 3 = 16` block. A calculation blocks, right or wrong,
@@ -215,18 +215,22 @@ static NUMBER: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(NUM).
 /// negative. `(-120)` carries its sign and is not ambiguous.
 static BRACKETED: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(&format!(r"\([ \t]*(?:{NUM})[ \t]*\)")).expect("pattern"));
+/// Operator symbols outside `\p{Sm}` and LaTeX arithmetic operator commands
+/// recognised in `INTERRUPTED` only (not in `OTHER`), so decorative symbols
+/// such as `★` or `✓` and text commands such as `\text` are not mistaken for
+/// operators or `=`.
+const EXTRA_OPERATOR: &str = r"[•⁎✕✖✱➕➖➗﹡＊／]|\\(?:times|cdotp?|div|pm|mp|ast|star|bullet|over|[dt]?frac|slash|[bp]?mod)(?:[^A-Za-z=]|$)";
 /// When an amount and, after it, an operator stand before a calculation with
 /// no `=` between that amount and the calculation, the calculation may be the
 /// tail of a longer sum, as after `$100 + wages `, `$100 + $20 wages `,
 /// `$500 wages + ` and `$100 + ... `; `+`, `×`, `*`, `÷`, every math symbol in
-/// `OTHER`, other symbols in `\p{So}`, bullets `•`, fullwidth `＊` and `／`,
-/// and LaTeX commands such as `\times` and `\cdot` are operators wherever they
+/// `OTHER` and every operator in `EXTRA_OPERATOR` are operators wherever they
 /// stand, and a minus, `x`, `X` and `/` only with whitespace round them, since
 /// they also mark hyphens, words, dates such as `1/7/2025`, fractions such as
 /// `1/11` and rates such as `$2,000/month`.
 static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:{NUM})[^=]*(?:[+×*÷\p{{So}}•＊／]|{OTHER}|\\[A-Za-z]+|[ \t][-−xX/](?:[ \t]|$))[^=]*$"
+        r"(?:{NUM})[^=]*(?:[+×*÷]|{OTHER}|{EXTRA_OPERATOR}|[ \t][-−xX/](?:[ \t]|$))[^=]*$"
     ))
     .expect("pattern")
 });

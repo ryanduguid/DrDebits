@@ -726,11 +726,16 @@ fn a_calculation_the_gate_cannot_read_whole_blocks() {
         ("5 • 3 = 16", true),
         ("5 • 3 = 15", true),
         ("5 ✕ 3 = 16", true),
+        ("5 ✖ 3 = 16", true),
         ("5 ➕ 3 = 9", true),
+        ("5 ➖ 3 = 1", true),
+        ("5 ➗ 2 = 3", true),
         ("5 ＊ 3 = 16", true),
         ("10 ／ 2 = 4", true),
         (r"5 \times 3 = 16", true),
+        (r"5\times3 = 16", true),
         (r"5 \cdot 3 = 16", true),
+        (r"10 \div 2 = 4", true),
         // A dash joined to a word, or after `:`, before the first amount.
         ("AUD-150 + 200 = 350", true),
         ("AUD-150 + 200 = 50", true),
@@ -804,6 +809,9 @@ fn a_calculation_the_gate_cannot_read_whole_blocks() {
         ("Note ✓ 1", false),
         ("• 1 item", false),
         ("2 + 3 = 5 • next", false),
+        ("5 ★ items; 2 + 2 = 4", false),
+        ("Item 5 ✓; 2 + 2 = 4", false),
+        (r"5 \text{ items}; 2 + 2 = 4", false),
     ];
     let wrong: Vec<String> = rows
         .iter()

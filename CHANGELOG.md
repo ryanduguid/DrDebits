@@ -31,11 +31,12 @@ release.
   `$100 + $50 = $150-million`. Before the first amount, a spaced dash after
   any non-word, non-space character blocks, as in `| – 150 + 200 = 350 |`,
   `• – 150 + 200 = 350` and `Net, – 150 + 200 = 350`, not only after `:`,
-  `=` or `(`. Symbols in `\p{So}`, bullets `•`, fullwidth `＊` and `／` and
-  LaTeX commands such as `\times` and `\cdot` count as operators before an
-  `=` or calculation, so `5 • 3 = 16`, `5 ✕ 3 = 16`, `5 ➕ 3 = 9`,
-  `5 ＊ 3 = 16`, `10 ／ 2 = 4` and `5 \times 3 = 16` block without treating
-  those symbols as `=`.
+  `=` or `(`. Operator symbols outside `\p{Sm}` (`•`, `⁎`, `✕`, `✖`, `✱`,
+  `➕`, `➖`, `➗`, `﹡`, `＊`, `／`) and LaTeX operator commands such as `\times`,
+  `\cdot` and `\div` count as operators before an `=` or calculation, so
+  `5 • 3 = 16`, `5 ✕ 3 = 16`, `5 ➕ 3 = 9`, `5 ＊ 3 = 16`, `10 ／ 2 = 4` and
+  `5 \times 3 = 16` block without treating those symbols as `=` or blocking
+  decorative symbols such as `★` or text commands such as `\text`.
 - A documentation-only pull request sends Codecov an empty upload, so its required `codecov/project` check arrives. It skips the tests, so no upload ran and the check never came.
 - `gate` refuses a sum it can read only from the second amount after a minus
   spaced on one side, including bracketed amounts, as in `$1,000- 200 + 50 = 250`.

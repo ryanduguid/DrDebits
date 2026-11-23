@@ -118,8 +118,9 @@ suite replays it on every platform.
   `$1,000 -200 = $800` and `per quarter, x4 = $12,000`. A math symbol the
   gate does not read, any but `+`, `×`, `÷`, `=`, `−`, `|`, `<` and `>`, and
   also `·` and `^`, counts as an operator and as an `=`, so `5 · 3 = 15`,
-  `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block; other symbols in `\p{So}`, bullets `•`,
-  fullwidth `＊` and `／` and LaTeX commands such as `\times` and `\cdot`
+  `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block; operator symbols outside `\p{Sm}` (`•`,
+  `⁎`, `✕`, `✖`, `✱`, `➕`, `➖`, `➗`, `﹡`, `＊`, `／`) and LaTeX operator
+  commands such as `\times`, `\cdot` and `\div`
   count as operators before an `=` or calculation only, so `5 • 3 = 16`,
   `5 ✕ 3 = 16`, `5 ➕ 3 = 9`, `5 ＊ 3 = 16`, `10 ／ 2 = 4` and
   `5 \times 3 = 16` block. Text joined to a calculation that may
