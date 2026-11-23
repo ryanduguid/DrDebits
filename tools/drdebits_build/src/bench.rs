@@ -1870,7 +1870,7 @@ fn run_estimate(root: &PyPath, topic: &str, args: &EstimateArgs) -> Result<u8, S
     }
     match &report.total_usd {
         Some(total) => outln!(
-            "total across {} model(s): ${total} USD",
+            "combined total across {} model(s): ${total} USD",
             report.models.len()
         ),
         None => outln!("note: pass --pricing FILE to estimate USD cost across configured models"),

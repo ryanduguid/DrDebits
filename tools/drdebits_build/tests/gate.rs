@@ -3481,6 +3481,33 @@ fn error_classes_separate_arithmetic_facts_and_route_findings() {
     check_facts(&bad_math, &facts, &mut report);
     assert_eq!(report.error_classes, [gate::ErrorClass::ArithmeticError]);
 
+    // Failed calculation with no monetary operands cannot suppress FACT_MISMATCH.
+    let no_fact_operand = format!("{DRAFT}\n- Bonus check: 100 + 200 = $400.\n");
+    let mut report = check(&no_fact_operand, &conclusions());
+    check_facts(&no_fact_operand, &facts, &mut report);
+    assert_eq!(
+        report.error_classes,
+        [
+            gate::ErrorClass::ArithmeticError,
+            gate::ErrorClass::FactMismatch
+        ]
+    );
+
+    // Failed calculation with an unknown monetary operand flags both classes.
+    let bad_operand_and_math = DRAFT
+        .replace("Invoice total $1,100", "Invoice total $1,200")
+        .replace("$1,100 / 11 = $100.00", "$1,200 / 11 = $150.00")
+        .replace("GST of $100", "GST of $150");
+    let mut report = check(&bad_operand_and_math, &conclusions());
+    check_facts(&bad_operand_and_math, &facts, &mut report);
+    assert_eq!(
+        report.error_classes,
+        [
+            gate::ErrorClass::ArithmeticError,
+            gate::ErrorClass::FactMismatch
+        ]
+    );
+
     // Valid arithmetic on a wrong input fact: FACT_MISMATCH only.
     let bad_fact = DRAFT
         .replace("Invoice total $1,100", "Invoice total $1,200")

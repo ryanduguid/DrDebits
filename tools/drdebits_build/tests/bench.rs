@@ -1591,7 +1591,9 @@ fn bench_estimate_previews_tokens_and_usd_across_subsets_and_models() {
         priced.stdout
     );
     assert!(
-        priced.stdout.contains("total across 2 model(s): $"),
+        priced
+            .stdout
+            .contains("combined total across 2 model(s): $"),
         "{}",
         priced.stdout
     );

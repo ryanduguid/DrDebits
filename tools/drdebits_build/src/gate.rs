@@ -1563,10 +1563,13 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
         .iter()
         .filter(|c| !c.matches)
         .filter(|c| {
-            c.operands
+            let mut monetary = c
+                .operands
                 .iter()
                 .filter(|t| t.contains('$') || t.ends_with('%'))
-                .all(|t| Amount::read(t).is_some_and(|a| is_known(&known, &a)))
+                .peekable();
+            monetary.peek().is_some()
+                && monetary.all(|t| Amount::read(t).is_some_and(|a| is_known(&known, &a)))
         })
         .flat_map(|c| {
             c.results
