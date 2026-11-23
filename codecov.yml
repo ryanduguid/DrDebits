@@ -2,10 +2,13 @@
 # project check fails below that, and main requires it. The patch status is
 # informational and Codecov posts no comments.
 coverage:
+  round: down
   status:
     project:
       default:
         target: 100%
+        threshold: 0%
+        if_not_found: failure
     patch:
       default:
         informational: true
