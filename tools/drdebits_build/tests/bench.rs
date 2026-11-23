@@ -1231,3 +1231,473 @@ fn compare_prints_the_every_repeat_rows_only_for_repeats() {
     );
     assert_eq!(out.lines().count(), 8, "{out}");
 }
+
+#[test]
+fn parenthetical_accounting_negatives_parse_in_bench_amounts() {
+    // Use a copied topic with one negative key to verify positive and negative parsing.
+    let tree = copy();
+    edit(
+        tree.path(),
+        "keys.json",
+        "\"value\": \"19715.97\"",
+        "\"value\": \"-1234.50\"",
+    );
+    let keys = bench::load_keys(&py(tree.path()), TOPIC).unwrap();
+    for (written, expected) in [
+        ("(1,234.50)", Value::Correct),
+        ("($1,234.50)", Value::Correct),
+        ("$(1,234.50)", Value::Correct),
+        ("( 1,234.50 )", Value::Correct),
+        ("-1234.50", Value::Correct),
+        ("1234.50", Value::Wrong),
+        ("(-1,234.50)", Value::Wrong),
+        ("((1,234.50))", Value::Wrong),
+        ("$($1,234.50)", Value::Wrong),
+    ] {
+        let answers = pyjson::loads(&format!(
+            r#"{{"answers": {{"D7A-007": {{"value": "{written}"}}}}}}"#
+        ))
+        .unwrap();
+        let scored = bench::score(&keys, &answers).unwrap();
+        let found = scored.iter().find(|s| s.id == "D7A-007").unwrap();
+        assert_eq!(found.value, expected, "{written}");
+    }
+}
+
+#[test]
+fn eras_are_validated_and_reported_per_slice() {
+    let tree = copy();
+    edit(
+        tree.path(),
+        "keys.json",
+        "\"era\": \"post-1-Jul-2026\"",
+        "\"era\": \"future-2030\"",
+    );
+    let error = bench::load_keys(&py(tree.path()), TOPIC).unwrap_err();
+    assert!(error.contains("unknown era future-2030"), "{error}");
+
+    let weekdays = baseline("weekdays-only.json");
+    let scored = bench::score(&keys(), &weekdays).unwrap();
+    let slices = bench::era_slices(&scored);
+    assert_eq!(slices.len(), 3);
+    assert_eq!(
+        (slices[0].era, slices[0].cases, slices[0].value_correct),
+        (bench::Era::Pre2025, 9, 0)
+    );
+    assert_eq!(
+        (slices[1].era, slices[1].cases, slices[1].value_correct),
+        (bench::Era::Fy2025_26, 1, 0)
+    );
+    assert_eq!(
+        (
+            slices[2].era,
+            slices[2].cases,
+            slices[2].value_correct,
+            slices[2].correct_value_right_authority
+        ),
+        (bench::Era::Post1Jul2026, 21, 7, 7)
+    );
+
+    // payg-medicare has only 2025-26 and post-1-Jul-2026.
+    let pm_keys = bench::load_keys(&py(&repo_root()), "payg-medicare").unwrap();
+    let pm_scored = bench::score(&pm_keys, &pyjson::loads(r#"{"answers": {}}"#).unwrap()).unwrap();
+    let pm_slices = bench::era_slices(&pm_scored);
+    assert_eq!(pm_slices.len(), 2);
+    assert_eq!(
+        (pm_slices[0].era, pm_slices[0].cases),
+        (bench::Era::Fy2025_26, 3)
+    );
+    assert_eq!(
+        (pm_slices[1].era, pm_slices[1].cases),
+        (bench::Era::Post1Jul2026, 17)
+    );
+}
+
+#[test]
+fn wilson_ci95_and_fabricated_citation_rate_report_in_text_and_json() {
+    assert_eq!(bench::wilson_ci95(0, 0), None);
+    let (r, lo, hi) = bench::wilson_ci95(0, 31).unwrap();
+    assert_eq!(r, 0.0);
+    assert_eq!(lo, 0.0);
+    assert!((hi - 0.1103).abs() < 0.0005, "{hi}");
+    let (r, lo, hi) = bench::wilson_ci95(1, 14).unwrap();
+    assert!((r - 1.0 / 14.0).abs() < 1e-9);
+    assert!((lo - 0.0127).abs() < 0.0005, "{lo}");
+    assert!((hi - 0.3147).abs() < 0.0005, "{hi}");
+    let (r, lo, hi) = bench::wilson_ci95(14, 14).unwrap();
+    assert_eq!(r, 1.0);
+    assert!((lo - 0.7847).abs() < 0.0005, "{lo}");
+    assert_eq!(hi, 1.0);
+
+    let root = repo_root();
+    let dir = tempfile::tempdir().unwrap();
+    let auth_path = dir.path().join("authorities.json");
+    std::fs::write(
+        &auth_path,
+        r#"{"authorities": [
+            "s 6 of the Superannuation Guarantee (Administration) Act 1992",
+            "s 109N of the Income Tax Assessment Act 1936"
+        ]}"#,
+    )
+    .unwrap();
+    let ans_path = dir.path().join("answers.json");
+    std::fs::write(
+        &ans_path,
+        r#"{"answers": {
+            "D7A-001": {"value": "8.77", "authorities": [
+                "s 109N(2) of the Income Tax Assessment Act 1936",
+                "s 999Z of the Income Tax Assessment Act 1936",
+                "Division 7A"
+            ]}
+        }}"#,
+    )
+    .unwrap();
+    let empty_ans = dir.path().join("empty.json");
+    std::fs::write(&empty_ans, r#"{"answers": {"D7A-001": {"value": "8.77"}}}"#).unwrap();
+
+    let text = run_in(
+        &root,
+        &[
+            "bench",
+            "score",
+            ans_path.to_str().unwrap(),
+            "--authorities",
+            auth_path.to_str().unwrap(),
+        ],
+        true,
+    );
+    assert_eq!(text.code, 0, "{}", text.stderr);
+    assert!(
+        text.stdout.contains("era pre-2025: 0/9 value correct"),
+        "{}",
+        text.stdout
+    );
+    assert!(
+        text.stdout.contains(
+            "fabricated citation rate: 1/2 (50.00%, 95% Wilson CI 9.45% to 90.55%; 1 unreadable)"
+        ),
+        "{}",
+        text.stdout
+    );
+
+    let json = run_in(
+        &root,
+        &[
+            "bench",
+            "score",
+            ans_path.to_str().unwrap(),
+            "--authorities",
+            auth_path.to_str().unwrap(),
+            "--json",
+        ],
+        true,
+    );
+    assert_eq!(json.code, 0, "{}", json.stderr);
+    let parsed = pyjson::loads(&json.stdout).unwrap();
+    let fcr = parsed.get("fabricated_citation_rate").unwrap();
+    assert_eq!(fcr.get("unlisted"), Some(&Json::Int(1.into())));
+    assert_eq!(fcr.get("checked"), Some(&Json::Int(2.into())));
+    assert_eq!(fcr.get("unreadable"), Some(&Json::Int(1.into())));
+    assert_eq!(fcr.get("rate"), Some(&Json::Float(0.5)));
+    assert_eq!(fcr.get("method"), Some(&Json::str_obj("wilson_95")));
+    assert_eq!(
+        parsed
+            .get("eras")
+            .and_then(|e| e.get("post-1-Jul-2026"))
+            .and_then(|s| s.get("value_correct")),
+        Some(&Json::Int(1.into()))
+    );
+
+    // Zero readable citations prints n/a and emits null rate/CI in JSON.
+    let empty_text = run_in(
+        &root,
+        &[
+            "bench",
+            "score",
+            empty_ans.to_str().unwrap(),
+            "--authorities",
+            auth_path.to_str().unwrap(),
+        ],
+        true,
+    );
+    assert_eq!(empty_text.code, 0, "{}", empty_text.stderr);
+    assert!(
+        empty_text
+            .stdout
+            .contains("fabricated citation rate: n/a (0 readable citations; 0 unreadable)"),
+        "{}",
+        empty_text.stdout
+    );
+    let empty_json = run_in(
+        &root,
+        &[
+            "bench",
+            "score",
+            empty_ans.to_str().unwrap(),
+            "--authorities",
+            auth_path.to_str().unwrap(),
+            "--json",
+        ],
+        true,
+    );
+    let empty_parsed = pyjson::loads(&empty_json.stdout).unwrap();
+    assert_eq!(
+        empty_parsed
+            .get("fabricated_citation_rate")
+            .and_then(|f| f.get("rate")),
+        Some(&Json::Null)
+    );
+
+    // Without --authorities, fabricated_citation_rate is null in JSON.
+    let no_auth = run_in(
+        &root,
+        &["bench", "score", ans_path.to_str().unwrap(), "--json"],
+        true,
+    );
+    let no_auth_parsed = pyjson::loads(&no_auth.stdout).unwrap();
+    assert_eq!(
+        no_auth_parsed.get("fabricated_citation_rate"),
+        Some(&Json::Null)
+    );
+}
+
+#[test]
+fn load_pricing_validates_schema_and_rates() {
+    let valid = bench::load_pricing(
+        r#"{"models": [
+            {"name": "model-a", "input_per_million": "3.00", "output_per_million": "15.00"},
+            {"name": "model-b", "input_per_million": "0.50", "output_per_million": "2.00"}
+        ]}"#,
+    )
+    .unwrap();
+    assert_eq!(valid.len(), 2);
+    assert_eq!(valid[0].name, "model-a");
+
+    for (bad, expected) in [
+        ("{", "not valid JSON"),
+        ("[]", "top level must be an object"),
+        (r#"{"models": [], "extra": 1}"#, "unknown key extra"),
+        (r#"{"models": []}"#, "models must be a list with entries"),
+        (r#"{"models": ["a"]}"#, "each model must be an object"),
+        (
+            r#"{"models": [{"name": "a", "input_per_million": "1", "output_per_million": "2", "note": "x"}]}"#,
+            "unknown field note",
+        ),
+        (
+            r#"{"models": [{"name": " ", "input_per_million": "1", "output_per_million": "2"}]}"#,
+            "model name must not be empty",
+        ),
+        (
+            r#"{"models": [
+                {"name": "a", "input_per_million": "1", "output_per_million": "2"},
+                {"name": "a", "input_per_million": "1", "output_per_million": "2"}
+            ]}"#,
+            "duplicate model a",
+        ),
+        (
+            r#"{"models": [{"name": "a", "input_per_million": "-1", "output_per_million": "2"}]}"#,
+            "input_per_million must not be negative",
+        ),
+        (
+            r#"{"models": [{"name": "a", "input_per_million": "1", "output_per_million": "abc"}]}"#,
+            "output_per_million abc is not a number",
+        ),
+    ] {
+        let error = bench::load_pricing(bad).unwrap_err();
+        assert!(error.contains(expected), "{bad}: {error}");
+    }
+}
+
+#[test]
+fn bench_estimate_previews_tokens_and_usd_across_subsets_and_models() {
+    let root = repo_root();
+    let dir = tempfile::tempdir().unwrap();
+    let pricing_path = dir.path().join("pricing.json");
+    std::fs::write(
+        &pricing_path,
+        r#"{"models": [
+            {"name": "fast-model", "input_per_million": "1.00", "output_per_million": "4.00"},
+            {"name": "pro-model", "input_per_million": "10.00", "output_per_million": "30.00"}
+        ]}"#,
+    )
+    .unwrap();
+    let pricing = pricing_path.to_str().unwrap();
+
+    // Without pricing: token estimate only (text + JSON).
+    let bare = run_in(&root, &["bench", "estimate", "--reps", "2"], true);
+    assert_eq!(bare.code, 0, "{}", bare.stderr);
+    assert!(
+        bare.stdout.contains(
+            "bench estimate: 31 question(s) (topic payday-div7a), 2 repeat(s), guide excluded"
+        ),
+        "{}",
+        bare.stdout
+    );
+    assert!(
+        bare.stdout.contains("pass --pricing FILE"),
+        "{}",
+        bare.stdout
+    );
+    assert!(
+        bare.stdout.contains("reasoning/thinking tokens"),
+        "{}",
+        bare.stdout
+    );
+
+    let bare_json = run_in(&root, &["bench", "estimate", "--json"], true);
+    assert_eq!(bare_json.code, 0, "{}", bare_json.stderr);
+    let parsed_bare = pyjson::loads(&bare_json.stdout).unwrap();
+    assert_eq!(parsed_bare.get("cases"), Some(&Json::Int(31.into())));
+    assert_eq!(parsed_bare.get("total_usd"), Some(&Json::Null));
+
+    // With pricing, model filter, era filter, case subset, guide included.
+    let priced = run_in(
+        &root,
+        &[
+            "bench",
+            "estimate",
+            "--era",
+            "post-1-Jul-2026",
+            "--cases",
+            "PDS-001,D7A-001",
+            "--reps",
+            "3",
+            "--output-tokens",
+            "200",
+            "--with-guide",
+            "--pricing",
+            pricing,
+            "--models",
+            "fast-model,pro-model",
+        ],
+        true,
+    );
+    assert_eq!(priced.code, 0, "{}", priced.stderr);
+    assert!(
+        priced.stdout.contains(
+            "bench estimate: 2 question(s) (topic payday-div7a), 3 repeat(s), guide included"
+        ),
+        "{}",
+        priced.stdout
+    );
+    assert!(
+        priced.stdout.contains("model fast-model: $"),
+        "{}",
+        priced.stdout
+    );
+    assert!(
+        priced.stdout.contains("model pro-model: $"),
+        "{}",
+        priced.stdout
+    );
+    assert!(
+        priced.stdout.contains("total across 2 model(s): $"),
+        "{}",
+        priced.stdout
+    );
+
+    // All models from pricing file in JSON mode on payg-medicare.
+    let all_json = run_in(
+        &root,
+        &[
+            "bench",
+            "--topic",
+            "payg-medicare",
+            "estimate",
+            "--era",
+            "2025-26",
+            "--pricing",
+            pricing,
+            "--json",
+        ],
+        true,
+    );
+    assert_eq!(all_json.code, 0, "{}", all_json.stderr);
+    let parsed = pyjson::loads(&all_json.stdout).unwrap();
+    assert_eq!(parsed.get("cases"), Some(&Json::Int(3.into())));
+    assert_eq!(parsed.get("output_tokens"), Some(&Json::Int(1050.into())));
+    let Some(Json::Array(models)) = parsed.get("models") else {
+        panic!("{}", all_json.stdout);
+    };
+    assert_eq!(models.len(), 2);
+    assert!(parsed.get("total_usd").and_then(Json::as_str).is_some());
+
+    // Error paths.
+    for (args, expected) in [
+        (
+            vec!["bench", "estimate", "--reps", "0"],
+            "reps must be at least 1",
+        ),
+        (
+            vec!["bench", "estimate", "--output-tokens", "0"],
+            "output-tokens must be at least 1",
+        ),
+        (
+            vec!["bench", "estimate", "--models", "fast-model"],
+            "--models requires --pricing",
+        ),
+        (
+            vec!["bench", "estimate", "--era", "nope"],
+            "unknown era nope",
+        ),
+        (
+            vec!["bench", "estimate", "--cases", "NOPE-001"],
+            "unknown question NOPE-001",
+        ),
+        (
+            vec!["bench", "estimate", "--cases", "PDS-001,PDS-001"],
+            "question PDS-001 is listed more than once",
+        ),
+        (
+            vec![
+                "bench",
+                "--topic",
+                "payg-medicare",
+                "estimate",
+                "--era",
+                "pre-2025",
+            ],
+            "no questions match the selected filters",
+        ),
+        (
+            vec![
+                "bench",
+                "estimate",
+                "--pricing",
+                pricing,
+                "--models",
+                "missing",
+            ],
+            "unknown model missing",
+        ),
+        (
+            vec![
+                "bench",
+                "estimate",
+                "--pricing",
+                pricing,
+                "--models",
+                "fast-model,fast-model",
+            ],
+            "model fast-model is listed more than once",
+        ),
+    ] {
+        let out = run_in(&root, &args, true);
+        assert_eq!(out.code, 2, "{args:?}: {}", out.stdout);
+        assert!(out.stderr.contains(expected), "{args:?}: {}", out.stderr);
+    }
+
+    // Missing drdebits.md when --with-guide is requested.
+    let copy_tree = copy();
+    let missing_guide = run_in(
+        copy_tree.path(),
+        &["bench", "estimate", "--with-guide"],
+        true,
+    );
+    assert_eq!(missing_guide.code, 2);
+    assert!(
+        missing_guide.stderr.contains("drdebits.md:"),
+        "{}",
+        missing_guide.stderr
+    );
+}

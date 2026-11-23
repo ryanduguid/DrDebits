@@ -49,12 +49,20 @@ cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- 
 
 The scorer marks 2 things separately, because a right figure can rest on the wrong section:
 
-- **Value:** correct, wrong or unanswered, and a blank value is unanswered. Dates and tokens compare as text. Amounts compare by value, ignoring `$`, commas and a trailing `%`.
+- **Value:** correct, wrong or unanswered, and a blank value is unanswered. Dates and tokens compare as text. Amounts compare by value, ignoring `$`, commas and a trailing `%`; accounting parenthetical negatives such as `(1,234.50)` and `($1,234.50)` parse as negative.
 - **Authority:** right when every citation is readable and names a section the key lists, at section level, so `s 109N(2)` meets `s 109N`. Each listed section is enough alone: for the Payday Super keys either s 6 or s 18C counts as right, because each states the period relied on. `authority_mixed` counts answers with a right section beside a readable section outside the key, so citing every section at once earns no `authority_right`. `authority_partly_unreadable` counts answers whose readable citations are all right beside one the gate cannot read, because it could be wrong. `wrong_authority` counts answers with no right section among their readable citations. `authority_unreadable` counts answers citing only forms the gate cannot read, such as `Division 7A`. `authority_missing` counts answers with no citation.
 
-`correct_value_wrong_authority` counts the right figure on the wrong section. Add `--json` for each question's marks.
+`correct_value_wrong_authority` counts the right figure on the wrong section. Each key carries an `era` (`pre-2025`, `2025-26` or `post-1-Jul-2026`) naming the effective-date era of the operative law or rate needed to answer it, and `bench score` reports per-era slices in both text and `--json` output. Pass `--authorities authorities.json` (in the format `gate --authorities` reads) to report `fabricated_citation_rate` with a 95% Wilson confidence interval for readable citations off that closed list. Add `--json` for each question's marks.
 
 Give one answers file per repeat to score several runs of one condition: `bench score run-1.json run-2.json run-3.json`. It prints each repeat's totals under its file, then how many questions were correct on every repeat, on value alone and on value with the right authority. A question right in 2 of 3 repeats does not count. With `--json`, each repeat's totals and marks sit under `repeats` and the counts under `every_repeat`. It refuses a file named twice and says which file it cannot score.
+
+## Estimate token and API spend before a run
+
+```bash
+cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- bench estimate --reps 3 --pricing pricing.json --root .
+```
+
+`bench estimate` calculates offline input and output token counts (4-character-per-token approximation) across a topic, optional `--era` or `--cases` subset, `--reps`, `--output-tokens` and optional `--with-guide` (`drdebits.md`). Pass `--pricing FILE` (`{"models": [{"name": "...", "input_per_million": "3.00", "output_per_million": "15.00"}]}`) and optional `--models` to preview USD spend in exact decimal arithmetic before calling an API. Actual spend varies by tokeniser, prompt caching and reasoning or thinking tokens. Add `--json` for machine-readable output.
 
 ## Compare 2 conditions
 
