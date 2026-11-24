@@ -169,10 +169,43 @@ struct Family {
     spouse_threshold: Q,
 }
 
+/// The law effective-date era of a benchmark key, used to slice scores across
+/// temporal boundaries.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Era {
+    Pre2025,
+    Fy2025_26,
+    Post1Jul2026,
+}
+
+impl Era {
+    pub const ALL: [Era; 3] = [Era::Pre2025, Era::Fy2025_26, Era::Post1Jul2026];
+
+    pub fn parse(value: &str) -> Result<Era, String> {
+        match value {
+            "pre-2025" => Ok(Era::Pre2025),
+            "2025-26" => Ok(Era::Fy2025_26),
+            "post-1-Jul-2026" => Ok(Era::Post1Jul2026),
+            other => Err(format!(
+                "unknown era {other}; expected pre-2025, 2025-26 or post-1-Jul-2026"
+            )),
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Era::Pre2025 => "pre-2025",
+            Era::Fy2025_26 => "2025-26",
+            Era::Post1Jul2026 => "post-1-Jul-2026",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Key {
     pub id: String,
     pub value: String,
+    pub era: Era,
     kind: Kind,
     authorities: Vec<Authority>,
     rule: Rule,
@@ -197,6 +230,17 @@ fn date(value: &str, at: &str) -> Result<Date, String> {
 
 fn amount(value: &str) -> Option<Q> {
     let written = value.trim();
+    let (dollar_outside, body) = match written.strip_prefix('$') {
+        Some(rest) if rest.starts_with('(') => (true, rest),
+        _ => (false, written),
+    };
+    if let Some(inner) = body.strip_prefix('(').and_then(|s| s.strip_suffix(')')) {
+        let inner = inner.trim();
+        if inner.starts_with(['-', '−', '(']) || (dollar_outside && inner.starts_with('$')) {
+            return None;
+        }
+        return gate::number(inner.strip_suffix('%').unwrap_or(inner)).map(|(q, ..)| q.neg());
+    }
     gate::number(written.strip_suffix('%').unwrap_or(written)).map(|(q, ..)| q)
 }
 
@@ -298,8 +342,10 @@ fn read_key(item: &Json) -> Result<Key, String> {
             return Err(format!("{at}: {field} is missing"));
         }
     }
+    let era = Era::parse(text(item, "era", &at)?).map_err(|e| format!("{at}: {e}"))?;
     let check = item.get("check").ok_or(format!("{at}: check is missing"))?;
     Ok(Key {
+        era,
         kind,
         authorities,
         rule: read_rule(check, &at)?,
@@ -846,17 +892,25 @@ pub enum Cited {
 #[derive(Debug, PartialEq)]
 pub struct Scored {
     pub id: String,
+    pub era: Era,
     pub value: Value,
     pub cited: Cited,
+    pub citations: Vec<Authority>,
+    pub unreadable_citations: usize,
 }
 
-fn cited(key: &Key, written: &[&str]) -> Cited {
+fn read_citations(written: &[&str]) -> (Vec<Authority>, usize) {
     let read: Vec<Authority> = written.iter().filter_map(|c| Authority::read(c)).collect();
+    let unreadable = written.len() - read.len();
+    (read, unreadable)
+}
+
+fn cited(key: &Key, written_len: usize, read: &[Authority]) -> Cited {
     let right = read
         .iter()
         .filter(|a| key.authorities.iter().any(|k| k.section() == a.section()))
         .count();
-    if written.is_empty() {
+    if written_len == 0 {
         Cited::Missing
     } else if read.is_empty() {
         Cited::Unreadable
@@ -864,7 +918,7 @@ fn cited(key: &Key, written: &[&str]) -> Cited {
         Cited::Wrong
     } else if right < read.len() {
         Cited::Mixed
-    } else if read.len() < written.len() {
+    } else if read.len() < written_len {
         Cited::PartlyUnreadable
     } else {
         Cited::Right
@@ -895,8 +949,11 @@ pub fn score(keys: &[Key], answers: &Json) -> Result<Vec<Scored>, String> {
         let Some(answer) = answers.get("answers").and_then(|a| a.get(&key.id)) else {
             scored.push(Scored {
                 id: key.id.clone(),
+                era: key.era,
                 value: Value::Unanswered,
                 cited: Cited::Missing,
+                citations: Vec::new(),
+                unreadable_citations: 0,
             });
             continue;
         };
@@ -921,8 +978,11 @@ pub fn score(keys: &[Key], answers: &Json) -> Result<Vec<Scored>, String> {
                 .collect::<Result<Vec<_>, _>>()?,
             Some(_) => return Err(fail(format!("{}: authorities must be a list", key.id))),
         };
+        let (citations, unreadable_citations) = read_citations(&written);
+        let mark = cited(key, written.len(), &citations);
         scored.push(Scored {
             id: key.id.clone(),
+            era: key.era,
             value: if value.trim().is_empty() {
                 Value::Unanswered
             } else if matches(key.kind, &key.value, value) {
@@ -930,10 +990,109 @@ pub fn score(keys: &[Key], answers: &Json) -> Result<Vec<Scored>, String> {
             } else {
                 Value::Wrong
             },
-            cited: cited(key, &written),
+            cited: mark,
+            citations,
+            unreadable_citations,
         });
     }
     Ok(scored)
+}
+
+/// Score counts for one temporal era present in a scored run.
+#[derive(Debug, PartialEq)]
+pub struct EraSummary {
+    pub era: Era,
+    pub cases: usize,
+    pub value_correct: usize,
+    pub correct_value_right_authority: usize,
+}
+
+/// Slice a scored run by law effective-date era, keeping only eras present in `scored`.
+pub fn era_slices(scored: &[Scored]) -> Vec<EraSummary> {
+    Era::ALL
+        .iter()
+        .filter_map(|&era| {
+            let cases = scored.iter().filter(|s| s.era == era).count();
+            (cases > 0).then(|| EraSummary {
+                era,
+                cases,
+                value_correct: scored
+                    .iter()
+                    .filter(|s| s.era == era && s.value == Value::Correct)
+                    .count(),
+                correct_value_right_authority: scored
+                    .iter()
+                    .filter(|s| {
+                        s.era == era && s.value == Value::Correct && s.cited == Cited::Right
+                    })
+                    .count(),
+            })
+        })
+        .collect()
+}
+
+/// 95% Wilson score confidence interval for `hits` out of `total` trials.
+/// Returns `(rate, low, high)` in `[0.0, 1.0]`, or `None` when `total == 0`.
+pub fn wilson_ci95(hits: usize, total: usize) -> Option<(f64, f64, f64)> {
+    if total == 0 {
+        return None;
+    }
+    const Z: f64 = 1.959_963_984_540_054;
+    let z2 = Z * Z;
+    let n = total as f64;
+    let p = hits as f64 / n;
+    let denom = 1.0 + z2 / n;
+    let centre = (p + z2 / (2.0 * n)) / denom;
+    let margin = (Z / denom) * ((p * (1.0 - p) / n + z2 / (4.0 * n * n)).sqrt());
+    Some((
+        p,
+        (centre - margin).clamp(0.0, 1.0),
+        (centre + margin).clamp(0.0, 1.0),
+    ))
+}
+
+fn round4(value: f64) -> f64 {
+    (value * 10_000.0).round() / 10_000.0
+}
+
+/// Unlisted-citation rate against a closed authorities list, with a 95% Wilson CI.
+#[derive(Debug, PartialEq)]
+pub struct CitationRate {
+    pub unlisted: usize,
+    pub checked: usize,
+    pub unreadable: usize,
+    pub rate: Option<f64>,
+    pub ci95_low: Option<f64>,
+    pub ci95_high: Option<f64>,
+}
+
+/// Count readable citations on answered questions that are absent from `authorities`
+/// (using the same containment rule as `gate --authorities`) and compute a 95% Wilson CI.
+pub fn fabricated_citation_rate(scored: &[Scored], authorities: &[Authority]) -> CitationRate {
+    let mut unlisted = 0;
+    let mut checked = 0;
+    let mut unreadable = 0;
+    for s in scored.iter().filter(|s| s.value != Value::Unanswered) {
+        unreadable += s.unreadable_citations;
+        for a in &s.citations {
+            checked += 1;
+            if !a.containing().iter().any(|c| authorities.contains(c)) {
+                unlisted += 1;
+            }
+        }
+    }
+    let (rate, ci95_low, ci95_high) = match wilson_ci95(unlisted, checked) {
+        Some((r, lo, hi)) => (Some(round4(r)), Some(round4(lo)), Some(round4(hi))),
+        None => (None, None, None),
+    };
+    CitationRate {
+        unlisted,
+        checked,
+        unreadable,
+        rate,
+        ci95_low,
+        ci95_high,
+    }
 }
 
 fn tally(scored: &[Scored]) -> Vec<(&'static str, usize)> {
@@ -1122,6 +1281,242 @@ pub fn compare(keys: &[Key], a: &[Json], b: &[Json]) -> Result<Vec<Paired>, Stri
     Ok(rows)
 }
 
+const ESTIMATE_CAVEAT: &str = "Token counts use a 4-character-per-token approximation; actual spend varies by tokeniser, prompt caching and reasoning/thinking tokens.";
+
+/// Configured model pricing in USD per million input and output tokens.
+#[derive(Debug)]
+pub struct ModelPrice {
+    pub name: String,
+    input_per_million: Q,
+    output_per_million: Q,
+}
+
+/// Read a pricing JSON file: `{"models": [{"name": "...", "input_per_million": "3.00", "output_per_million": "15.00"}]}`.
+pub fn load_pricing(body: &str) -> Result<Vec<ModelPrice>, String> {
+    let fail = |m: String| format!("pricing file: {m}");
+    let payload = pyjson::loads(body).map_err(|e| fail(format!("not valid JSON ({e})")))?;
+    let Json::Object(top) = &payload else {
+        return Err(fail("top level must be an object".into()));
+    };
+    if let Some((key, _)) = top.iter().find(|(k, _)| k != "models") {
+        return Err(fail(format!("unknown key {key}; the only key is 'models'")));
+    }
+    let rows = items(&payload, "models", "pricing file")?;
+    let mut seen = HashSet::new();
+    rows.iter()
+        .map(|row| {
+            let Json::Object(fields) = row else {
+                return Err(fail("each model must be an object".into()));
+            };
+            if let Some((k, _)) = fields.iter().find(|(k, _)| {
+                !["name", "input_per_million", "output_per_million"].contains(&k.as_str())
+            }) {
+                return Err(fail(format!("unknown field {k}")));
+            }
+            let name = text(row, "name", "pricing file")?.trim().to_string();
+            if name.is_empty() {
+                return Err(fail("model name must not be empty".into()));
+            }
+            if !seen.insert(name.clone()) {
+                return Err(fail(format!("duplicate model {name}")));
+            }
+            let at = format!("pricing file {name}");
+            let rate = |field| {
+                let q = decimal_field(row, field, &at)?;
+                if q.less_than(&ratio(0, 1)) {
+                    return Err(format!("{at}: {field} must not be negative"));
+                }
+                Ok(q)
+            };
+            Ok(ModelPrice {
+                input_per_million: rate("input_per_million")?,
+                output_per_million: rate("output_per_million")?,
+                name,
+            })
+        })
+        .collect()
+}
+
+/// Estimated USD spend for one configured model.
+#[derive(Debug, PartialEq)]
+pub struct ModelEstimate {
+    pub name: String,
+    pub input_usd: String,
+    pub output_usd: String,
+    pub total_usd: String,
+}
+
+/// Offline pre-run token and optional USD cost estimate for a benchmark subset.
+#[derive(Debug, PartialEq)]
+pub struct EstimateReport {
+    pub topic: String,
+    pub cases: usize,
+    pub reps: u32,
+    pub with_guide: bool,
+    pub output_tokens_per_case: u32,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub total_tokens: u64,
+    pub models: Vec<ModelEstimate>,
+    pub total_usd: Option<String>,
+}
+
+/// Options for offline pre-run cost estimation.
+pub struct EstimateOptions<'a> {
+    pub topic: &'a str,
+    pub era: Option<Era>,
+    pub cases: &'a [String],
+    pub reps: u32,
+    pub output_tokens: u32,
+    pub with_guide: bool,
+    pub pricing: Option<&'a [ModelPrice]>,
+    pub models: &'a [String],
+}
+
+fn price_models(
+    table: &[ModelPrice],
+    requested: &[String],
+    input_tokens: u64,
+    output_tokens: u64,
+) -> Result<(Vec<ModelEstimate>, Option<String>), String> {
+    let chosen: Vec<&ModelPrice> = if requested.is_empty() {
+        table.iter().collect()
+    } else {
+        let mut seen = HashSet::new();
+        requested
+            .iter()
+            .map(|name| {
+                if !seen.insert(name.as_str()) {
+                    return Err(format!("model {name} is listed more than once"));
+                }
+                table
+                    .iter()
+                    .find(|m| &m.name == name)
+                    .ok_or_else(|| format!("unknown model {name}"))
+            })
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    let cost =
+        |tokens: u64, rate: &Q| Q::new(BigInt::from(tokens), BigInt::from(1_000_000)).mul(rate);
+    let mut grand_total = ratio(0, 1);
+    let mut models = Vec::with_capacity(chosen.len());
+    for m in chosen {
+        let in_usd = cost(input_tokens, &m.input_per_million);
+        let out_usd = cost(output_tokens, &m.output_per_million);
+        let sum = in_usd.add(&out_usd, 1);
+        grand_total = grand_total.add(&sum, 1);
+        models.push(ModelEstimate {
+            name: m.name.clone(),
+            input_usd: gate::decimal(&in_usd, 4),
+            output_usd: gate::decimal(&out_usd, 4),
+            total_usd: gate::decimal(&sum, 4),
+        });
+    }
+    let total_usd = (!models.is_empty()).then(|| gate::decimal(&grand_total, 4));
+    Ok((models, total_usd))
+}
+
+/// Estimate offline token counts and optional USD cost across selected cases and configured models.
+pub fn estimate(root: &PyPath, opts: &EstimateOptions<'_>) -> Result<EstimateReport, String> {
+    if opts.reps == 0 {
+        return Err("reps must be at least 1".into());
+    }
+    if opts.output_tokens == 0 {
+        return Err("output-tokens must be at least 1".into());
+    }
+    if !opts.models.is_empty() && opts.pricing.is_none() {
+        return Err("--models requires --pricing".into());
+    }
+    let keys = load_keys(root, opts.topic)?;
+    let topic = Topic::find(opts.topic)?;
+    let questions_file = topic.file("questions.json");
+    let questions_json = read_json(root, &questions_file)?;
+    let instructions = text(&questions_json, "instructions", &questions_file)?;
+    let question_rows = items(&questions_json, "questions", &questions_file)?;
+    let mut selected_ids = HashSet::new();
+    for id in opts.cases {
+        if !keys.iter().any(|k| &k.id == id) {
+            return Err(format!("unknown question {id}"));
+        }
+        if !selected_ids.insert(id.as_str()) {
+            return Err(format!("question {id} is listed more than once"));
+        }
+    }
+    let guide_chars = if opts.with_guide {
+        builder::read_text(&root.join("drdebits.md"))
+            .map_err(|e| format!("drdebits.md: {e}"))?
+            .chars()
+            .count()
+    } else {
+        0
+    };
+    let base_chars = instructions.chars().count() + guide_chars + 2;
+    let mut cases = 0usize;
+    let mut per_rep_input = 0u64;
+    for (key, row) in keys.iter().zip(question_rows) {
+        if opts.era.is_some_and(|e| key.era != e)
+            || (!selected_ids.is_empty() && !selected_ids.contains(key.id.as_str()))
+        {
+            continue;
+        }
+        let prompt_chars = base_chars
+            + text(row, "question", &questions_file)?.chars().count()
+            + text(row, "answer_format", &questions_file)?.chars().count();
+        per_rep_input += prompt_chars.div_ceil(4) as u64;
+        cases += 1;
+    }
+    if cases == 0 {
+        return Err("no questions match the selected filters".into());
+    }
+    let reps = u64::from(opts.reps);
+    let input_tokens = per_rep_input * reps;
+    let output_tokens = cases as u64 * u64::from(opts.output_tokens) * reps;
+    let (models, total_usd) = match opts.pricing {
+        Some(table) => price_models(table, opts.models, input_tokens, output_tokens)?,
+        None => (Vec::new(), None),
+    };
+    Ok(EstimateReport {
+        topic: opts.topic.to_string(),
+        cases,
+        reps: opts.reps,
+        with_guide: opts.with_guide,
+        output_tokens_per_case: opts.output_tokens,
+        input_tokens,
+        output_tokens,
+        total_tokens: input_tokens + output_tokens,
+        models,
+        total_usd,
+    })
+}
+
+#[derive(clap::Args)]
+struct EstimateArgs {
+    /// Limit to questions in this era (pre-2025, 2025-26 or post-1-Jul-2026).
+    #[arg(long)]
+    era: Option<String>,
+    /// Limit to specific question ids (comma-separated or repeated).
+    #[arg(long = "cases", value_delimiter = ',')]
+    cases: Vec<String>,
+    /// Number of repeats per question.
+    #[arg(long, default_value_t = 1)]
+    reps: u32,
+    /// Estimated output tokens per question.
+    #[arg(long, default_value_t = 350)]
+    output_tokens: u32,
+    /// Include drdebits.md in each question's input token estimate.
+    #[arg(long)]
+    with_guide: bool,
+    /// A JSON pricing file mapping configured models to USD rates per million tokens.
+    #[arg(long)]
+    pricing: Option<String>,
+    /// Configured model names from `--pricing` to estimate (comma-separated or repeated).
+    #[arg(long, value_delimiter = ',')]
+    models: Vec<String>,
+    /// Print the estimate as JSON.
+    #[arg(long)]
+    json: bool,
+}
+
 #[derive(clap::Args)]
 pub struct Args {
     /// The benchmark folder under `benchmarks/`: payday-div7a or payg-medicare.
@@ -1141,6 +1536,10 @@ enum Command {
         /// The answers file, or one file per repeat.
         #[arg(required = true)]
         answers: Vec<String>,
+        /// A JSON authorities file in the form `gate --authorities` reads;
+        /// reports `fabricated_citation_rate` with a 95% Wilson CI.
+        #[arg(long)]
+        authorities: Option<String>,
         /// Print each question's marks and the totals as JSON.
         #[arg(long)]
         json: bool,
@@ -1155,6 +1554,8 @@ enum Command {
         #[arg(long = "b", num_args = 1.., required = true)]
         b: Vec<String>,
     },
+    /// Estimate offline token counts and optional USD cost before running a model.
+    Estimate(EstimateArgs),
 }
 
 fn run_keys(root: &PyPath, topic: &str) -> Result<u8, String> {
@@ -1200,9 +1601,46 @@ fn once_each<'a>(mut paths: impl Iterator<Item = &'a String>) -> Result<(), Stri
     }
 }
 
-fn score_json(totals: &[(&str, usize)], scored: &[Scored]) -> Vec<(String, Json)> {
+fn citation_rate_json(rate: Option<&CitationRate>) -> Json {
+    let Some(r) = rate else {
+        return Json::Null;
+    };
+    let int = |n: usize| Json::Int(BigInt::from(n));
+    let float = |v: Option<f64>| v.map_or(Json::Null, Json::Float);
+    Json::Object(vec![
+        ("unlisted".into(), int(r.unlisted)),
+        ("checked".into(), int(r.checked)),
+        ("unreadable".into(), int(r.unreadable)),
+        ("rate".into(), float(r.rate)),
+        ("ci95_low".into(), float(r.ci95_low)),
+        ("ci95_high".into(), float(r.ci95_high)),
+        ("method".into(), Json::str_obj("wilson_95")),
+    ])
+}
+
+fn score_json(
+    totals: &[(&str, usize)],
+    scored: &[Scored],
+    citation_rate: Option<&CitationRate>,
+) -> Vec<(String, Json)> {
     let int = |n: usize| Json::Int(BigInt::from(n));
     let word = |m: String| Json::Str(m.to_lowercase());
+    let eras = era_slices(scored)
+        .into_iter()
+        .map(|slice| {
+            (
+                slice.era.as_str().to_string(),
+                Json::Object(vec![
+                    ("cases".into(), int(slice.cases)),
+                    ("value_correct".into(), int(slice.value_correct)),
+                    (
+                        "correct_value_right_authority".into(),
+                        int(slice.correct_value_right_authority),
+                    ),
+                ]),
+            )
+        })
+        .collect();
     vec![
         (
             "totals".into(),
@@ -1213,6 +1651,11 @@ fn score_json(totals: &[(&str, usize)], scored: &[Scored]) -> Vec<(String, Json)
                     .collect(),
             ),
         ),
+        ("eras".into(), Json::Object(eras)),
+        (
+            "fabricated_citation_rate".into(),
+            citation_rate_json(citation_rate),
+        ),
         (
             "questions".into(),
             Json::Array(
@@ -1221,6 +1664,7 @@ fn score_json(totals: &[(&str, usize)], scored: &[Scored]) -> Vec<(String, Json)
                     .map(|s| {
                         Json::Object(vec![
                             ("id".into(), Json::str_obj(&s.id)),
+                            ("era".into(), Json::str_obj(s.era.as_str())),
                             ("value".into(), word(format!("{:?}", s.value))),
                             ("authority".into(), word(format!("{:?}", s.cited))),
                         ])
@@ -1233,9 +1677,16 @@ fn score_json(totals: &[(&str, usize)], scored: &[Scored]) -> Vec<(String, Json)
 
 /// One file prints its totals, as it always has. Several print each
 /// repeat's totals under its file, then the questions right on every repeat.
-fn run_score(root: &PyPath, topic: &str, paths: &[String], json: bool) -> Result<u8, String> {
+fn run_score(
+    root: &PyPath,
+    topic: &str,
+    paths: &[String],
+    authorities: Option<&str>,
+    json: bool,
+) -> Result<u8, String> {
     let keys = load_keys(root, topic)?;
     once_each(paths.iter())?;
+    let corpus = gate::load_list(authorities, "authorities", gate::load_authorities)?;
     let runs = paths
         .iter()
         .map(|p| {
@@ -1247,17 +1698,31 @@ fn run_score(root: &PyPath, topic: &str, paths: &[String], json: bool) -> Result
         })
         .collect::<Result<Vec<_>, _>>()?;
     let tallies: Vec<_> = runs.iter().map(|s| tally(s)).collect();
+    let rates: Vec<Option<CitationRate>> = runs
+        .iter()
+        .map(|s| {
+            corpus
+                .as_deref()
+                .map(|list| fabricated_citation_rate(s, list))
+        })
+        .collect();
     let held = every_repeat(&runs);
     let int = |n: usize| Json::Int(BigInt::from(n));
     if json {
         let payload = if let [scored] = &runs[..] {
-            score_json(&tallies[0], scored)
+            score_json(&tallies[0], scored, rates[0].as_ref())
         } else {
-            let repeats = paths.iter().zip(&tallies).zip(&runs).map(|((p, t), s)| {
-                let mut run = vec![("file".to_string(), Json::str_obj(p))];
-                run.extend(score_json(t, s));
-                Json::Object(run)
-            });
+            let repeats =
+                paths
+                    .iter()
+                    .zip(&tallies)
+                    .zip(&runs)
+                    .zip(&rates)
+                    .map(|(((p, t), s), r)| {
+                        let mut run = vec![("file".to_string(), Json::str_obj(p))];
+                        run.extend(score_json(t, s, r.as_ref()));
+                        Json::Object(run)
+                    });
             let mut every = vec![("repeats".to_string(), int(runs.len()))];
             every.extend(held.iter().map(|(m, n)| (m.replace(' ', "_"), int(*n))));
             vec![
@@ -1268,12 +1733,45 @@ fn run_score(root: &PyPath, topic: &str, paths: &[String], json: bool) -> Result
         outln!("{}", pyjson::dumps(&Json::Object(payload), false));
         return Ok(EXIT_OK);
     }
-    for (i, (path, totals)) in paths.iter().zip(&tallies).enumerate() {
+    for (i, (((path, totals), scored), rate)) in paths
+        .iter()
+        .zip(&tallies)
+        .zip(&runs)
+        .zip(&rates)
+        .enumerate()
+    {
         if runs.len() > 1 {
             outln!("repeat {}: {path}", i + 1);
         }
         for (label, count) in totals {
             outln!("{}: {count}", label.replace('_', " "));
+        }
+        for slice in era_slices(scored) {
+            outln!(
+                "era {}: {}/{} value correct, {}/{} correct value and authority",
+                slice.era.as_str(),
+                slice.value_correct,
+                slice.cases,
+                slice.correct_value_right_authority,
+                slice.cases,
+            );
+        }
+        if let Some(r) = rate {
+            match (r.rate, r.ci95_low, r.ci95_high) {
+                (Some(p), Some(lo), Some(hi)) => outln!(
+                    "fabricated citation rate: {}/{} ({:.2}%, 95% Wilson CI {:.2}% to {:.2}%; {} unreadable)",
+                    r.unlisted,
+                    r.checked,
+                    p * 100.0,
+                    lo * 100.0,
+                    hi * 100.0,
+                    r.unreadable,
+                ),
+                _ => outln!(
+                    "fabricated citation rate: n/a (0 readable citations; {} unreadable)",
+                    r.unreadable,
+                ),
+            }
         }
     }
     if runs.len() > 1 {
@@ -1282,6 +1780,102 @@ fn run_score(root: &PyPath, topic: &str, paths: &[String], json: bool) -> Result
             outln!("{measure}: {count}");
         }
     }
+    Ok(EXIT_OK)
+}
+
+fn estimate_json(report: &EstimateReport) -> Json {
+    let int = |n: u64| Json::Int(BigInt::from(n));
+    let models = report
+        .models
+        .iter()
+        .map(|m| {
+            Json::Object(vec![
+                ("name".into(), Json::str_obj(&m.name)),
+                ("input_usd".into(), Json::str_obj(&m.input_usd)),
+                ("output_usd".into(), Json::str_obj(&m.output_usd)),
+                ("total_usd".into(), Json::str_obj(&m.total_usd)),
+            ])
+        })
+        .collect();
+    Json::Object(vec![
+        ("topic".into(), Json::str_obj(&report.topic)),
+        ("cases".into(), int(report.cases as u64)),
+        ("reps".into(), int(u64::from(report.reps))),
+        ("with_guide".into(), Json::Bool(report.with_guide)),
+        (
+            "output_tokens_per_case".into(),
+            int(u64::from(report.output_tokens_per_case)),
+        ),
+        ("input_tokens".into(), int(report.input_tokens)),
+        ("output_tokens".into(), int(report.output_tokens)),
+        ("total_tokens".into(), int(report.total_tokens)),
+        ("models".into(), Json::Array(models)),
+        (
+            "total_usd".into(),
+            report
+                .total_usd
+                .as_deref()
+                .map_or(Json::Null, Json::str_obj),
+        ),
+        ("caveat".into(), Json::str_obj(ESTIMATE_CAVEAT)),
+    ])
+}
+
+fn run_estimate(root: &PyPath, topic: &str, args: &EstimateArgs) -> Result<u8, String> {
+    let era = args.era.as_deref().map(Era::parse).transpose()?;
+    let loaded_pricing = gate::load_list(args.pricing.as_deref(), "pricing", load_pricing)?;
+    let report = estimate(
+        root,
+        &EstimateOptions {
+            topic,
+            era,
+            cases: &args.cases,
+            reps: args.reps,
+            output_tokens: args.output_tokens,
+            with_guide: args.with_guide,
+            pricing: loaded_pricing.as_deref(),
+            models: &args.models,
+        },
+    )?;
+    if args.json {
+        outln!("{}", pyjson::dumps(&estimate_json(&report), false));
+        return Ok(EXIT_OK);
+    }
+    let guide = if report.with_guide {
+        "guide included"
+    } else {
+        "guide excluded"
+    };
+    outln!(
+        "bench estimate: {} question(s) (topic {}), {} repeat(s), {guide}",
+        report.cases,
+        report.topic,
+        report.reps,
+    );
+    outln!("estimated input tokens: {}", report.input_tokens);
+    outln!(
+        "estimated output tokens: {} ({} per question)",
+        report.output_tokens,
+        report.output_tokens_per_case,
+    );
+    outln!("estimated total tokens: {}", report.total_tokens);
+    for m in &report.models {
+        outln!(
+            "model {}: ${} USD (input ${}, output ${})",
+            m.name,
+            m.total_usd,
+            m.input_usd,
+            m.output_usd,
+        );
+    }
+    match &report.total_usd {
+        Some(total) => outln!(
+            "combined total across {} model(s): ${total} USD",
+            report.models.len()
+        ),
+        None => outln!("note: pass --pricing FILE to estimate USD cost across configured models"),
+    }
+    outln!("note: {ESTIMATE_CAVEAT}");
     Ok(EXIT_OK)
 }
 
@@ -1340,8 +1934,13 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
         .map_err(|e| e.to_string())
         .and_then(|root| match args.command {
             Command::Keys => run_keys(&root, &args.topic),
-            Command::Score { answers, json } => run_score(&root, &args.topic, &answers, json),
+            Command::Score {
+                answers,
+                authorities,
+                json,
+            } => run_score(&root, &args.topic, &answers, authorities.as_deref(), json),
             Command::Compare { a, b } => run_compare(&root, &args.topic, &a, &b),
+            Command::Estimate(est) => run_estimate(&root, &args.topic, &est),
         });
     result.unwrap_or_else(|e| {
         errln!("bench: {e}");

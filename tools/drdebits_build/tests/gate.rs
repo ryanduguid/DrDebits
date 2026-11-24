@@ -3448,3 +3448,117 @@ fn the_source_option_reports_through_the_command_and_stops_on_a_bad_file() {
         missing.stderr
     );
 }
+
+#[test]
+fn parenthetical_accounting_negatives_block_in_calculations() {
+    for line in [
+        "$2,000 + ($1,234.50) = $765.50",
+        "$1,000 - $2,234.50 = (1,234.50)",
+        "$1,000 - $2,234.50 = ($1,234.50)",
+        "$1,000 - $2,234.50 = $(1,234.50)",
+        "$(1,234.50) + $500 = -$734.50",
+    ] {
+        let found = calculations(line);
+        assert!(
+            !found.is_empty() && found.iter().any(|c| !c.matches),
+            "{line}: should block"
+        );
+    }
+}
+
+#[test]
+fn error_classes_separate_arithmetic_facts_and_route_findings() {
+    let facts = load_facts(FACTS).unwrap();
+    let authorities =
+        load_authorities(r#"{"authorities": ["s 8-1 of the Income Tax Assessment Act 1997"]}"#)
+            .unwrap();
+
+    // Pure arithmetic error with operands matching --facts: ARITHMETIC_ERROR only.
+    let bad_math = DRAFT
+        .replace("= $100.00", "= $110.00")
+        .replace("GST of $100", "GST of $110");
+    let mut report = check(&bad_math, &conclusions());
+    check_facts(&bad_math, &facts, &mut report);
+    assert_eq!(report.error_classes, [gate::ErrorClass::ArithmeticError]);
+
+    // Failed calculation with no monetary operands cannot suppress FACT_MISMATCH.
+    let no_fact_operand = format!("{DRAFT}\n- Bonus check: 100 + 200 = $400.\n");
+    let mut report = check(&no_fact_operand, &conclusions());
+    check_facts(&no_fact_operand, &facts, &mut report);
+    assert_eq!(
+        report.error_classes,
+        [
+            gate::ErrorClass::ArithmeticError,
+            gate::ErrorClass::FactMismatch
+        ]
+    );
+
+    // Failed calculation with an unknown monetary operand flags both classes.
+    let bad_operand_and_math = DRAFT
+        .replace("Invoice total $1,100", "Invoice total $1,200")
+        .replace("$1,100 / 11 = $100.00", "$1,200 / 11 = $150.00")
+        .replace("GST of $100", "GST of $150");
+    let mut report = check(&bad_operand_and_math, &conclusions());
+    check_facts(&bad_operand_and_math, &facts, &mut report);
+    assert_eq!(
+        report.error_classes,
+        [
+            gate::ErrorClass::ArithmeticError,
+            gate::ErrorClass::FactMismatch
+        ]
+    );
+
+    // Valid arithmetic on a wrong input fact: FACT_MISMATCH only.
+    let bad_fact = DRAFT
+        .replace("Invoice total $1,100", "Invoice total $1,200")
+        .replace("$1,100 / 11 = $100.00", "$1,200 / 11 = $109.09")
+        .replace("GST of $100", "GST of $109.09");
+    let mut report = check(&bad_fact, &conclusions());
+    check_facts(&bad_fact, &facts, &mut report);
+    assert_eq!(report.error_classes, [gate::ErrorClass::FactMismatch]);
+
+    // Unreadable amount in --facts: FACT_MISMATCH.
+    let unreadable_fact = format!("{DRAFT}\n- Threshold is about $5k.\n");
+    let mut report = check(&unreadable_fact, &conclusions());
+    check_facts(&unreadable_fact, &facts, &mut report);
+    assert_eq!(report.error_classes, [gate::ErrorClass::FactMismatch]);
+
+    // Unlisted authority and missing status: ROUTE_ERROR (deduplicated).
+    let bad_route = DRAFT
+        .replace("Primary decision status: PROCEED_DRAFT_ONLY", "")
+        .replace(
+            "The supply is wholly taxable.",
+            "Rely on s 9-5 of the A New Tax System (Goods and Services Tax) Act 1999.",
+        );
+    let mut report = check(&bad_route, &conclusions());
+    check_authorities(&bad_route, &authorities, &mut report);
+    assert_eq!(report.error_classes, [gate::ErrorClass::RouteError]);
+
+    // CLI --json and text output carry error_classes cleanly.
+    let dir = tempfile::tempdir().unwrap();
+    let root = repo_root();
+    let root = root.to_str().unwrap();
+    std::fs::write(dir.path().join("bad.md"), &bad_math).unwrap();
+    let text_out = run_in(dir.path(), &["--root", root, "gate", "bad.md"], false);
+    assert_eq!(text_out.code, i32::from(EXIT_BLOCK));
+    assert!(
+        text_out
+            .stdout
+            .contains("  error classes: ARITHMETIC_ERROR\n"),
+        "{}",
+        text_out.stdout
+    );
+    let json_out = run_in(
+        dir.path(),
+        &["--root", root, "gate", "--json", "bad.md"],
+        false,
+    );
+    assert_eq!(json_out.code, i32::from(EXIT_BLOCK));
+    let parsed = pyjson::loads(&json_out.stdout).unwrap();
+    assert_eq!(
+        parsed.get("error_classes"),
+        Some(&pyjson::Json::Array(vec![pyjson::Json::str_obj(
+            "ARITHMETIC_ERROR"
+        )]))
+    );
+}

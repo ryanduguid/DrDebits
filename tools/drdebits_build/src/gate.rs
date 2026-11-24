@@ -417,7 +417,7 @@ impl Q {
     pub(crate) fn div(&self, o: &Q) -> Option<Q> {
         (!o.n.is_zero()).then(|| Q::new(&self.n * &o.d, &self.d * &o.n))
     }
-    fn neg(&self) -> Q {
+    pub(crate) fn neg(&self) -> Q {
         Q::new(-&self.n, self.d.clone())
     }
     pub(crate) fn equals(&self, o: &Q) -> bool {
@@ -1222,6 +1222,25 @@ fn section(lines: &[String], heading: &str) -> Option<bool> {
     )
 }
 
+/// Structured 3-way error class for a gate finding, separating arithmetic
+/// failures from fact mismatches and authority or routing errors.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ErrorClass {
+    ArithmeticError,
+    FactMismatch,
+    RouteError,
+}
+
+impl ErrorClass {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ErrorClass::ArithmeticError => "ARITHMETIC_ERROR",
+            ErrorClass::FactMismatch => "FACT_MISMATCH",
+            ErrorClass::RouteError => "ROUTE_ERROR",
+        }
+    }
+}
+
 /// The gate's findings for one response.
 #[derive(Default)]
 pub struct Report {
@@ -1230,6 +1249,7 @@ pub struct Report {
     pub reviews: Vec<String>,
     pub notes: Vec<String>,
     pub calculations: Vec<Calculation>,
+    pub error_classes: Vec<ErrorClass>,
 }
 
 impl Report {
@@ -1240,6 +1260,12 @@ impl Report {
             ("REVIEW", EXIT_REVIEW)
         } else {
             ("PASS", EXIT_PASS)
+        }
+    }
+
+    fn record_error(&mut self, class: ErrorClass) {
+        if !self.error_classes.contains(&class) {
+            self.error_classes.push(class);
         }
     }
 }
@@ -1355,6 +1381,9 @@ pub fn check(response: &str, conclusions: &[Conclusion]) -> Report {
             statuses.len()
         )),
     }
+    if report.status.is_none() {
+        report.record_error(ErrorClass::RouteError);
+    }
     let stop = report
         .status
         .as_deref()
@@ -1387,14 +1416,20 @@ pub fn check(response: &str, conclusions: &[Conclusion]) -> Report {
         ));
     }
     report.calculations = calculations(response);
+    let mut bad_calc = false;
     for c in report.calculations.iter().filter(|c| !c.matches) {
         report.blocks.push(format!(
             "calculation does not reperform: {} (computes to {})",
             c.text, c.computed
         ));
+        bad_calc = true;
+    }
+    if bad_calc {
+        report.record_error(ErrorClass::ArithmeticError);
     }
     for label in harness::prohibited_hits(response, conclusions) {
         report.reviews.push(format!("prohibited-conclusion screen: {label}; a human must confirm whether it is concluded or refused"));
+        report.record_error(ErrorClass::RouteError);
     }
     report
 }
@@ -1523,9 +1558,30 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
             );
         }
     }
+    let failed_results: Vec<Amount> = report
+        .calculations
+        .iter()
+        .filter(|c| !c.matches)
+        .filter(|c| {
+            let mut monetary = c
+                .operands
+                .iter()
+                .filter(|t| t.contains('$') || t.ends_with('%'))
+                .peekable();
+            monetary.peek().is_some()
+                && monetary.all(|t| Amount::read(t).is_some_and(|a| is_known(&known, &a)))
+        })
+        .flat_map(|c| {
+            c.results
+                .iter()
+                .filter(|t| t.contains('$') || t.ends_with('%'))
+                .filter_map(|t| Amount::read(t))
+        })
+        .collect();
     let mut untraced: Vec<String> = Vec::new();
     let mut unread: Vec<String> = Vec::new();
     let mut equal: Vec<String> = Vec::new();
+    let mut fact_mismatch = false;
     for line in py::splitlines(response).into_iter().map(normalise) {
         let mut at = 0;
         while let Some(m) = DRAFT_AMOUNT.find_at(&line, at) {
@@ -1554,7 +1610,12 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
                         .collect();
                     match names.as_slice() {
                         [] if is_known(&known, &a) => continue,
-                        [] => (&mut untraced, written.to_string()),
+                        [] => {
+                            if !is_known(&failed_results, &a) {
+                                fact_mismatch = true;
+                            }
+                            (&mut untraced, written.to_string())
+                        }
                         [name] => (
                             &mut equal,
                             format!("{written} is equal in amount to fact {name}"),
@@ -1574,6 +1635,9 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
                 list.push(item);
             }
         }
+    }
+    if fact_mismatch || !unread.is_empty() {
+        report.record_error(ErrorClass::FactMismatch);
     }
     if !untraced.is_empty() {
         report.reviews.push(format!(
@@ -1711,7 +1775,7 @@ impl Authority {
 
     /// The citation and each provision containing it, narrowest first:
     /// `s 8-1(1)(a)`, `s 8-1(1)`, `s 8-1`. A ruling id contains nothing else.
-    fn containing(&self) -> Vec<Authority> {
+    pub(crate) fn containing(&self) -> Vec<Authority> {
         let Some((mut provision, act)) = self.0.split_once(" of the ") else {
             return vec![Authority(self.0.clone())];
         };
@@ -1853,6 +1917,9 @@ pub fn check_authorities(response: &str, authorities: &[Authority], report: &mut
             unread.join(", ")
         ));
     }
+    if !unlisted.is_empty() || !unread.is_empty() {
+        report.record_error(ErrorClass::RouteError);
+    }
     report.notes.push(
         "authorities check: it reads only a section of a named Act, or a subsection, paragraph or subparagraph of one, and a ruling id, so a pass does not show that every authority the draft cites was checked; a listed authority is not thereby current or correctly applied"
             .into(),
@@ -1993,6 +2060,16 @@ fn report_json(report: &Report) -> Json {
                     .collect(),
             ),
         ),
+        (
+            "error_classes".into(),
+            Json::Array(
+                report
+                    .error_classes
+                    .iter()
+                    .map(|c| Json::str_obj(c.as_str()))
+                    .collect(),
+            ),
+        ),
     ])
 }
 
@@ -2102,6 +2179,10 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
         for item in items {
             outln!("  {label}: {item}");
         }
+    }
+    if !report.error_classes.is_empty() {
+        let classes: Vec<&str> = report.error_classes.iter().map(|c| c.as_str()).collect();
+        outln!("  error classes: {}", classes.join(", "));
     }
     for c in report.calculations.iter().filter(|c| c.matches) {
         outln!("  reperformed: {}", c.text);

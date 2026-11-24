@@ -74,7 +74,8 @@ pass, 1 when the draft breaks the contract or a calculation does not
 reperform, 2 when it could not run and 3 when nothing blocked but the
 prohibited-conclusion screen matched or the draft records a state-changing
 action, which a person must resolve. `--json` prints the findings for the
-host. A pass does not establish that the facts,
+host, including `error_classes` separating `ARITHMETIC_ERROR`, `FACT_MISMATCH`
+and `ROUTE_ERROR`. A pass does not establish that the facts,
 sources or conclusion are right; a person still reviews the draft.
 
 `--facts facts.json` also asks for review of any dollar amount or percentage

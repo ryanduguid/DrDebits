@@ -6,6 +6,7 @@
   "keys": [
     {
       "id": "PAYG-001",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "27.00",
       "authorities": [
@@ -30,6 +31,7 @@
     },
     {
       "id": "PAYG-002",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "409.00",
       "authorities": [
@@ -54,6 +56,7 @@
     },
     {
       "id": "PAYG-003",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "1062.00",
       "authorities": [
@@ -78,6 +81,7 @@
     },
     {
       "id": "PAYG-004",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "159.00",
       "authorities": [
@@ -102,6 +106,7 @@
     },
     {
       "id": "PAYG-005",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "674.00",
       "authorities": [
@@ -126,6 +131,7 @@
     },
     {
       "id": "PAYG-006",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "159.00",
       "authorities": [
@@ -150,6 +156,7 @@
     },
     {
       "id": "PAYG-007",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "98.00",
       "authorities": [
@@ -174,6 +181,7 @@
     },
     {
       "id": "PAYG-008",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "362.00",
       "authorities": [
@@ -198,6 +206,7 @@
     },
     {
       "id": "PAYG-009",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "784.00",
       "authorities": [
@@ -222,6 +231,7 @@
     },
     {
       "id": "PAYG-010",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "117.00",
       "authorities": [
@@ -246,6 +256,7 @@
     },
     {
       "id": "PAYG-011",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "827.00",
       "authorities": [
@@ -271,6 +282,7 @@
     },
     {
       "id": "PAYG-012",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "23.00",
       "authorities": [
@@ -296,6 +308,7 @@
     },
     {
       "id": "PAYG-013",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "219.00",
       "authorities": [
@@ -323,6 +336,7 @@
     },
     {
       "id": "PAYG-014",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "19.00",
       "authorities": [
@@ -348,6 +362,7 @@
     },
     {
       "id": "PAYG-015",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "36.00",
       "authorities": [
@@ -373,6 +388,7 @@
     },
     {
       "id": "PAYG-016",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "11.00",
       "authorities": [
@@ -398,6 +414,7 @@
     },
     {
       "id": "PAYG-017",
+      "era": "post-1-Jul-2026",
       "kind": "number",
       "value": "56.00",
       "authorities": [
@@ -423,6 +440,7 @@
     },
     {
       "id": "ML-001",
+      "era": "2025-26",
       "kind": "number",
       "value": "1500",
       "authorities": [
@@ -446,6 +464,7 @@
     },
     {
       "id": "ML-002",
+      "era": "2025-26",
       "kind": "number",
       "value": "98.90",
       "authorities": [
@@ -469,6 +488,7 @@
     },
     {
       "id": "ML-003",
+      "era": "2025-26",
       "kind": "number",
       "value": "92.90",
       "authorities": [
