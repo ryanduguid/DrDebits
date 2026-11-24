@@ -9,7 +9,7 @@ release_tag: v0.8.0
 sources_checked_at: 2026-10-14T00:00:00+11:00
 review_due: 2027-01-14
 tasa_compilation: C2026C00441
-tasr_compilation: F2026C01004
+tasr_compilation: F2026C01218
 code_determination_compilation: F2026C00953
 aml_ctf_act_compilation: C2026C00447
 taa_compilation: C2026C00468
@@ -109,7 +109,7 @@ Apply DrDebits to this task. Classify the service, role, period and applicable s
 | Source | Version checked | Status at 2026-10-14 unless a later confirmation is stated | Role in DrDebits |
 |---|---|---|---|
 | [*Tax Agent Services Act 2009*](https://www.legislation.gov.au/C2009A00013/latest) | `C2026C00441`, Compilation No 27, 1 October 2026 | In force; completion of substantive human review confirmed on 8 October 2026 | Primary statutory TPB framework, including the Code in s 30-10 |
-| [*Tax Agent Services Regulations 2022*](https://www.legislation.gov.au/F2022L00238/latest) | `F2026C01004`, Compilation No 5, 1 October 2026 | In force; completion of substantive human review confirmed on 11 October 2026 | Registration, association and related regulatory detail |
+| [*Tax Agent Services Regulations 2022*](https://www.legislation.gov.au/F2022L00238/latest) | `F2026C01218`, Compilation No 6, 14 November 2026 | In force; completion of substantive human review confirmed on 25 November 2026 | Registration, association and related regulatory detail |
 | [*Tax Agent Services (Code of Professional Conduct) Determination 2024*](https://www.legislation.gov.au/F2024L00849/latest) | `F2026C00953`, Compilation No 4, 1 October 2026 | In force; completion of substantive human review confirmed on 4 October 2026 | Eight additional Code obligations under TASA s 30-12 |
 | [TPB Guidance Statement library](https://www.tpb.gov.au/policy-and-guidance?field_document_type=394&search_api_fulltext=&sort_by=created&sort_order=DESC) | 55 indexed statements, GS01 to GS55 | Interpretive guidance; not legislation | TPB’s current interpretation and practical guidance |
 | [TPB(GS) 55/2026: AI and the Code](https://www.tpb.gov.au/tpbgs-552026-use-artificial-intelligence-and-code-professional-conduct) | Issued 22 July 2026 | Current | Central TPB guidance for AI-assisted tax agent services |
@@ -144,6 +144,8 @@ Register metadata retrieved on 4 October 2026 identifies [Code Determination com
 Register metadata retrieved on 8 October 2026 identifies [TASA compilation `C2026C00441`](https://www.legislation.gov.au/C2009A00013/2026-10-01/text), Compilation No 27, current from 1 October 2026 and registered on 7 October 2026, with no unincorporated amendments. Completion of substantive human review of the replacement compilation and affected guide controls was confirmed on 8 October 2026. The TASA pin has advanced and the existing sanctions-control wording is retained. The confirmation date does not advance the guide-wide source-check date or determine the version applicable to a particular client event.
 
 Register metadata retrieved on 12 October 2026 identifies [TASR compilation `F2026C01004`](https://www.legislation.gov.au/F2022L00238/2026-10-01/text), Compilation No 5, current from 1 October 2026 and registered on 12 October 2026, with no unincorporated amendments. It incorporates the Tax Agent Services Amendment (Enhancing Tax Practitioners Board Sanctions) Regulations 2026, which amend the details the TPB must publish on its register about sanctions (Part 5 Division 2). Completion of substantive human review of those amendments and the affected guide controls was confirmed on 11 October 2026. The TASR pin has advanced and the existing wording is retained. The confirmation date does not advance the guide-wide source-check date or determine the version applicable to a particular client event.
+
+Register metadata retrieved on 25 November 2026 identifies [TASR compilation `F2026C01218`](https://www.legislation.gov.au/F2022L00238/2026-11-14/text), Compilation No 6, current from 14 November 2026 and registered on 23 November 2026. It incorporates Schedule 1 items 1 and 2 of the *Treasury Laws Amendment (Permitted Records and Disclosures) Regulations 2026*. Completion of substantive human review of the replacement compilation and affected guide controls was confirmed on 25 November 2026. The TASR pin has advanced and the existing wording is retained. The confirmation date does not advance the guide-wide source-check date or determine the version applicable to a particular client event.
 
 Register metadata retrieved on 19 October 2026 identifies [AML/CTF Act compilation `C2026C00447`](https://www.legislation.gov.au/C2006A00169/2026-10-01/text), Compilation No 63, current from 1 October 2026 and registered on 10 October 2026, with no unincorporated amendments. It incorporates Schedule 7 item 1 of the *Treasury Laws Amendment (Strengthening Accountability for Tax Adviser Misconduct and Other Measures) Act 2026*. Completion of substantive human review of the replacement compilation and affected guide controls was confirmed on 19 October 2026. The AML/CTF Act pin has advanced and the existing wording is retained. The confirmation date does not advance the guide-wide source-check date or determine the version applicable to a particular client event.
 
