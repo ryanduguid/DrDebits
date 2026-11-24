@@ -1,11 +1,11 @@
 ---
 title: DrDebits
-guide_version: 0.7.0
+guide_version: 0.8.0
 status: current
 jurisdiction: AU
 owner: Ryan Duguid
 canonical_repository: https://github.com/ryanduguid/DrDebits
-release_tag: v0.7.0
+release_tag: v0.8.0
 sources_checked_at: 2026-10-14T00:00:00+11:00
 review_due: 2027-01-14
 tasa_compilation: C2026C00441
@@ -32,23 +32,23 @@ apes_ai_alert_label: Technical Alert
 apes_ai_alert_date: 2025-10-31
 tpb_guidance_statement_count: 55
 tpb_library_index_count: 55
-guide_end_marker: DRDEBITS-END-v0.7.0
+guide_end_marker: DRDEBITS-END-v0.8.0
 ---
 
 # DrDebits
 
 > Australian tax-practice and accounting-ethics guardrails for LLM-assisted work
 >
-> Version: `0.7.0`
+> Version: `0.8.0`
 >
-> Release status: published; signed tag `v0.7.0`
+> Release status: published; signed tag `v0.8.0`
 >
 > Jurisdiction: Australia
 >
 > Sources last checked: `2026-10-14` (Australia/Sydney)
 
 The published evaluation records describe release 0.3.3; no confirmed model
-evaluation covers release 0.7.0 yet. Identify a committed revision by its
+evaluation covers release 0.8.0 yet. Identify a committed revision by its
 Git commit and guide version. For an uncommitted review, retain the base commit,
 complete diff and diff digest as well as the guide version; the base commit
 alone does not identify the changed guide.
@@ -635,6 +635,7 @@ Retrieve these files when a routing decision needs them. The `SHA256SUMS` file a
 
 | Version | Date | Status | Change |
 |---|---|---|---|
+| 0.8.0 | 2026-11-24 | Published | Adds 2 behaviour tests (SRC-007 and SRC-008) on an overseas rule supplied as the only source for an Australian resident and a summary contrast, bringing the suite to 113 cases, and cites s 284-75(5) for the reasonable care exception in CARE-001. No change to the control model, authority handling or human-decision boundaries. Relicenses Ryan Duguid’s original guide and tooling under the Apache License, Version 2.0 (preserving applicable notices in NOTICE; earlier releases keep their terms). Adds the 20-question PAYG withholding and Medicare levy benchmark (payg-medicare), bench score repeat counts, bench compare, bench estimate, bench runs (strict and partial pass rates, topic and era slices, repeat stability, recorded cost frontier and fabricated_citation_rate with 95% Wilson CI), negative-control tests and inspect-export for Inspect JSON Lines datasets; publishes Payday Super and Division 7A model results and withdraws and replaces the first Opus 5.5 comparison where all 6 calls ran without the guide. Tightens the builder’s gate calculation checks (truncated subtraction, one-sided minus signs before words with digits whilst reading Act provisions as references, spaced %, hyphenated and abbreviated scale words, non-word dashes, extra operators and error_classes in JSON output), updates sources to report uncompiled in-force amendments as superseding the pinned compilation, switches CI and hook secret scanning to betterleaks, strips release symbols with deny.toml and updates url to 2.5.9 for RUSTSEC-2026-0592. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet. |
 | 0.7.0 | 2026-11-14 | Published | Adds a workpaper record line for work where more than one model was asked: each model and its answer, whether they agreed and how any disagreement was resolved, and that agreement between models is not an independent check. Adds 7 behaviour tests (CALC-011, CALC-012, CALC-013, SRC-009, SRC-010, WORK-004 and DATA-008) on model agreement, Payday Super sources, super guarantee rounding, PAYG withholding worked from the annual rates, a rate card for the wrong year, an unapproved sign-off and a TFN sent to a public website, bringing the suite to 111 cases. No change to the control model, authority handling or human-decision boundaries; the builder's calculation check blocks more interrupted sums, dates, dashes used as minus signs, results it cannot read whole and non-ASCII digits, and the repository gains an AI-use policy crosswalk and 2 naive benchmark baselines. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet. |
 | 0.6.0 | 2026-11-12 | Published | Adds an AI tool register and incident log to the AI-specific TPB rules, a rule to weigh a tribunal decision on another taxpayer’s facts as reasoning and never as settling the client’s position, and a rule to treat another jurisdiction’s terms, authorities and rules as unverified leads until an Australian primary source supports them; corrects the TPB interim suspension to allow more than one extension. Adds vendor checklist questions VA-38 to VA-47 on source authority, connectors, recordings and sharing, the APES 110 value chain start date and AUSTRAC’s table 6 examples in the AML/CTF intake classification. Adds 37 behaviour tests, bringing the suite to 104 cases. No change to the control model, authority handling or human-decision boundaries; the builder gains review checks for quoted spans and uncited authorities, a pre-run report and a block on calculations with unmatched brackets, and the repository gains a 31-question Payday Super and Division 7A benchmark with no scored run. Licensed under the Ryan Duguid Public Attribution Licence 1.0. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet. |
 | 0.5.0 | 2026-10-31 | Published | Adds a conditional automated-decision transparency check to the data and privacy gate for APP 1.7 to 1.9 of the Privacy Act 1988, which start on 10 December 2026, with vendor checklist question VA-37 and a matching row in the AI register entry; each leaves the legal conclusion to the firm. Adds 8 behaviour tests for output-side TFN and cross-client leaks and for assuming a flagged fact, bringing the suite to 67 cases, and a benchmark canary string in the evaluation files. No other model-facing guide control change; the builder gains a review check for untraced amounts (gate --facts) and a stricter prohibited-text screen. Sources were not rechecked for this release: sources_checked_at and review_due are unchanged (14 October 2026; review due 14 January 2027). No confirmed model evaluation covers this release yet. |
@@ -646,4 +647,4 @@ Retrieve these files when a routing decision needs them. The `SHA256SUMS` file a
 | 0.2.0-draft | 2026-08-16 | Published draft | Added APES 220, the TAA 1953 Sch 1 penalty and safe-harbour layer and an AML/CTF control set; added a low-impact proportionality lane; release integrity now rests on `SHA256SUMS` digests with the end marker demoted to a truncation check; behaviour tests, TPB catalogue, APES 110 map and maintenance protocol split into separate files; added PROP-001 and AML-001 behaviour tests. |
 | 0.1.0-draft | 2026-08-16 | Published draft | Initial source-backed guide; 55-statement TPB catalogue; APES 110 July 2025 mapping; AI, tax-planning, NOCLAR, privacy and independence controls; original DrDebits prose licensed under CC BY 4.0. |
 
-DRDEBITS-END-v0.7.0
+DRDEBITS-END-v0.8.0
