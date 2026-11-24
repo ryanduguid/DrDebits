@@ -54,6 +54,8 @@ The scorer marks 2 things separately, because a right figure can rest on the wro
 
 `correct_value_wrong_authority` counts the right figure on the wrong section. Each key carries an `era` (`pre-2025`, `2025-26` or `post-1-Jul-2026`) naming the income year or effective-date era tested (`pre-2025` for pre-2025 income years and standing pre-2025 statutory rules with no later year named), and `bench score` reports per-era slices in both text and `--json` output. Pass `--authorities authorities.json` (in the format `gate --authorities` reads) to report `fabricated_citation_rate` with a 95% Wilson confidence interval for readable citations off that closed list. Add `--json` for each question's marks.
 
+`bench score` also prints 2 rates side by side. The strict pass rate counts answers that meet every criterion, the right value on the right authority, so it says how many answers could be used as they stand. Partial credit counts the criteria met, out of 2 for each answer. Each question's `topic` in `questions.json` (here `Payday Super dates` and `Division 7A`) gets its own strict and partial line, in the order the topics first appear; a question without a `topic` is counted under `(no topic)`. With `--json` they sit under `strict_pass`, `partial_credit` and `families`.
+
 Give one answers file per repeat to score several runs of one condition: `bench score run-1.json run-2.json run-3.json`. It prints each repeat's totals under its file, then how many questions were correct on every repeat, on value alone and on value with the right authority. A question right in 2 of 3 repeats does not count. With `--json`, each repeat's totals and marks sit under `repeats` and the counts under `every_repeat`. It refuses a file named twice and says which file it cannot score.
 
 ## Estimate token and API spend before a run
@@ -63,6 +65,22 @@ cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- 
 ```
 
 `bench estimate` calculates offline input and output token counts (4-character-per-token approximation) across a topic, optional `--era` or `--cases` subset, `--reps`, `--output-tokens` and optional `--with-guide` (`drdebits.md`). Pass `--pricing FILE` (`{"models": [{"name": "...", "input_per_million": "3.00", "output_per_million": "15.00"}]}`) and optional `--models` to preview USD spend in exact decimal arithmetic before calling an API. Actual spend varies by tokeniser, prompt caching and reasoning or thinking tokens. Add `--json` for machine-readable output.
+
+## Report runs on accuracy, stability and recorded cost
+
+```bash
+cargo run --manifest-path tools/drdebits_build/Cargo.toml --locked --release -- bench runs a-1.json a-2.json b-1.json --root .
+```
+
+An answers file may carry a `run` object beside `answers`, recording what the runner knew about that run:
+
+```json
+{"run": {"model": "model-a", "input_tokens": 41000, "output_tokens": 9200, "input_per_million": "3.00", "output_per_million": "15.00"}, "answers": {}}
+```
+
+`model` is a label: files that share it are repeats of one condition, and a file without one is its own condition, named by its path. The price comes only from the file: either both per-million rates with both token counts, or a `cost_usd` the runtime recorded, never both. Nothing supplies a missing price, so a run without one gets no cost figure. `bench score` and `bench compare` accept the same files and refuse a malformed `run`.
+
+For each condition `bench runs` prints the strict pass rate, partial credit and topic lines `bench score` prints, each repeat's strict passes, and the questions that met every criterion on some repeats and not others, with the count (`unstable: D7A-004 2/3`). When every file is priced it prints the total cost, the mean cost a run and the cost per strictly passed answer, in exact decimal arithmetic shown to 4 places. A priced condition is on the frontier unless another priced condition has at least its strict pass rate at no more mean cost a run, and is better on one of the 2; an unpriced condition is left off. With 2 or more conditions it lists the questions every condition passes on every repeat and those none passes on any, which no longer tell these conditions apart. Conditions print in the order their first file is given, so the same files give the same report. Add `--json` for the same report as JSON. It refuses a file named twice and names any file it cannot score.
 
 ## Compare 2 conditions
 

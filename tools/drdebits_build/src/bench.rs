@@ -34,6 +34,12 @@ use crate::py::{Date, PyPath};
 use crate::pyjson::{self, Json};
 use crate::templates::BENCHMARK_CANARY;
 
+mod runs;
+pub use runs::{
+    Condition, NO_FAMILY, RunRecord, RunsReport, Saturation, Slice, Unstable, criteria, families,
+    read_run, share, strict, summarise,
+};
+
 /// A published topic: its folder under `benchmarks/`, what its `keys.json`
 /// must say about several listed authorities (because the scorer applies
 /// exactly this), and whether each key is also compared with a recorded
@@ -206,6 +212,8 @@ pub struct Key {
     pub id: String,
     pub value: String,
     pub era: Era,
+    /// The question's `topic` in `questions.json`, when it has one.
+    pub family: Option<String>,
     kind: Kind,
     authorities: Vec<Authority>,
     rule: Rule,
@@ -346,6 +354,7 @@ fn read_key(item: &Json) -> Result<Key, String> {
     let check = item.get("check").ok_or(format!("{at}: check is missing"))?;
     Ok(Key {
         era,
+        family: None,
         kind,
         authorities,
         rule: read_rule(check, &at)?,
@@ -376,14 +385,21 @@ pub fn load_keys(root: &PyPath, topic: &str) -> Result<Vec<Key>, String> {
     if keys.get("authority_rule").and_then(Json::as_str) != Some(topic.authority_rule) {
         return Err(format!("{keys_file}: authority_rule is missing or changed"));
     }
-    let asked = items(&questions, "questions", &questions_file)?
+    let questions = items(&questions, "questions", &questions_file)?;
+    let asked = questions
         .iter()
         .map(|q| text(q, "id", &questions_file))
         .collect::<Result<Vec<_>, _>>()?;
-    let keys = items(&keys, "keys", &keys_file)?
+    let mut keys = items(&keys, "keys", &keys_file)?
         .iter()
         .map(read_key)
         .collect::<Result<Vec<_>, _>>()?;
+    for (key, question) in keys.iter_mut().zip(questions) {
+        key.family = match question.get("topic") {
+            None => None,
+            Some(_) => Some(text(question, "topic", &questions_file)?.to_string()),
+        };
+    }
     let keyed: Vec<&str> = keys.iter().map(|k| k.id.as_str()).collect();
     if asked != keyed {
         return Err("the keys do not match the questions, id for id and in order".into());
@@ -935,9 +951,13 @@ pub fn score(keys: &[Key], answers: &Json) -> Result<Vec<Scored>, String> {
     let Some((_, Json::Object(given))) = top.iter().find(|(field, _)| field == "answers") else {
         return Err(missing_answers());
     };
-    if let Some((field, _)) = top.iter().find(|(field, _)| field != "answers") {
+    if let Some((field, _)) = top
+        .iter()
+        .find(|(field, _)| field != "answers" && field != "run")
+    {
         return Err(fail(format!("unknown field {field}")));
     }
+    read_run(answers)?;
     if let Some((id, _)) = given
         .iter()
         .find(|(id, _)| !keys.iter().any(|k| &k.id == id))
@@ -1556,6 +1576,17 @@ enum Command {
     },
     /// Estimate offline token counts and optional USD cost before running a model.
     Estimate(EstimateArgs),
+    /// Report strict and partial pass rates, topic slices, unstable questions,
+    /// recorded cost per passed task, the accuracy against cost frontier and
+    /// saturated questions across answers files grouped by `run.model`.
+    Runs {
+        /// The answers files: repeats of one condition share a `run.model`.
+        #[arg(required = true)]
+        answers: Vec<String>,
+        /// Print the report as JSON.
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn run_keys(root: &PyPath, topic: &str) -> Result<u8, String> {
@@ -1618,7 +1649,77 @@ fn citation_rate_json(rate: Option<&CitationRate>) -> Json {
     ])
 }
 
+fn family_json(families: &[Slice]) -> Json {
+    let int = |n: usize| Json::Int(BigInt::from(n));
+    Json::Array(
+        families
+            .iter()
+            .map(|f| {
+                Json::Object(vec![
+                    ("family".into(), Json::str_obj(&f.name)),
+                    ("questions".into(), int(f.questions)),
+                    ("answers".into(), int(f.answers)),
+                    ("strict_passed".into(), int(f.strict_passed)),
+                    ("criteria_met".into(), int(f.criteria_met)),
+                ])
+            })
+            .collect(),
+    )
+}
+
+/// The strict pass and partial credit counts and rates for some answers.
+fn rates_json(answers: usize, strict_passed: usize, criteria_met: usize) -> Vec<(String, Json)> {
+    let int = |n: usize| Json::Int(BigInt::from(n));
+    vec![
+        (
+            "strict_pass".into(),
+            Json::Object(vec![
+                ("passed".into(), int(strict_passed)),
+                ("answers".into(), int(answers)),
+                ("rate".into(), Json::str_obj(&share(strict_passed, answers))),
+            ]),
+        ),
+        (
+            "partial_credit".into(),
+            Json::Object(vec![
+                ("criteria_met".into(), int(criteria_met)),
+                ("criteria_possible".into(), int(2 * answers)),
+                (
+                    "rate".into(),
+                    Json::str_obj(&share(criteria_met, 2 * answers)),
+                ),
+            ]),
+        ),
+    ]
+}
+
+/// `n/d (rate%)`, the rate to 2 places.
+fn percent(n: usize, d: usize) -> String {
+    let rate = Q::new(BigInt::from(n * 100), BigInt::from(d.max(1)));
+    format!("{n}/{d} ({}%)", gate::decimal(&rate, 2))
+}
+
+fn rate_lines(answers: usize, strict_passed: usize, criteria_met: usize, families: &[Slice]) {
+    outln!(
+        "strict pass: {} answers met every criterion",
+        percent(strict_passed, answers)
+    );
+    outln!(
+        "partial credit: {} criteria met",
+        percent(criteria_met, 2 * answers)
+    );
+    for f in families {
+        outln!(
+            "family {}: {} strict, {} criteria",
+            f.name,
+            percent(f.strict_passed, f.answers),
+            percent(f.criteria_met, 2 * f.answers),
+        );
+    }
+}
+
 fn score_json(
+    keys: &[Key],
     totals: &[(&str, usize)],
     scored: &[Scored],
     citation_rate: Option<&CitationRate>,
@@ -1652,6 +1753,15 @@ fn score_json(
             ),
         ),
         ("eras".into(), Json::Object(eras)),
+    ]
+    .into_iter()
+    .chain(rates_json(
+        scored.len(),
+        scored.iter().filter(|s| strict(s)).count(),
+        scored.iter().map(criteria).sum(),
+    ))
+    .chain([
+        ("families".into(), family_json(&families(keys, &[scored]))),
         (
             "fabricated_citation_rate".into(),
             citation_rate_json(citation_rate),
@@ -1672,7 +1782,8 @@ fn score_json(
                     .collect(),
             ),
         ),
-    ]
+    ])
+    .collect()
 }
 
 /// One file prints its totals, as it always has. Several print each
@@ -1710,7 +1821,7 @@ fn run_score(
     let int = |n: usize| Json::Int(BigInt::from(n));
     if json {
         let payload = if let [scored] = &runs[..] {
-            score_json(&tallies[0], scored, rates[0].as_ref())
+            score_json(&keys, &tallies[0], scored, rates[0].as_ref())
         } else {
             let repeats =
                 paths
@@ -1720,7 +1831,7 @@ fn run_score(
                     .zip(&rates)
                     .map(|(((p, t), s), r)| {
                         let mut run = vec![("file".to_string(), Json::str_obj(p))];
-                        run.extend(score_json(t, s, r.as_ref()));
+                        run.extend(score_json(&keys, t, s, r.as_ref()));
                         Json::Object(run)
                     });
             let mut every = vec![("repeats".to_string(), int(runs.len()))];
@@ -1756,6 +1867,12 @@ fn run_score(
                 slice.cases,
             );
         }
+        rate_lines(
+            scored.len(),
+            scored.iter().filter(|s| strict(s)).count(),
+            scored.iter().map(criteria).sum(),
+            &families(&keys, &[scored]),
+        );
         if let Some(r) = rate {
             match (r.rate, r.ci95_low, r.ci95_high) {
                 (Some(p), Some(lo), Some(hi)) => outln!(
@@ -1941,6 +2058,7 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
             } => run_score(&root, &args.topic, &answers, authorities.as_deref(), json),
             Command::Compare { a, b } => run_compare(&root, &args.topic, &a, &b),
             Command::Estimate(est) => run_estimate(&root, &args.topic, &est),
+            Command::Runs { answers, json } => runs::run_runs(&root, &args.topic, &answers, json),
         });
     result.unwrap_or_else(|e| {
         errln!("bench: {e}");
