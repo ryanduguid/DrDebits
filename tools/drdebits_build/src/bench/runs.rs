@@ -89,6 +89,10 @@ pub fn read_run(answers: &Json) -> Result<Option<RunRecord>, String> {
     let money = |field: &str| {
         run.get(field)
             .map(|_| {
+                let written = text(run, field, at)?;
+                if written.trim_end().ends_with('%') {
+                    return Err(format!("{at}: {field} {written} is not a number"));
+                }
                 let q = decimal_field(run, field, at)?;
                 if q.less_than(&ratio(0, 1)) {
                     return Err(format!("{at}: {field} must not be negative"));
@@ -236,6 +240,7 @@ pub struct RunsReport {
 
 struct Group<'a> {
     label: String,
+    by_model: bool,
     files: Vec<&'a str>,
     scored: Vec<Vec<Scored>>,
     records: Vec<Option<RunRecord>>,
@@ -321,11 +326,15 @@ pub fn summarise(keys: &[Key], files: &[(String, Json)]) -> Result<RunsReport, S
     for (path, answers) in files {
         let scored = score(keys, answers).map_err(|e| format!("{e} ({path})"))?;
         let record = read_run(answers).map_err(|e| format!("{e} ({path})"))?;
-        let label = record
-            .as_ref()
-            .and_then(|r| r.model.clone())
-            .unwrap_or_else(|| path.clone());
-        match groups.iter_mut().find(|g| g.label == label) {
+        let model = record.as_ref().and_then(|r| r.model.clone());
+        // Only a recorded model merges files: a path-labelled file stays its
+        // own condition even when another file's model has the same text.
+        let by_model = model.is_some();
+        let label = model.unwrap_or_else(|| path.clone());
+        match groups
+            .iter_mut()
+            .find(|g| by_model && g.by_model && g.label == label)
+        {
             Some(g) => {
                 g.files.push(path.as_str());
                 g.scored.push(scored);
@@ -333,6 +342,7 @@ pub fn summarise(keys: &[Key], files: &[(String, Json)]) -> Result<RunsReport, S
             }
             None => groups.push(Group {
                 label,
+                by_model,
                 files: vec![path.as_str()],
                 scored: vec![scored],
                 records: vec![record],

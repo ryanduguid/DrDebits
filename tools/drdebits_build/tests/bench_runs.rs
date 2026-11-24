@@ -127,6 +127,15 @@ fn a_run_record_refuses_what_it_cannot_price_exactly() {
         ),
         (r#"{"cost_usd": "-0.01"}"#, "cost_usd must not be negative"),
         (r#"{"cost_usd": "lots"}"#, "cost_usd lots is not a number"),
+        (r#"{"cost_usd": "1%"}"#, "cost_usd 1% is not a number"),
+        (
+            r#"{"input_per_million": "1%", "output_per_million": "1", "input_tokens": 5, "output_tokens": 5}"#,
+            "input_per_million 1% is not a number",
+        ),
+        (
+            r#"{"input_per_million": "1", "output_per_million": "2 %", "input_tokens": 5, "output_tokens": 5}"#,
+            "output_per_million 2 % is not a number",
+        ),
         (
             r#"{"cost_usd": "1", "input_per_million": "1", "output_per_million": "1"}"#,
             "not both",
@@ -256,6 +265,19 @@ fn repeats_group_by_model_and_a_question_that_passes_on_some_is_unstable() {
             .iter()
             .any(|id| id == "D7A-001" || id == "D7A-002")
     );
+}
+
+#[test]
+fn a_model_named_like_a_path_does_not_merge_with_that_unlabelled_file() {
+    let named = r#"{"model": "a.json"}"#;
+    let a = || ("a.json", answers(&["D7A-001"], &[], None));
+    let b = || ("b.json", answers(&["D7A-002"], &[], Some(named)));
+    for files in [[a(), b()], [b(), a()]] {
+        let report = summarise(&files);
+        assert_eq!(report.conditions.len(), 2);
+        assert!(report.conditions.iter().all(|c| c.files.len() == 1));
+        assert!(report.saturation.is_some());
+    }
 }
 
 #[test]
