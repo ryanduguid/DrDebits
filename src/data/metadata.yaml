@@ -20,7 +20,7 @@ fields:
   - key: tasa_compilation
     value: "C2026C00441"
   - key: tasr_compilation
-    value: "F2026C01004"
+    value: "F2026C01218"
   - key: code_determination_compilation
     value: "F2026C00953"
   - key: aml_ctf_act_compilation
