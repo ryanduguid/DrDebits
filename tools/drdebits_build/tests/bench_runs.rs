@@ -451,6 +451,24 @@ fn bench_runs_prints_the_same_report_every_time_and_refuses_a_bad_file() {
         "{}",
         one.stdout
     );
+    let one_json = parsed(&run_in(&root, &["bench", "runs", &b, "--json"], true).stdout);
+    assert_eq!(one_json.get("saturation"), Some(&Json::Null));
+
+    let costly = r#"{"model": "model-c", "cost_usd": "1"}"#;
+    let c1 = write("c1.json", answers(&[], &[], Some(costly)));
+    let c2 = write("c2.json", answers(&[], &[], Some(costly)));
+    let worse = run_in(&root, &["bench", "runs", &c1, &c2, &a1], true);
+    for line in [
+        "cost: $2.0000 USD, $1.0000 USD a run; per passed task: none passed; below the frontier",
+        "unstable: none",
+        "every condition passes: none",
+    ] {
+        assert!(
+            worse.stdout.lines().any(|l| l == line),
+            "{line}\n{}",
+            worse.stdout
+        );
+    }
     let twice = run_in(&root, &["bench", "runs", &b, &b], true);
     assert_eq!(twice.code, 2);
     assert!(twice.stderr.contains("more than once"), "{}", twice.stderr);
