@@ -8,22 +8,28 @@ release.
 
 ## [Unreleased]
 
+## [v0.8.0] - 2026-11-24
+
+Changes released in `0.8.0`, merged since `v0.7.0` (14 November 2026). Sources were not rechecked: they stay as checked on 14 October 2026.
+
 ### Added
 
-- `bench runs <files>` reports answers files grouped by an optional `run.model` label: strict pass rate (right value on the right authority) beside partial credit, a line for each question's `topic`, each repeat's strict passes, questions that pass on some repeats only, and, where every file records its own price or cost, the cost per passed answer and the accuracy against cost frontier. With 2 or more conditions it lists the questions every condition passes or none does. No price is supplied for a run that records none. `bench score` prints the strict, partial and topic lines too, and both accept the `run` object.
-
-- `inspect-export --out <file>` writes every behaviour case as an Inspect dataset in JSON Lines, already in Inspect's `Sample` form: the frozen prompt (with any system instruction as a system message) or, where a case has none, its scenario, flagged in `metadata.input`; the rubric as `target`; and the guide version, both digests and the canary in each sample's metadata. Nothing calls a model.
-- Model results for the Payday Super and Division 7A benchmark, in `benchmarks/payday-div7a/results-2026-11-14.md`: Opus 5.5 with and without the guide, 10 primary repeats each, and 4 Codex models with and without it, 3 repeats each, scored offline. All 10 primary Opus calls and all 12 Codex calls with the guide abstained on all 31 questions.
-- A PAYG withholding and Medicare levy benchmark in `benchmarks/payg-medicare/`: 20 questions, each key the figure a cited row of Schedule 1 to the Taxation Administration (Withholding Schedules) Instrument 2026 or an ATO Medicare levy example prints. `bench keys --topic payg-medicare` recomputes all 20 from the Schedule 1 coefficients or the Medicare Levy Act thresholds, and `bench score --topic payg-medicare` scores answers as before. `--topic` defaults to `payday-div7a`. No model has been run on these questions.
-- `bench score` takes one answers file per repeat and, given several, prints each repeat's totals and how many questions were correct on every repeat, on value and on value with the right authority. `bench compare` with more than one repeat a condition adds both counts as rows paired question by question, with the same sign test. One file a condition prints as before.
-- `bench compare --a <files> --b <files>`: pairs 2 conditions question by question across equal repeats and prints, for each measure, both totals and means, the questions each side leads on, the ties and an exact two-sided sign test, and says when too few questions are untied for any split to give p below 0.05. It refuses a side with no file, unequal repeats and a file named twice, names any file it refuses, and takes `--topic` like `bench keys` and `bench score`.
-- SRC-007 and SRC-008, behaviour tests with frozen prompts, bringing the suite to 113: an overseas rule supplied as the only source for an Australian resident's income, with a benign contrast that asks only for a summary of it. Neither has a recorded model result.
+- `bench runs <files>` reports answers files grouped by an optional `run.model` label: strict pass rate (right value on the right authority) beside partial credit, a line for each question's `topic`, each repeat's strict passes, questions that pass on some repeats only, and, where every file records its own price or cost, the cost per passed answer and the accuracy against cost frontier. With 2 or more conditions it lists the questions every condition passes or none does. No price is supplied for a run that records none. `bench score` prints the strict, partial and topic lines too, and both accept the `run` object (#316).
+- `bench estimate` previews offline token counts and optional USD spend before a run; `bench score` reports temporal-era slices (`pre-2025`, `2025-26`, `post-1-Jul-2026`), `fabricated_citation_rate` with a 95% Wilson confidence interval when given `--authorities`, and parses accounting parenthetical negatives; `gate --json` includes `error_classes` (`ARITHMETIC_ERROR`, `FACT_MISMATCH`, `ROUTE_ERROR`); and 6-mutation negative-control tests cover `gate` and `bench score` (#313).
+- `inspect-export --out <file>` writes every behaviour case as an Inspect dataset in JSON Lines, already in Inspect's `Sample` form: the frozen prompt (with any system instruction as a system message) or, where a case has none, its scenario, flagged in `metadata.input`; the rubric as `target`; and the guide version, both digests and the canary in each sample's metadata. Nothing calls a model (#301).
+- Model results for the Payday Super and Division 7A benchmark, in `benchmarks/payday-div7a/results-2026-11-14.md`: Opus 5.5 with and without the guide, 10 primary repeats each, and 4 Codex models with and without it, 3 repeats each, scored offline. All 10 primary Opus calls and all 12 Codex calls with the guide abstained on all 31 questions (#280, #285).
+- A PAYG withholding and Medicare levy benchmark in `benchmarks/payg-medicare/`: 20 questions, each key the figure a cited row of Schedule 1 to the Taxation Administration (Withholding Schedules) Instrument 2026 or an ATO Medicare levy example prints. `bench keys --topic payg-medicare` recomputes all 20 from the Schedule 1 coefficients or the Medicare Levy Act thresholds, and `bench score --topic payg-medicare` scores answers as before. `--topic` defaults to `payday-div7a`. No model has been run on these questions (#282, #284).
+- `bench score` takes one answers file per repeat and, given several, prints each repeat's totals and how many questions were correct on every repeat, on value and on value with the right authority. `bench compare` with more than one repeat a condition adds both counts as rows paired question by question, with the same sign test. One file a condition prints as before (#300).
+- `bench compare --a <files> --b <files>`: pairs 2 conditions question by question across equal repeats and prints, for each measure, both totals and means, the questions each side leads on, the ties and an exact two-sided sign test, and says when too few questions are untied for any split to give p below 0.05. It refuses a side with no file, unequal repeats and a file named twice, names any file it refuses, and takes `--topic` like `bench keys` and `bench score` (#282).
+- SRC-007 and SRC-008, behaviour tests with frozen prompts, bringing the suite to 113: an overseas rule supplied as the only source for an Australian resident's income, with a benign contrast that asks only for a summary of it. Neither has a recorded model result (#291).
+- `deny.toml` for checking the builder's external dependency licences and sources (#310).
 
 ### Changed
 
-- Relicensed Ryan Duguid's original work under Apache-2.0. Earlier releases keep their original terms.
-
-- The secrets and client-identifier gate runs betterleaks 1.10.1 in place of gitleaks, in CI and in the pre-commit hook, with the same `.gitleaks.toml`. CI installs the release binary pinned by version and SHA-256, as betterleaks publishes no action, and every scan names `--config .gitleaks.toml`, as betterleaks does not load it by itself. Both scanners report nothing on `main`'s full history under this config.
+- Relicensed Ryan Duguid's original work under Apache-2.0. Earlier releases keep their original terms (#299).
+- The secrets and client-identifier gate runs betterleaks 1.10.1 in place of gitleaks, in CI and in the pre-commit hook, with the same `.gitleaks.toml` and shared `.github/secrets-rules.toml` via `ryanduguid/release-policy`, scanning pull requests only with the base branch's workflow. CI installs the release binary pinned by version and SHA-256, as betterleaks publishes no action, and every scan names `--config .gitleaks.toml`, as betterleaks does not load it by itself. Both scanners report nothing on `main`'s full history under this config (#286, #292, #293, #294).
+- Release builds strip symbols (#310); Codecov holds project coverage at 100% with complete reports and documents rerunning pending uploads (#283, #304, #309); and attribution checks queue per pull request without cancelling earlier runs (#311).
+- Dropped repeated gate docs, a one-use YAML trait and README repeats (#302); dropped the README sentence on the project name, switched badge labels to black and described other jurisdictions' benchmarks without their names or links (#314); and dropped 'endorsement' from the guide's project-name note (#315).
 
 ### Fixed
 
@@ -38,12 +44,12 @@ release.
   `\cdot` and `\div` count as operators before an `=` or calculation, so
   `5 • 3 = 16`, `5 ✕ 3 = 16`, `5 ➕ 3 = 9`, `5 ＊ 3 = 16`, `10 ／ 2 = 4` and
   `5 \times 3 = 16` block without treating those symbols as `=` or blocking
-  decorative symbols such as `★` or text commands such as `\text`.
-- A documentation-only pull request sends Codecov an empty upload, so its required `codecov/project` check arrives. It skips the tests, so no upload ran and the check never came.
+  decorative symbols such as `★` or text commands such as `\text` (#312).
+- A documentation-only pull request sends Codecov an empty upload, so its required `codecov/project` check arrives. It skips the tests, so no upload ran and the check never came (#306).
 - `gate` refuses a sum it can read only from the second amount after a minus
   spaced on one side, including bracketed amounts, as in `$1,000- 200 + 50 = 250`.
   It also blocks a running total such as `$1 + $1 = $2- $-1 = $4`
-  when it cannot read the continuation.
+  when it cannot read the continuation (#298).
 - `gate` counts any word that holds a digit as an amount when a minus spaced
   on one side stands between it and a sum the gate reads, so
   `1,000)- 5 + 2 = 7`, `(1,000)%- 5 + 2 = 7` and `Net-1000- 5 + 2 = 7` block.
@@ -59,11 +65,28 @@ release.
   `$1,000 (GST exclusive) -5 + 2 = -3` and
   `$1,000 as at 30/6/2026 -5 + 2 = -3`; punctuation that closes its clause
   does. A minus with a space before it only and a number after it is an
-  operator mid sentence too, as in `$1,000 -200 adjustment 5 + 2 = 7`.
-- `sources` reports a pinned compilation as superseded when the Register's current version is an amendment in force that it has not compiled yet, and names the amending title, where it reported the check incomplete. A current record with no compilation and no reason naming what changed is still incomplete.
-- The first Opus 5.5 comparison in `benchmarks/payday-div7a/results-2026-11-14.md` is withdrawn: all 6 of its calls used the questions without the guide, including the 3 labelled with it. A validated rerun of 10 calls a condition replaces it, with a mean of 0 answers right on both value and authority out of 31 with the guide and 9.7 without. The Codex results stand.
-- `gate` blocks a calculation it cannot read whole, right or wrong, which it passed unchecked or misread. A math symbol it does not read counts as an operator and as an `=`: any but `+`, `×`, `÷`, `=`, `−`, `|`, `<` and `>`, and also `·` and `^`, so `5 · 3 = 16`, `10 ∕ 2 = 4`, `5 ＋ 3 = 9`, `2 + 3 ＝ 6`, `2 + 3 ≈ 7` and `2 + 3 = 5^2` block, and so do the correct `5 · 3 = 15`, `2 + 3 ≈ 5` and `$100 + $50 ≤ $18,200`. Text joined to a calculation that may belong to it blocks it: before the first amount, a hyphen or dash joined to a word, which may be a sign, so `AUD-150 + 200 = 350` blocks where it passed as `150 + 200 = 350`, and so do the correct `AUD-150 + 200 = 50` and `Quarterly-$12,000/4 = $3,000`, which 0.7.0 reperformed, or a dash after `:`, `=`, `(` or the start of the line, so `Net: – 150 + 200 = 350` and a line starting `– 150 + 200 = 350` block, though a list marker's `- ` still does not; a number and a space before a first amount without `$`, so `1 000 + 1 = 1 002` blocks where it passed as `000 + 1 = 1`; and, after the result, a space and a digit, as in `$100 + $50 = $150 000`, a minus and a digit, as in `2 + 3 = 5-1` and `2 + 3 = 5 -1 = 3`, or a scale word, as in `$100 + $50 = $150 k` and `$100 + $50 = $150 million`. Before an `=` that no read calculation ends, a minus spaced on one side only, and a minus, `/`, `x` or `X` joined to the next number but not to the text before it, count as operators, so `$1,000 -200 = $900`, `$1,000- 200 = $900` and `$12,000/4 = $3,000 per quarter, x4 = $13,000` block, and so do the correct `$1,000 -200 = $800` and `$3,000 per quarter, x4 = $12,000`. A digit after such an `=` counts until the next `=`, not only until a `,` or `;`, unless it starts a calculation the gate reads after a `,` or `;`, so `$100 + $50 = in all, $160` blocks, and so does `$100 + $50 = the total, due 30 June`. Arrows are math symbols, so `FY2025 → FY2026: $500 × 2 = $1,000` blocks, and `m` and `b` are scale words, so `5 × 20 = 100 m` and `$100 + $50 = $150 b/f` block. A dash and a word after a result are prose, as in `$100 + $50 = $150—the total` and `$100 + $50 = $150-ish`, and so is a dash after a word and a space, as in `Net — 150 + 200 = 350`.
-- CARE-001 cites s 284-75(5) for the reasonable care exception and distinguishes it from the base penalty amount in s 284-90.
+  operator mid sentence too, as in `$1,000 -200 adjustment 5 + 2 = 7` (#303, #307).
+- `sources` reports a pinned compilation as superseded when the Register's current version is an amendment in force that it has not compiled yet, and names the amending title, where it reported the check incomplete. A current record with no compilation and no reason naming what changed is still incomplete (#296).
+- The first Opus 5.5 comparison in `benchmarks/payday-div7a/results-2026-11-14.md` is withdrawn: all 6 of its calls used the questions without the guide, including the 3 labelled with it. A validated rerun of 10 calls a condition replaces it, with a mean of 0 answers right on both value and authority out of 31 with the guide and 9.7 without. The Codex results stand (#285).
+- `gate` blocks a calculation it cannot read whole, right or wrong, which it passed unchecked or misread. A math symbol it does not read counts as an operator and as an `=`: any but `+`, `×`, `÷`, `=`, `−`, `|`, `<` and `>`, and also `·` and `^`, so `5 · 3 = 16`, `10 ∕ 2 = 4`, `5 ＋ 3 = 9`, `2 + 3 ＝ 6`, `2 + 3 ≈ 7` and `2 + 3 = 5^2` block, and so do the correct `5 · 3 = 15`, `2 + 3 ≈ 5` and `$100 + $50 ≤ $18,200`. Text joined to a calculation that may belong to it blocks it: before the first amount, a hyphen or dash joined to a word, which may be a sign, so `AUD-150 + 200 = 350` blocks where it passed as `150 + 200 = 350`, and so do the correct `AUD-150 + 200 = 50` and `Quarterly-$12,000/4 = $3,000`, which 0.7.0 reperformed, or a dash after `:`, `=`, `(` or the start of the line, so `Net: – 150 + 200 = 350` and a line starting `– 150 + 200 = 350` block, though a list marker's `- ` still does not; a number and a space before a first amount without `$`, so `1 000 + 1 = 1 002` blocks where it passed as `000 + 1 = 1`; and, after the result, a space and a digit, as in `$100 + $50 = $150 000`, a minus and a digit, as in `2 + 3 = 5-1` and `2 + 3 = 5 -1 = 3`, or a scale word, as in `$100 + $50 = $150 k` and `$100 + $50 = $150 million`. Before an `=` that no read calculation ends, a minus spaced on one side only, and a minus, `/`, `x` or `X` joined to the next number but not to the text before it, count as operators, so `$1,000 -200 = $900`, `$1,000- 200 = $900` and `$12,000/4 = $3,000 per quarter, x4 = $13,000` block, and so do the correct `$1,000 -200 = $800` and `$3,000 per quarter, x4 = $12,000`. A digit after such an `=` counts until the next `=`, not only until a `,` or `;`, unless it starts a calculation the gate reads after a `,` or `;`, so `$100 + $50 = in all, $160` blocks, and so does `$100 + $50 = the total, due 30 June`. Arrows are math symbols, so `FY2025 → FY2026: $500 × 2 = $1,000` blocks, and `m` and `b` are scale words, so `5 × 20 = 100 m` and `$100 + $50 = $150 b/f` block. A dash and a word after a result are prose, as in `$100 + $50 = $150—the total` and `$100 + $50 = $150-ish`, and so is a dash after a word and a space, as in `Net — 150 + 200 = 350` (#281).
+- CARE-001 cites s 284-75(5) for the reasonable care exception and distinguishes it from the base penalty amount in s 284-90 (#297).
+- Replaced unmaintained `chrono` with `jiff` in the builder (#290), updated `url` to 2.5.9 for RUSTSEC-2026-0592 (#308), and bumped `fancy-regex`, `codeql-action` and `taiki-e/install-action` (#287, #288, #289).
+
+### Known issues
+
+Builder and repository:
+
+- The builder parses `behaviour-tests.yaml` twice on every run, `gate` included. It is slower, not wrong.
+- Compared with gitleaks 8.30.1 on gitleaks' own rule-generator suite, betterleaks 1.10.1 omits 107 samples (Fly.io tokens without `FlyV1`, Etsy access tokens, all-digit Discord client secrets, a JFrog identity token and a 40-hex Sourcegraph token) and skips `bun.lock` and `bun.lockb`.
+- CI runs no `cargo audit` or `cargo deny` check on the builder's lockfile.
+- CI lints workflows with actionlint but not zizmor, and CONTRIBUTING.md says the Windows job runs tests without coverage, though it runs the coverage floor too.
+
+Limitations:
+
+- No confirmed model evaluation covers this release, and no run of the same model without the guide shows its effect.
+- `gate --facts` notes an amount equal to a supplied fact; it does not show the amount was derived from it.
+- The fee-quote cases (APES 110 section 330) and the reasonable-care cases are not yet confirmed against their source text.
+- The source watch omits the ISM agent controls, ASD's agentic AI guidance, APESB's pending APES 215 and 225 AI guidance and the IESBA technology and AI material, and the GS 55 concordance does not map the TPB's AI questions and answers.
 
 ## [v0.7.0] - 2026-11-14
 
@@ -267,7 +290,9 @@ reporting (#99, #144, #149, #152, #154, #157, #158, #166, #167), and CI and
 documentation housekeeping (#48, #101, #111, #135, #184, #185, #186, #189, #198,
 #207).
 
-[Unreleased]: https://github.com/ryanduguid/DrDebits/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/ryanduguid/DrDebits/compare/v0.8.0...HEAD
+[v0.8.0]: https://github.com/ryanduguid/DrDebits/compare/v0.7.0...v0.8.0
+[v0.7.0]: https://github.com/ryanduguid/DrDebits/compare/v0.6.0...v0.7.0
 [v0.6.0]: https://github.com/ryanduguid/DrDebits/compare/v0.5.0...v0.6.0
 [v0.5.0]: https://github.com/ryanduguid/llm-tax-guardrails/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://github.com/ryanduguid/llm-tax-guardrails/compare/v0.3.3...v0.4.0
