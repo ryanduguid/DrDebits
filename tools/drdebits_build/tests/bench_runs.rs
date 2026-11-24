@@ -202,7 +202,7 @@ fn slices_follow_each_question_topic_and_name_a_question_without_one() {
     }
     let questions = dir.join("questions.json");
     let body = std::fs::read_to_string(&questions).unwrap();
-    let dropped = body.replacen("\"topic\": \"Division 7A\", ", "", 1);
+    let dropped = body.replacen("\"topic\": \"Division 7A\",", "", 1);
     assert_ne!(dropped, body);
     std::fs::write(&questions, dropped).unwrap();
     let keys = bench::load_keys(&py(tree.path()), TOPIC).unwrap();
