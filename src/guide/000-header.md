@@ -21,4 +21,4 @@ DrDebits is an independent, source-linked operating guide for large language mod
 
 DrDebits does not reproduce APES 110, certify compliance, replace the source documents or replace a registered tax practitioner’s or professional accountant’s judgement. It is not legal, tax or financial advice. A competent, appropriately authorised human remains responsible for every professional service, judgement and consequential action.
 
-“Dr” is part of the project name only. It does not claim a qualification, professional designation, registration, regulatory status or endorsement.
+“Dr” is part of the project name only. It does not claim a qualification, professional designation, registration or regulatory status.
