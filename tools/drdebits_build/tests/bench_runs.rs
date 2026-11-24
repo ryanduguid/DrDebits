@@ -94,7 +94,7 @@ fn a_run_record_prices_a_run_only_from_its_own_figures() {
     assert_eq!(rated.cost_usd().as_deref(), Some("6.0000"));
     let recorded = read(r#"{"cost_usd": "0.4200"}"#);
     assert_eq!(
-        (recorded.model, recorded.cost_usd().as_deref()),
+        (recorded.model.as_deref(), recorded.cost_usd().as_deref()),
         (None, Some("0.4200"))
     );
     let tokens_only = read(r#"{"model": "model-b", "input_tokens": 10, "output_tokens": 5}"#);
