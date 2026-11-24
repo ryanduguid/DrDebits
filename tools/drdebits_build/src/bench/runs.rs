@@ -465,6 +465,7 @@ fn listed(items: &[String]) -> String {
 fn condition_lines(c: &Condition) {
     let repeats = c.files.len();
     outln!("condition {}: {repeats} answers file(s)", c.label);
+    outln!("files: {}", c.files.join(", "));
     rate_lines(
         c.questions * repeats,
         c.strict_passed,

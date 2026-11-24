@@ -397,6 +397,35 @@ fn a_condition_is_priced_only_when_every_repeat_is() {
 }
 
 #[test]
+fn bench_runs_names_the_files_of_conditions_that_share_a_label() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = |name: &str| dir.path().join(name).to_string_lossy().into_owned();
+    let (a, b) = (path("a.json"), path("b.json"));
+    let named = format!(
+        r#"{{"model": "{}", "cost_usd": "1"}}"#,
+        a.replace('\\', "\\\\")
+    );
+    std::fs::write(&a, answers(&["D7A-001"], &[], None)).unwrap();
+    std::fs::write(&b, answers(&["D7A-002", "PDS-001"], &[], Some(&named))).unwrap();
+    let root = repo_root();
+    for args in [
+        ["bench", "runs", a.as_str(), b.as_str()],
+        ["bench", "runs", b.as_str(), a.as_str()],
+    ] {
+        let out = run_in(&root, &args, true);
+        assert_eq!(out.code, 0, "{}", out.stderr);
+        let heading = format!("condition {a}: 1 answers file(s)");
+        let lines: Vec<&str> = out.stdout.lines().collect();
+        assert_eq!(lines.iter().filter(|l| **l == heading).count(), 2);
+        for file in [&a, &b] {
+            let named = format!("files: {file}");
+            let at = lines.iter().position(|l| *l == named).unwrap();
+            assert_eq!(lines[at - 1], heading, "{}", out.stdout);
+        }
+    }
+}
+
+#[test]
 fn bench_runs_prints_the_same_report_every_time_and_refuses_a_bad_file() {
     let dir = tempfile::tempdir().unwrap();
     let write = |name: &str, body: String| {
@@ -420,6 +449,7 @@ fn bench_runs_prints_the_same_report_every_time_and_refuses_a_bad_file() {
     for line in [
         "bench runs: 3 answers file(s), 2 condition(s), 31 questions (topic payday-div7a)",
         "condition model-a: 2 answers file(s)",
+        &format!("files: {a1}, {a2}"),
         "strict pass: 3/62 (4.84%) answers met every criterion",
         "partial credit: 7/124 (5.65%) criteria met",
         "family Payday Super dates: 1/30 (3.33%) strict, 3/60 (5.00%) criteria",
