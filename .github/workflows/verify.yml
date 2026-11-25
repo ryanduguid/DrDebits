@@ -93,16 +93,18 @@ jobs:
           CARGO_DENY_SHA256: "98c56e6a408bfa5c3c60744b6015aaa6aa08f743fdeb88386d06fca035bb1786"
         run: |
           set -euo pipefail
-          curl --proto '=https' --proto-redir '=https' -fsSLO "https://github.com/EmbarkStudios/cargo-deny/releases/download/${CARGO_DENY_VERSION}/cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl.tar.gz"
-          echo "${CARGO_DENY_SHA256}  cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl.tar.gz" | sha256sum --check
+          curl --proto '=https' --proto-redir '=https' -fsSL -o "$RUNNER_TEMP/cargo-deny.tar.gz" "https://github.com/EmbarkStudios/cargo-deny/releases/download/${CARGO_DENY_VERSION}/cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          echo "${CARGO_DENY_SHA256}  $RUNNER_TEMP/cargo-deny.tar.gz" | sha256sum --check
           mkdir -p "$RUNNER_TEMP/cargo-deny-bin"
-          tar --strip-components=1 -xzf "cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl.tar.gz" -C "$RUNNER_TEMP/cargo-deny-bin" "cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl/cargo-deny"
-          rm -f "cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          tar --strip-components=1 -xzf "$RUNNER_TEMP/cargo-deny.tar.gz" -C "$RUNNER_TEMP/cargo-deny-bin" "cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl/cargo-deny"
+          rm -f "$RUNNER_TEMP/cargo-deny.tar.gz"
           echo "$RUNNER_TEMP/cargo-deny-bin" >> "$GITHUB_PATH"
 
       - name: Check dependency policy
         if: matrix.os == 'ubuntu-latest'
-        run: cargo deny --locked --config "$GITHUB_WORKSPACE/deny.toml" check licenses sources
+        run: |
+          cargo deny --locked --config "$GITHUB_WORKSPACE/deny.toml" check licenses sources
+          cargo deny --locked --manifest-path fuzz/Cargo.toml --config "$GITHUB_WORKSPACE/deny.toml" check licenses sources
 
       - name: Install the pinned cargo-llvm-cov
         uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
