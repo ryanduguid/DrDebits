@@ -160,7 +160,8 @@ jobs:
       # .gitleaks.toml allows 2 value shapes only inside src/data/metadata.yaml.
       # This plants credentials of both shapes in that file and in another one,
       # scans them with the repository's own configuration and the scanner
-      # release the secrets scan pins, and fails unless exactly the 2 outside
+      # release the secrets scan pins, as a directory and as a commit, and fails
+      # unless each scan reports exactly the 2 outside
       # metadata.yaml are reported. Generated at run time, so no tracked file
       # holds a credential-shaped value.
       - name: Prove the secrets allowlist stays scoped to metadata.yaml
@@ -184,8 +185,14 @@ jobs:
             printf 'api_key: "%s"\nauth_token = "%s"\n' "$digest" "$snake" > "$plant/$file"
           done
           cd "$plant"
-          "$RUNNER_TEMP/betterleaks" dir . --config .gitleaks.toml --no-banner --exit-code 0 --report-format json --report-path "$RUNNER_TEMP/plant.json"
-          jq -e '[.[].File | ltrimstr("./")] | sort == ["notes.yaml", "notes.yaml"]' "$RUNNER_TEMP/plant.json"
+          # The secrets scan reads commits, so scan the files committed too.
+          git init --quiet
+          git add --all
+          git -c user.name=fixture -c user.email=fixture@example.invalid commit --quiet --message plant
+          for mode in dir git; do
+            "$RUNNER_TEMP/betterleaks" "$mode" . --config .gitleaks.toml --no-banner --exit-code 0 --report-format json --report-path "$RUNNER_TEMP/plant-$mode.json"
+            jq -e '[.[].File | ltrimstr("./")] | sort == ["notes.yaml", "notes.yaml"]' "$RUNNER_TEMP/plant-$mode.json"
+          done
 
 # The secrets scan runs in secrets.yml, on pull_request_target for pull
 # requests, so a pull request cannot edit its own scan away. Main requires
