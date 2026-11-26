@@ -16,14 +16,16 @@ title = "DrDebits"
 path = ".github/secrets-rules.toml"
 
 [[allowlists]]
-description = "Provenance digests and placeholder identifiers"
+description = "The scanner's own rules quote the patterns they match"
 paths = [
-  # The scanner's own rules quote the patterns they match.
   '''\.gitleaks\.toml$''',
 ]
+
+[[allowlists]]
+description = "Field names and provenance digests in metadata.yaml"
 # src/data/metadata.yaml is a list of `key:`/`value:` pairs, and the default
 # generic-api-key rule reads every `key: <something>` line as an assignment.
-# The two shapes that appear on those lines are allowed here and nothing else:
+# The two shapes that appear on those lines are allowed there and nowhere else:
 #
 #   * a field name such as `apes_110_compilation`, which is lowercase words
 #     joined by underscores and could not be a credential
@@ -31,9 +33,21 @@ paths = [
 #     the SHA-256 of the official compiled APES 110 PDF, recorded so a
 #     replacement document can be detected
 #
-# Anything mixed-case, punctuated or of another length still fires.
+# AND makes both the path and a regex match: without it either alone allows a
+# finding, and these 2 shapes would hide real credentials in every other file.
+# Anything mixed-case, punctuated or of another length still fires, and
+# a verify.yml step proves a credential planted elsewhere does.
+condition = "AND"
+paths = [
+  '''(?:^|[\\/])src[\\/]data[\\/]metadata\.yaml$''',
+]
 regexes = [
   '''^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$''',
   '''^[0-9a-f]{64}$''',
+]
+
+[[allowlists]]
+description = "Placeholder client identifiers such as <tfn>"
+regexes = [
   '''(?i)^<(?:tfn|abn|bsb|account[ -]?number|medicare[ -]?number)>$''',
 ]
