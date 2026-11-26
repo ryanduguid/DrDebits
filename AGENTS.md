@@ -20,9 +20,10 @@ test and evaluation sources under `src/`; regenerate their outputs with the
 documented builder. Historical human-recorded evaluation results stay unchanged.
 
 Before handoff, run the builder tests and generated-output verification defined
-in [verify.yml](.github/workflows/verify.yml). `pre-commit install` runs the
-same commands through the same pinned toolchain before a commit lands, and adds
-a betterleaks scan against [.gitleaks.toml](.gitleaks.toml), which extends
+in [verify.yml](.github/workflows/verify.yml). `pre-commit install` runs its
+format, lint, test and build parity checks through the same pinned toolchain
+before a commit lands (the tests without the coverage floor), and adds
+betterleaks' own pre-commit hook, run with [.gitleaks.toml](.gitleaks.toml), which extends
 `.github/secrets-rules.toml`: the client-identifier rules shared with the CI
 scan, on top of the default credential rules.
 

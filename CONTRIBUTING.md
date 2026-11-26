@@ -33,17 +33,21 @@ cargo fmt --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo llvm-cov --locked --fail-under-lines 92
 cargo run --locked --release -- verify --root ../..
+python3 -m unittest discover --start-directory tests --pattern 'test_*.py'
 ```
 
-`cargo llvm-cov` runs the tests with line coverage; `cargo test --locked` runs
-them without it, as the Windows job does. CI also scans the commits each push or
+`cargo llvm-cov` runs the tests with line coverage, as both jobs do; `cargo
+test --locked` runs them without it. The Ubuntu job also lints the workflows
+with actionlint and audits them with zizmor. CI also scans the commits each push or
 pull request adds, and the full history weekly, for secrets and client
 identifiers with the shared secrets scan from `ryanduguid/release-policy`
 (betterleaks) and [.gitleaks.toml](.gitleaks.toml). It scans a pull request a
 second time with the base branch's `.gitleaks.toml`, so add an allowlist entry
 in its own pull request, before the change that needs it.
-`pre-commit install` runs formatting, lint, tests, `verify` and betterleaks before
-each commit, through the same pinned toolchain.
+`pre-commit install` runs formatting, lint, tests (without the coverage floor)
+and `verify` before each commit, through the same pinned toolchain, and
+betterleaks through its own pre-commit hook at the version
+`.pre-commit-config.yaml` pins.
 
 ## Tests for the build tooling
 
