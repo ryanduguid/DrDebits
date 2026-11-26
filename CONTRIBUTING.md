@@ -33,10 +33,12 @@ cargo fmt --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo llvm-cov --locked --fail-under-lines 92
 cargo run --locked --release -- verify --root ../..
+python3 -m unittest discover --start-directory tests --pattern 'test_*.py'
 ```
 
-`cargo llvm-cov` runs the tests with line coverage; `cargo test --locked` runs
-them without it, as the Windows job does. CI also scans the commits each push or
+`cargo llvm-cov` runs the tests with line coverage, as both jobs do; `cargo
+test --locked` runs them without it. The Ubuntu job also lints the workflows
+with actionlint and audits them with zizmor. CI also scans the commits each push or
 pull request adds, and the full history weekly, for secrets and client
 identifiers with the shared secrets scan from `ryanduguid/release-policy`
 (betterleaks) and [.gitleaks.toml](.gitleaks.toml). It scans a pull request a

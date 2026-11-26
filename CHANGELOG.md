@@ -8,6 +8,16 @@ release.
 
 ## [Unreleased]
 
+### Fixed
+
+- `gate` blocks operators it does not read instead of passing the line
+  unchecked: the words `plus`, `minus`, `less`, `times`, `multiplied` and
+  `divided`, a colon and the Cyrillic `х`, as in `$1,000 less $200 = $900`,
+  `5 times 3 = 16`, `10 : 2 = 4`, `10:2 = 4` and `5 х 3 = 16`; an `=` drawn
+  as `꞊` or `═`, as in `2 + 3 ꞊ 6`; and an apostrophe that groups digits, as
+  in `1'000 + 1 = 1'002`. Correct lines written these ways block too, such as
+  `5 times 3 = 15`.
+
 ## [v0.8.0] - 2026-11-24
 
 Changes released in `0.8.0`, merged since `v0.7.0` (14 November 2026). Sources were not rechecked: they stay as checked on 14 October 2026.
@@ -294,5 +304,5 @@ documentation housekeeping (#48, #101, #111, #135, #184, #185, #186, #189, #198,
 [v0.8.0]: https://github.com/ryanduguid/DrDebits/compare/v0.7.0...v0.8.0
 [v0.7.0]: https://github.com/ryanduguid/DrDebits/compare/v0.6.0...v0.7.0
 [v0.6.0]: https://github.com/ryanduguid/DrDebits/compare/v0.5.0...v0.6.0
-[v0.5.0]: https://github.com/ryanduguid/llm-tax-guardrails/compare/v0.4.0...v0.5.0
-[v0.4.0]: https://github.com/ryanduguid/llm-tax-guardrails/compare/v0.3.3...v0.4.0
+[v0.5.0]: https://github.com/ryanduguid/DrDebits/compare/v0.4.0...v0.5.0
+[v0.4.0]: https://github.com/ryanduguid/DrDebits/compare/v0.3.3...v0.4.0
