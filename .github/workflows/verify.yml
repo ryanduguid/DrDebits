@@ -106,6 +106,18 @@ jobs:
           cargo deny --locked --config "$GITHUB_WORKSPACE/deny.toml" check licenses sources
           cargo deny --locked --manifest-path fuzz/Cargo.toml --config "$GITHUB_WORKSPACE/deny.toml" check licenses sources
 
+      # test_ci_gates.py covers .github/ci/check_gates.py, which the
+      # verify-gates job runs on every pull request. Linux runs the CR/LF
+      # file name cases Windows skips.
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          python-version: "3.15"
+
+      - name: Test the CI gate scripts
+        if: matrix.os == 'ubuntu-latest'
+        run: python3 -m unittest discover --start-directory tests --pattern 'test_*.py' --verbose
+
       - name: Install the pinned cargo-llvm-cov
         uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
@@ -174,6 +186,43 @@ jobs:
           echo "${ACTIONLINT_SHA256}  actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" | sha256sum --check
           tar -xzf "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" actionlint
           ./actionlint -shellcheck "./shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
+
+      # .gitleaks.toml allows 2 value shapes only inside src/data/metadata.yaml.
+      # This plants credentials of both shapes in that file and in another one,
+      # scans them with the repository's own configuration and the scanner
+      # release the secrets scan pins, as a directory and as a commit, and fails
+      # unless each scan reports exactly the 2 outside metadata.yaml.
+      # Generated at run time, so no tracked file
+      # holds a credential-shaped value.
+      - name: Prove the secrets allowlist stays scoped to metadata.yaml
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          BETTERLEAKS_VERSION: "1.10.1"
+          BETTERLEAKS_SHA256: "c174b42d7aa60caf58c0c3e555c0e4bed01fe6b0d99a412bce777b5af4ce913e"
+        run: |
+          set -euo pipefail
+          archive="betterleaks_${BETTERLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --proto '=https' --proto-redir '=https' -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/betterleaks/betterleaks/releases/download/v${BETTERLEAKS_VERSION}/$archive"
+          echo "${BETTERLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict -
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" betterleaks
+          plant="$RUNNER_TEMP/allowlist-plant"
+          mkdir -p "$plant/src/data" "$plant/.github"
+          cp ../../.gitleaks.toml "$plant/"
+          cp ../../.github/secrets-rules.toml "$plant/.github/"
+          digest="$(printf 'planted' | sha256sum | cut -d' ' -f1)"
+          snake='q7x_zr9k_m4pw_v2bt_h8yn'
+          for file in notes.yaml src/data/metadata.yaml; do
+            printf 'api_key: "%s"\nauth_token = "%s"\n' "$digest" "$snake" > "$plant/$file"
+          done
+          cd "$plant"
+          # The secrets scan reads commits, so scan the files committed too.
+          git init --quiet
+          git add --all
+          git -c user.name=fixture -c user.email=fixture@example.invalid commit --quiet --message plant
+          for mode in dir git; do
+            "$RUNNER_TEMP/betterleaks" "$mode" . --config .gitleaks.toml --no-banner --exit-code 0 --report-format json --report-path "$RUNNER_TEMP/plant-$mode.json"
+            jq -e '[.[].File | ltrimstr("./")] | sort == ["notes.yaml", "notes.yaml"]' "$RUNNER_TEMP/plant-$mode.json"
+          done
 
 # The secrets scan runs in secrets.yml, on pull_request_target for pull
 # requests, so a pull request cannot edit its own scan away. Main requires
