@@ -148,6 +148,24 @@ jobs:
       - name: Verify committed outputs against sources
         run: cargo run --locked --release --quiet -- verify --root ../..
 
+      # zizmor audits the workflows for security faults such as template
+      # injection, credential persistence and unpinned actions; its online
+      # audits read the pinned actions with the job's read-only token. The
+      # 2 pull_request_target triggers carry an inline ignore with the reason.
+      - name: Audit the workflows with pinned zizmor
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          ZIZMOR_VERSION: "1.33.1"
+          ZIZMOR_SHA256: "3e6a301c7a820a2501915f5a9de8c0486da82bdec7965f068477538a98743d43"
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          archive="zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          curl --proto '=https' --proto-redir '=https' -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/$archive"
+          echo "${ZIZMOR_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict -
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" zizmor
+          "$RUNNER_TEMP/zizmor" --format github ../../.github/workflows
+
       # actionlint finds the workflows from here and runs shellcheck over
       # their run: scripts; the repository tracks no shell files of its own.
       # Each release asset is checked against the digest recorded at pin time
