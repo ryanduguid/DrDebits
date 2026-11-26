@@ -481,6 +481,39 @@ fn the_published_whole_response_verdict_must_be_violation() {
     );
 }
 
+#[test]
+fn one_parse_of_the_behaviour_file_gives_both_loaders_results() {
+    // The builder reads behaviour-tests.yaml once for its cases and its
+    // whole-response rule; each part keeps the separate loader's result and
+    // refusals, cases first.
+    let tmp = tempfile::tempdir().unwrap();
+    let path = write(
+        tmp.path(),
+        "b.yaml",
+        &WHOLE_RESPONSE_TEMPLATE.replace("{verdict}", "violation"),
+    );
+    let (cases, rule) = model::load_behaviour_file(&path).unwrap();
+    let ids = |cases: &[model::Behaviour]| -> Vec<String> {
+        cases.iter().map(|c| c.get("id").to_string()).collect()
+    };
+    assert_eq!(
+        ids(&cases),
+        ids(&model::load_behaviour_tests(&path).unwrap())
+    );
+    assert_eq!(
+        rule.verdict,
+        model::load_whole_response(&path).unwrap().verdict
+    );
+    assert_refused(
+        model::load_behaviour_file(&write(
+            tmp.path(),
+            "b2.yaml",
+            &WHOLE_RESPONSE_TEMPLATE.replace("{verdict}", "fail"),
+        )),
+        "whole_response verdict must be 'violation'",
+    );
+}
+
 const CONCORDANCE_SOURCE: &str = r#"issued: "2026-07-22"
 checked: "2026-09-27"
 sections:

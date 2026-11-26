@@ -191,13 +191,14 @@ pub fn load_sources(root: &PyPath) -> Result<Sources, Fail> {
     if fragments.is_empty() {
         return Err(Fail::Build("src/guide/ has no fragments".into()));
     }
-    let behaviour_path = data.join("behaviour-tests.yaml");
+    let (behaviour, whole_response) =
+        model::load_behaviour_file(&data.join("behaviour-tests.yaml"))?;
     Ok(Sources {
         meta,
         fragments,
         catalogue,
-        behaviour: model::load_behaviour_tests(&behaviour_path)?,
-        whole_response: model::load_whole_response(&behaviour_path)?,
+        behaviour,
+        whole_response,
         apes: model::load_apes_map(&data.join("apes-110-map.yaml"))?,
         vendor: model::load_vendor_assurance(&data.join("ai-vendor-assurance.yaml"))?,
         concordance: model::load_concordance(&data.join("gs55-concordance.yaml"))?,
