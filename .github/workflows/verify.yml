@@ -106,6 +106,18 @@ jobs:
           cargo deny --locked --config "$GITHUB_WORKSPACE/deny.toml" check licenses sources
           cargo deny --locked --manifest-path fuzz/Cargo.toml --config "$GITHUB_WORKSPACE/deny.toml" check licenses sources
 
+      # test_ci_gates.py covers .github/ci/check_gates.py, which the
+      # verify-gates job runs on every pull request. Linux runs the CR/LF
+      # file name cases Windows skips.
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          python-version: "3.15"
+
+      - name: Test the CI gate scripts
+        if: matrix.os == 'ubuntu-latest'
+        run: python3 -m unittest discover --start-directory tests --pattern 'test_*.py' --verbose
+
       - name: Install the pinned cargo-llvm-cov
         uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:

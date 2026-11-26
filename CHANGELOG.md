@@ -294,5 +294,5 @@ documentation housekeeping (#48, #101, #111, #135, #184, #185, #186, #189, #198,
 [v0.8.0]: https://github.com/ryanduguid/DrDebits/compare/v0.7.0...v0.8.0
 [v0.7.0]: https://github.com/ryanduguid/DrDebits/compare/v0.6.0...v0.7.0
 [v0.6.0]: https://github.com/ryanduguid/DrDebits/compare/v0.5.0...v0.6.0
-[v0.5.0]: https://github.com/ryanduguid/llm-tax-guardrails/compare/v0.4.0...v0.5.0
-[v0.4.0]: https://github.com/ryanduguid/llm-tax-guardrails/compare/v0.3.3...v0.4.0
+[v0.5.0]: https://github.com/ryanduguid/DrDebits/compare/v0.4.0...v0.5.0
+[v0.4.0]: https://github.com/ryanduguid/DrDebits/compare/v0.3.3...v0.4.0
