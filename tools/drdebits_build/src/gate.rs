@@ -72,7 +72,14 @@
 //! or `X` joined to the next number but not to the text before it, so
 //! `$12,000/4 bonus = $3,000`, `1/11 of the price = $100`, `2x3 = 6`,
 //! `$1,000-$200 = $800`, `$1,000 -200 = $800` and
-//! `$3,000 per quarter, x4 = $12,000` block. A math symbol the gate does not
+//! `$3,000 per quarter, x4 = $12,000` block. The gate reads no operator
+//! written as a word, a colon or a Cyrillic `х`, so before an `=` that no read
+//! calculation ends, `plus`, `minus`, `less`, `times`, `multiplied` and
+//! `divided` count as operators, as a spaced `:`, `х` or `Х` does, and an
+//! unspaced one between numbers, so `$1,000 less $200 = $900`,
+//! `5 times 3 = 16`, `10 : 2 = 4`, `10:2 = 4` and `5 х 3 = 16` block. So does
+//! an `=` drawn as `꞊` or `═`, as in `2 + 3 ꞊ 6`, and an apostrophe that
+//! groups digits, as in `1'000 + 1 = 1'002`. A math symbol the gate does not
 //! read, which is any but `+`, `×`, `÷`, `=`, `−`, `|`, `<` and `>`, and `·`
 //! and `^`, counts both as an operator and as an `=`, so `5 · 3 = 15`,
 //! `2 + 3 ≈ 5` and `2 + 3 ＝ 5` block; extra operator symbols (`•`, `⁎`, `✕`,
@@ -180,8 +187,7 @@ const BEFORE: &str = r"(?:^|[^\w.,$/\-−]|(?:^|[^\d.,$])[-−])";
 /// What may follow a result: the end of the line, or text that does not
 /// continue it as a longer number, an operator or `=`, nor a letter written
 /// onto it, as in `$150k`.
-const AFTER: &str =
-    r"(?:$|[,.]+(?:$|[^\d,.])|[ \t]+(?:$|[^ \t+×*/÷=\-−xX]|[-−xX](?:$|[^ \t]))|[^\w,. \t+×*/÷=])";
+const AFTER: &str = r"(?:$|[,.]+(?:$|[^\d,.])|[ \t]+(?:$|[^ \t+×*/÷=\-−xXхХ]|[-−xXхХ](?:$|[^ \t]))|[^\w,. \t+×*/÷=])";
 /// One written calculation, `calc`, on one line only: a bullet's leading
 /// hyphen is not a minus sign. `left` holds every link before the final
 /// result, `right`, each ending in `=`; the first link needs an operator, so
@@ -204,7 +210,7 @@ static CLAIM: LazyLock<regex::Regex> = LazyLock::new(|| {
 /// calculation it reads after a `,` or `;`, as in `= x, and 2 + 2 = 4`.
 static RESULT: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:=+|{OTHER})(?P<gap>[^\d=]*)(?P<digit>\d)[^\s=]*"
+        r"(?:=+|{OTHER}|{EQUALS_LOOKALIKE})(?P<gap>[^\d=]*)(?P<digit>\d)[^\s=]*"
     ))
     .expect("pattern")
 });
@@ -220,17 +226,25 @@ static BRACKETED: LazyLock<regex::Regex> =
 /// such as `★` or `✓` and text commands such as `\text` are not mistaken for
 /// operators or `=`.
 const EXTRA_OPERATOR: &str = r"[•⁎✕✖✱➕➖➗﹡＊／]|\\(?:times|cdotp?|div|pm|mp|ast|star|bullet|over|[dt]?frac|slash|[bp]?mod)(?:[^A-Za-z=]|$)";
+/// Words that write an operator, as in `$1,000 less $200` and `5 times 3`,
+/// recognised in `INTERRUPTED` only: the gate does not read them, so a sum
+/// that uses one blocks.
+const WORD_OPERATOR: &str = r"\b(?i:plus|minus|less|times|multiplied|divided)\b";
+/// Characters drawn as `=` outside `\p{Sm}`, the modifier letter `꞊` and the
+/// box-drawing `═`: `RESULT` takes each as an `=` the gate does not read.
+const EQUALS_LOOKALIKE: &str = r"[꞊═]";
 /// When an amount and, after it, an operator stand before a calculation with
 /// no `=` between that amount and the calculation, the calculation may be the
 /// tail of a longer sum, as after `$100 + wages `, `$100 + $20 wages `,
 /// `$500 wages + ` and `$100 + ... `; `+`, `×`, `*`, `÷`, every math symbol in
-/// `OTHER` and every operator in `EXTRA_OPERATOR` are operators wherever they
-/// stand, and a minus, `x`, `X` and `/` only with whitespace round them, since
-/// they also mark hyphens, words, dates such as `1/7/2025`, fractions such as
-/// `1/11` and rates such as `$2,000/month`.
+/// `OTHER`, every operator in `EXTRA_OPERATOR` and every word in
+/// `WORD_OPERATOR` are operators wherever they stand, and a minus, `x`, `X`,
+/// the Cyrillic `х` and `Х`, `/` and `:` only with whitespace round them,
+/// since they also mark hyphens, words, dates such as `1/7/2025`, fractions
+/// such as `1/11`, rates such as `$2,000/month` and labels such as `Total:`.
 static INTERRUPTED: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"(?:{NUM})[^=]*(?:[+×*÷]|{OTHER}|{EXTRA_OPERATOR}|[ \t][-−xX/](?:[ \t]|$))[^=]*$"
+        r"(?:{NUM})[^=]*(?:[+×*÷]|{OTHER}|{EXTRA_OPERATOR}|{WORD_OPERATOR}|[ \t][-−xXхХ/:](?:[ \t]|$))[^=]*$"
     ))
     .expect("pattern")
 });
@@ -302,9 +316,9 @@ static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
     ))
     .expect("pattern")
 });
-/// An operator `INTERRUPTED` does not count, after a number: a `/`, `x` or
-/// `X` between numbers without spaces round it, as in `100/4`,
-/// `$12,000/ 4 bonus` and `$500x52`; a minus before `$`, as in
+/// An operator `INTERRUPTED` does not count, after a number: a `/`, `x`,
+/// `X`, Cyrillic `х` or `Х`, or `:` between numbers without spaces round it,
+/// as in `100/4`, `$12,000/ 4 bonus`, `$500x52` and `10:2`; a minus before `$`, as in
 /// `$1,000-$200`, or spaced on one side only, as in `$1,000- 200`; or a
 /// minus, `/`, `x` or `X` joined to the next number but not to the text
 /// before it, as in `$1,000 -200` and `per quarter, x4`. An operator before
@@ -314,12 +328,12 @@ static ITEM_REFERENCE_END: LazyLock<regex::Regex> = LazyLock::new(|| {
 static UNSPACED: LazyLock<regex::Regex> = LazyLock::new(|| {
     let amount_end = format!(r"\d%?(?:[ \t]*{CLOSE_BRACKET})*");
     let opening = format!(r"(?:{OPEN_BRACKET}[ \t]*)*");
-    let quotient_or_product = format!(r"\d[ \t]*[/xX][ \t]*{CURRENCY_PREFIX}?");
+    let quotient_or_product = format!(r"\d[ \t]*[/xXхХ:][ \t]*{CURRENCY_PREFIX}?");
     let subtraction = format!(
         r"{amount_end}(?:[ \t]*[-−][ \t]*{opening}{CURRENCY_PREFIX}|[ \t]*[-−][ \t]+{opening}[-−]?|[ \t]+[-−]{opening}[-−]?)"
     );
     regex::Regex::new(&format!(
-        r"(?:{quotient_or_product}|{subtraction})\d|\d.*[^\w$][-−/xX]{CURRENCY_PREFIX}?\d",
+        r"(?:{quotient_or_product}|{subtraction})\d|\d.*[^\w$][-−/xXхХ]{CURRENCY_PREFIX}?\d",
     ))
     .expect("pattern")
 });
@@ -338,21 +352,23 @@ const OTHER: &str = r"[\p{Sm}·^&&[^+×÷=−|<>]]";
 static JOINED_BEFORE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"(?:[^\W\d]|(?:^|[^\w\s])[ \t]*)[-−][ \t]*$").expect("pattern")
 });
-/// A number and a space before a calculation whose first amount has no `$`,
-/// as in `1 000 + 1`: the amount may be a digit group of a longer one.
+/// A number and a space or an apostrophe before a calculation whose first
+/// amount has no `$`, as in `1 000 + 1` and `1'000 + 1`: the amount may be a
+/// digit group of a longer one.
 static GROUPED: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"\d[ \t]+$").expect("pattern"));
+    LazyLock::new(|| regex::Regex::new(r"\d(?:[ \t]+|['’])$").expect("pattern"));
 const SCALE_WORD: &str =
     r"(?i:k|m|b|bn|bln|mn|mln|mil|mill|tn|thousand|million|billion|trillion)s?\b";
 /// Text after a result that may change it: a minus and an amount, as in
 /// `5-1`, `$5- $4`, `$5- $-4` or `$150-$10`;
 /// a math symbol in `OTHER`, as in `5^2` and `5 ≈ 6`; a spaced `%`, as in
-/// `2 + 3 = 5 %`; a hyphenated scale word, as in `$150-million`; or a space
+/// `2 + 3 = 5 %`; a hyphenated scale word, as in `$150-million`; an
+/// apostrophe and a digit, as in `1'001`; or a space
 /// and a digit, as in `$150 000`, an operator joined to a number, as in
 /// `5 -1`, or a scale word, as in `$150 k`, `$150 bln` and `$150 million`.
 static JOINED_AFTER: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(&format!(
-        r"^(?:[ \t]*(?:[-−][ \t]*(?:{OPEN_BRACKET}[ \t]*)*(?:{CURRENCY_PREFIX}|[-−]?)\d|{OTHER})|[-−]{SCALE_WORD}|[ \t]+(?:[xX/]?\$?\d|%|{SCALE_WORD}))"
+        r"^(?:[ \t]*(?:[-−][ \t]*(?:{OPEN_BRACKET}[ \t]*)*(?:{CURRENCY_PREFIX}|[-−]?)\d|{OTHER})|[-−]{SCALE_WORD}|['’]\d|[ \t]+(?:[xXхХ/]?\$?\d|%|{SCALE_WORD}))"
     ))
     .expect("pattern")
 });
