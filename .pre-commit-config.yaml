@@ -1,9 +1,13 @@
 # Local gates, matching .github/workflows/verify.yml.
 #
-# Every hook below runs the same command the workflow runs, through the
-# toolchain pinned in rust-toolchain.toml and the locked dependencies, so a
-# hook that passes here cannot fail there on a version difference. `cargo`
-# must be on PATH; rustup installs the pinned toolchain on first use.
+# The local hooks run the workflow's format, lint and build parity commands
+# through the toolchain pinned in rust-toolchain.toml and the locked
+# dependencies, so none of them can pass here and fail there on a version
+# difference. The test hook runs `cargo test`, without the workflow's
+# coverage floor. The secrets hook is betterleaks' own pre-commit hook at the
+# rev pinned below, run with .gitleaks.toml; CI scans commits with the shared
+# secrets-scan action instead. `cargo` must be on PATH; rustup installs the
+# pinned toolchain on first use.
 #
 # The build parity check matters most locally: CI rejects a hand edit to a
 # generated file, and finding that out after a push means rewriting the commit.
