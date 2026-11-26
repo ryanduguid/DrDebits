@@ -11,7 +11,7 @@ name: No AI attribution
 # It never runs pull request code.
 
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] runs only base-branch code; see above
     types: [opened, edited, synchronize, reopened, ready_for_review]
   push:
     branches: ['**']
