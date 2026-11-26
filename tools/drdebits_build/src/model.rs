@@ -401,10 +401,21 @@ impl Behaviour {
     }
 }
 
+/// Load `behaviour-tests.yaml`'s cases and its whole-response rule from one
+/// read and parse of the file.
+pub fn load_behaviour_file(path: &PyPath) -> Result<(Vec<Behaviour>, WholeResponse), Fail> {
+    let data = read(path)?;
+    Ok((behaviour_tests(path, &data)?, whole_response(path, &data)?))
+}
+
 pub fn load_behaviour_tests(path: &PyPath) -> Result<Vec<Behaviour>, Fail> {
+    behaviour_tests(path, &read(path)?)
+}
+
+fn behaviour_tests(path: &PyPath, data: &Value) -> Result<Vec<Behaviour>, Fail> {
     let rows = rows(
         path,
-        &read(path)?,
+        data,
         "entries",
         &BEHAVIOUR_FIELDS,
         true,
@@ -476,7 +487,10 @@ pub struct WholeResponse {
 /// defined exactly once here, which is what makes a per-case
 /// `prohibited_anywhere` value checkable.
 pub fn load_whole_response(path: &PyPath) -> Result<WholeResponse, Fail> {
-    let data = read(path)?;
+    whole_response(path, &read(path)?)
+}
+
+fn whole_response(path: &PyPath, data: &Value) -> Result<WholeResponse, Fail> {
     let rule = data.get("whole_response");
     let rule_ok = rule.as_ref().and_then(dict_keys).is_some_and(|keys| {
         keys.len() == WHOLE_RESPONSE_FIELDS.len()
