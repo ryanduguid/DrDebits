@@ -33,6 +33,7 @@ cargo fmt --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo llvm-cov --locked --fail-under-lines 92
 cargo run --locked --release -- verify --root ../..
+python3 -m unittest discover --start-directory tests --pattern 'test_*.py'
 ```
 
 `cargo llvm-cov` runs the tests with line coverage; `cargo test --locked` runs
