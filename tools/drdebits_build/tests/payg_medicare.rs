@@ -319,6 +319,48 @@ fn the_levy_follows_each_limb_of_ss_7_and_8() {
     );
 }
 
+/// A liable spouse is refused only where ss 8(3) and 8(4) could change the
+/// answer: with a nil s 8(2) reduction there is nothing to share, and a nil
+/// levy cannot be reduced, so both cases are worked.
+#[test]
+fn a_liable_spouse_is_worked_where_ss_8_3_and_8_4_change_nothing() {
+    // The spouse's 50,000 exceeds 44,268, so the spouse would be liable, but
+    // family income 99,700 leaves 2% of 61,623 less 0.08 of 38,077 negative:
+    // the s 7(2) levy of 543.20 stands.
+    let tree = copy();
+    edit(
+        tree.path(),
+        "keys.json",
+        "\"taxable_income\": \"21700\"",
+        "\"taxable_income\": \"50000\"",
+    );
+    assert_eq!(
+        problems(tree.path()),
+        ["ML-003: the key says 92.90 and the rule gives 543.20"]
+    );
+
+    // 30,000 does not exceed 44,268, so there is no levy to reduce (s 7(1)),
+    // though the spouse's 45,000 makes the spouse liable and family income
+    // 75,000 gives a reduction of 162.30.
+    let tree = copy();
+    for (from, to) in [
+        (
+            "\"taxable_income\": \"49700\"",
+            "\"taxable_income\": \"30000\"",
+        ),
+        (
+            "\"taxable_income\": \"21700\"",
+            "\"taxable_income\": \"45000\"",
+        ),
+    ] {
+        edit(tree.path(), "keys.json", from, to);
+    }
+    assert_eq!(
+        problems(tree.path()),
+        ["ML-003: the key says 92.90 and the rule gives 0.00"]
+    );
+}
+
 #[test]
 fn a_rule_that_cannot_be_worked_stops_the_check() {
     for (file, from, to, expected) in [

@@ -8,8 +8,16 @@ release.
 
 ## [Unreleased]
 
+### Added
+
+- An answers file's `run` object may record a `topic`; `bench score`, `bench runs`
+  and `bench compare` refuse a file whose `topic` is not the topic being scored.
+
 ### Fixed
 
+- `bench keys --topic payg-medicare` works a Medicare levy key with a liable
+  spouse when ss 8(3) and 8(4) cannot change it: when the s 8(2) reduction is nil
+  or the levy itself is nil. It still refuses a case where they could.
 - `gate` blocks operators it does not read instead of passing the line
   unchecked: the words `plus`, `minus`, `less`, `times`, `multiplied` and
   `divided`, a colon and the Cyrillic `х`, as in `$1,000 less $200 = $900`,
