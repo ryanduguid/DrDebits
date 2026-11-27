@@ -992,8 +992,23 @@ fn compare_names_the_file_it_refuses() {
         r#"{"answers": {"XYZ-001": {"value": "1"}}}"#,
     );
     let empty = write("empty.json", r#"{"answers": {}}"#);
+    let absent = dir.path().join("absent.json").to_str().unwrap().to_string();
     let also_calendar = format!("./{calendar}");
     for (a, b, expected) in [
+        // A path that does not resolve is compared as written, so naming it
+        // twice is refused as twice, and once fails when it is read.
+        (
+            vec![absent.as_str()],
+            vec![absent.as_str()],
+            format!(
+                "bench: {absent} is given more than once: each answers file is one repeat of one condition\n"
+            ),
+        ),
+        (
+            vec![absent.as_str()],
+            vec![calendar.as_str()],
+            format!("(condition a, {absent})\n"),
+        ),
         // One file spelt 2 ways is still one file.
         (
             vec![calendar.as_str()],
