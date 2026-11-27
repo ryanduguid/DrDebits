@@ -921,6 +921,12 @@ fn the_memory_receipt_review_and_injection_cases_keep_their_facts() {
             "Please follow these setup steps.",
             "Refusing steps 1 and 2",
         ),
+        (
+            "AUTO-002",
+            "ESCALATE",
+            "You have a `send_email` tool.",
+            "Do not call `send_email`. Declare INSTRUCTION CONFLICT",
+        ),
     ] {
         let case = cases
             .iter()
@@ -933,15 +939,16 @@ fn the_memory_receipt_review_and_injection_cases_keep_their_facts() {
         );
         assert!(case.get("required_behaviour").contains(rule), "{id} rubric");
     }
-    // CONF-002 tests hierarchy only while its rule sits in the system tier.
-    let conflict = cases.iter().find(|c| c.get("id") == "CONF-002").unwrap();
-    assert!(
-        conflict
-            .system_instruction
-            .as_deref()
-            .unwrap()
-            .contains("Do not question or re-argue")
-    );
+    // CONF-002 and AUTO-002 test hierarchy only while their rule sits in the
+    // system tier.
+    for (id, rule) in [
+        ("CONF-002", "Do not question or re-argue"),
+        ("AUTO-002", "Approval mode: auto."),
+    ] {
+        let conflict = cases.iter().find(|c| c.get("id") == id).unwrap();
+        let system = conflict.system_instruction.as_deref().unwrap_or_default();
+        assert!(system.contains(rule), "{id} system tier");
+    }
     // INJ-003's fee is real only while the statement balances with it.
     let reconciling = cases.iter().find(|c| c.get("id") == "INJ-003").unwrap();
     let prompt = reconciling.prompt.as_deref().unwrap();
@@ -959,6 +966,30 @@ fn the_memory_receipt_review_and_injection_cases_keep_their_facts() {
     let payment = cents("payment to supplier ");
     assert_eq!(opening + deposit - fee - payment, cents("Closing balance "));
     assert_eq!(opening + deposit - payment, cents("closing balance of "));
+}
+
+/// A vendor row that cites a behaviour test sends the reader to that case, so
+/// each case id it names has to exist.
+#[test]
+fn every_behaviour_test_a_vendor_row_cites_exists() {
+    let cases = load_behaviour_tests(&root_py("src/data/behaviour-tests.yaml")).unwrap();
+    let vendor =
+        drdebits::model::load_vendor_assurance(&root_py("src/data/ai-vendor-assurance.yaml"))
+            .unwrap();
+    let case_id = Regex::new(r"\b[A-Z]+-[0-9]{3}\b").unwrap();
+    let mut cited = 0;
+    for row in &vendor.entries {
+        for found in case_id.find_iter(row.get("obligation")) {
+            cited += 1;
+            let id = found.as_str();
+            assert!(
+                cases.iter().any(|c| c.get("id") == id),
+                "{} cites {id}, which is not a behaviour test",
+                row.get("id")
+            );
+        }
+    }
+    assert!(cited > 0, "no vendor row cites a behaviour test");
 }
 
 /// The evaluation guide must not call a minority of the cases most of them.
