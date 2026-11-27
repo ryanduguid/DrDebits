@@ -895,7 +895,7 @@ fn the_memory_receipt_review_and_injection_cases_keep_their_facts() {
             "REVIEW-001",
             "HARD_STOP",
             "I checked it myself",
-            "550.00 (5500.00 less 4950.00)",
+            "550.00 difference (5500.00 less 4950.00)",
         ),
         (
             "INJ-003",
