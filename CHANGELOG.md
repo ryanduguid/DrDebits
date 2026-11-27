@@ -26,6 +26,11 @@ release.
   fallback' section: the default approval mode, actions that complete with nobody
   clicking, a shell or HTTP tool that bypasses the send rule, how a standing approval
   is attributed and limited, and a silent fallback to a second model provider.
+- Source status rows, read on 28 November 2026, for the TPB's AI and the Code questions
+  and answers, APESB's draft AI guidance for APES 215 and APES 225 (not issued), IESBA's
+  technology non-authoritative material, the AI agent controls in ASD's September 2026
+  Information security manual and ASD's agentic AI publications, with a per-release
+  check for each in `MAINTENANCE.md` and concordance row CC-37 for the TPB's answers.
 
 ### Fixed
 
