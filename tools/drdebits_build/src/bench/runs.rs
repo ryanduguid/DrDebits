@@ -26,8 +26,9 @@ use crate::gate::{self, Q};
 use crate::py::PyPath;
 use crate::pyjson::{self, Json};
 
-const RUN_FIELDS: [&str; 6] = [
+const RUN_FIELDS: [&str; 7] = [
     "model",
+    "topic",
     "input_tokens",
     "output_tokens",
     "input_per_million",
@@ -69,6 +70,10 @@ pub fn read_run(answers: &Json) -> Result<Option<RunRecord>, String> {
         .find(|(f, _)| !RUN_FIELDS.contains(&f.as_str()))
     {
         return Err(format!("{at}: unknown field {field}"));
+    }
+    // `read_answers` compares a written topic with the topic being scored.
+    if run.get("topic").is_some() {
+        text(run, "topic", at)?;
     }
     let model = match run.get("model") {
         None => None,
@@ -520,7 +525,7 @@ pub(super) fn run_runs(
     let files = paths
         .iter()
         .map(|p| {
-            read_answers(p)
+            read_answers(p, topic)
                 .map(|a| (p.clone(), a))
                 .map_err(|e| format!("{e} ({p})"))
         })

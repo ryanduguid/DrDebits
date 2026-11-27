@@ -117,6 +117,7 @@ fn a_run_record_refuses_what_it_cannot_price_exactly() {
         (r#"{"price": "1"}"#, "unknown field price"),
         (r#"{"model": " "}"#, "model must not be empty"),
         (r#"{"model": 3}"#, "model"),
+        (r#"{"topic": 3}"#, "topic must be text"),
         (
             r#"{"input_tokens": -1}"#,
             "input_tokens must be a whole number",
@@ -539,6 +540,55 @@ fn bench_runs_prints_the_same_report_every_time_and_refuses_a_bad_file() {
         "{}",
         missing.stderr
     );
+}
+
+/// A file whose `run.topic` names the topic being scored is marked; one that
+/// names another topic is refused by score, runs and compare, even with no
+/// answer whose id would give it away.
+#[test]
+fn a_recorded_topic_must_be_the_topic_being_scored() {
+    let dir = tempfile::tempdir().unwrap();
+    let write = |name: &str, run: &str| {
+        let path = dir.path().join(name);
+        std::fs::write(&path, answers(&["D7A-001"], &[], Some(run))).unwrap();
+        path.to_str().unwrap().to_string()
+    };
+    let own = write("own.json", r#"{"topic": "payday-div7a"}"#);
+    let other = write("other.json", r#"{"topic": "payg-medicare"}"#);
+    let root = repo_root();
+    let scored = run_in(&root, &["bench", "score", &own], true);
+    assert_eq!(scored.code, 0, "{}", scored.stderr);
+    assert!(
+        scored
+            .stdout
+            .contains("strict pass: 1/31 (3.23%) answers met every criterion"),
+        "{}",
+        scored.stdout
+    );
+    let refusal =
+        "answers file: run: topic payg-medicare is not the topic being scored, payday-div7a";
+    for (args, suffix) in [
+        (vec!["bench", "score", other.as_str()], String::new()),
+        (
+            vec!["bench", "runs", own.as_str(), other.as_str()],
+            format!(" ({other})"),
+        ),
+        (
+            vec![
+                "bench",
+                "compare",
+                "--a",
+                own.as_str(),
+                "--b",
+                other.as_str(),
+            ],
+            format!(" (condition b, {other})"),
+        ),
+    ] {
+        let refused = run_in(&root, &args, true);
+        assert_eq!(refused.code, 2, "{}", refused.stdout);
+        assert_eq!(refused.stderr, format!("bench: {refusal}{suffix}\n"));
+    }
 }
 
 #[test]

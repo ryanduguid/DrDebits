@@ -573,7 +573,9 @@ fn weekly_levy_adjustment(
 /// not be liable. A liable spouse brings in ss 8(3) and 8(4), which share the
 /// reduction and pass any excess between the spouses using the spouse's own
 /// levy and family income threshold; the key does not record those, so that
-/// case is refused rather than worked in part.
+/// case is refused rather than worked in part. It is refused only when it
+/// matters: a nil s 8(2) reduction leaves the levy as it is, and a nil levy
+/// stays nil, whether or not the spouse is liable.
 fn medicare_levy(
     income: &Q,
     threshold: &Q,
@@ -597,19 +599,21 @@ fn medicare_levy(
     if !family.threshold.less_than(&family_income) {
         return Ok(ratio(0, 1));
     }
-    if family.spouse_threshold.less_than(&family.spouse_income) {
-        return Err(
-            "the spouse would be liable, so ss 8(3) and 8(4) apply, which this rule does not work",
-        );
-    }
     let excess = family_income.add(&family.threshold, -1);
     let reduction = family
         .threshold
         .mul(&two_percent)
         .add(&excess.mul(&ratio(8, 100)), -1);
-    Ok(if !ratio(0, 1).less_than(&reduction) {
-        levy
-    } else if reduction.less_than(&levy) {
+    let nil = ratio(0, 1);
+    if !nil.less_than(&reduction) || !nil.less_than(&levy) {
+        return Ok(levy);
+    }
+    if family.spouse_threshold.less_than(&family.spouse_income) {
+        return Err(
+            "the spouse would be liable, so ss 8(3) and 8(4) apply, which this rule does not work",
+        );
+    }
+    Ok(if reduction.less_than(&levy) {
         levy.add(&reduction, -1)
     } else {
         ratio(0, 1)
@@ -1613,9 +1617,21 @@ fn run_keys(root: &PyPath, topic: &str) -> Result<u8, String> {
     Ok(EXIT_OK)
 }
 
-fn read_answers(path: &str) -> Result<Json, String> {
+/// Read an answers file, refusing one whose `run.topic` names another topic,
+/// so a file is never marked against another benchmark's keys.
+fn read_answers(path: &str, topic: &str) -> Result<Json, String> {
     let body = builder::read_text(&PyPath::new(path)).map_err(|e| format!("answers file: {e}"))?;
-    pyjson::loads(&body).map_err(|e| format!("answers file: {e}"))
+    let answers = pyjson::loads(&body).map_err(|e| format!("answers file: {e}"))?;
+    match answers
+        .get("run")
+        .and_then(|run| run.get("topic"))
+        .and_then(Json::as_str)
+    {
+        Some(recorded) if recorded != topic => Err(format!(
+            "answers file: run: topic {recorded} is not the topic being scored, {topic}"
+        )),
+        _ => Ok(answers),
+    }
 }
 
 /// Refuse a file given twice: each answers file is one repeat. The same file
@@ -1801,7 +1817,7 @@ fn run_score(
     let runs = paths
         .iter()
         .map(|p| {
-            let scored = read_answers(p).and_then(|a| score(&keys, &a));
+            let scored = read_answers(p, topic).and_then(|a| score(&keys, &a));
             match paths {
                 [_] => scored,
                 _ => scored.map_err(|e| format!("{e} ({p})")),
@@ -2002,7 +2018,7 @@ fn run_compare(root: &PyPath, topic: &str, a: &[String], b: &[String]) -> Result
     let read = |side: &str, paths: &[String]| {
         paths
             .iter()
-            .map(|p| read_answers(p).map_err(|e| format!("{e} (condition {side}, {p})")))
+            .map(|p| read_answers(p, topic).map_err(|e| format!("{e} (condition {side}, {p})")))
             .collect::<Result<Vec<_>, _>>()
     };
     let paired = compare(&keys, &read("a", a)?, &read("b", b)?)?;
