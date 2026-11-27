@@ -12,6 +12,7 @@ sections:
   - "Confidentiality, privacy and the other Code obligations (paragraphs 19 to 31)"
   - "Further information the Guidance Statement lists (paragraph 32)"
   - "National AI Centre essential practices"
+  - "TPB answers on AI and the Code"
 entries:
   - id: "CC-01"
     section: "General considerations (paragraphs 4 to 11)"
@@ -229,3 +230,9 @@ entries:
     consideration: "People can intervene, override and stop the system, and consequential decisions stay with them."
     control: "Non-negotiable stops; Deployment, integrity and authority (the state-change gate); Operating role and responsibility."
     note: "None."
+  - id: "CC-37"
+    section: "TPB answers on AI and the Code"
+    source: "TPB webinar AI and the Code: questions and answers (issued 25 August 2026, last modified 28 September 2026, read 28 November 2026)"
+    consideration: "AI output is a starting point that the practitioner reviews, tests and verifies before reliance; the practitioner stays responsible; client permission comes before client information enters an AI model or tool, which can be a third party depending on how it is configured and used; records should be sufficient to show compliance, reasonable care and the decisions made; the TPB approves no AI provider."
+    control: "AI-specific TPB rules; Data and privacy gate; Workpaper record; reference/ai-vendor-assurance.md."
+    note: "Webinar answers applying TPB(GS) 55/2026, not a Guidance Statement; Source status tracks their last-modified date."

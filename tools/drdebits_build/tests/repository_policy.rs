@@ -1023,3 +1023,80 @@ fn the_benchmark_canary_is_in_every_form_of_the_cases() {
         assert!(read(file).contains(canary), "{file}");
     }
 }
+
+/// Each AI source the table watches keeps the dates and identifiers read on
+/// 28 November 2026, and the release protocol checks every one of them.
+#[test]
+fn the_ai_source_watch_keeps_its_dates_and_release_checks() {
+    let status = read("src/guide/040-source-status.md");
+    let row = |link: &str| -> String {
+        status
+            .lines()
+            .find(|l| l.starts_with(&format!("| [{link}]")))
+            .unwrap_or_else(|| panic!("no source-status row for {link}"))
+            .to_string()
+    };
+    for (link, facts) in [
+        (
+            "TPB AI and the Code webinar questions and answers",
+            &[
+                "Issued 25 August 2026; last modified 28 September 2026",
+                "not a Guidance Statement",
+            ][..],
+        ),
+        (
+            "APESB AI guidance for APES 215 and APES 225 (locate via APESB)",
+            &["25 November 2026", "Not issued when checked on 2026-11-28"],
+        ),
+        (
+            "IESBA technology focus page",
+            &["15 July 2026", "never cited as binding"],
+        ),
+        (
+            "ASD Information security manual",
+            &[
+                "September 2026 release",
+                "ISM-2113",
+                "ISM-2133 to ISM-2135",
+                "ISM-2156 to ISM-2159",
+            ],
+        ),
+        (
+            "ASD: Careful adoption of agentic AI services",
+            &[
+                "1 May 2026 and 11 September 2026",
+                "not tax-practice authority",
+            ],
+        ),
+    ] {
+        let found = row(link);
+        for fact in facts {
+            assert!(found.contains(fact), "{link}: missing {fact:?}");
+        }
+    }
+
+    let step = release_protocol_step(&read("MAINTENANCE.md"), 3);
+    for check in [
+        "Information security manual and its AI agent controls",
+        "ASD's agentic AI publications",
+        "AI guidance for APES 215 and APES 225",
+        "IESBA's technology non-authoritative material",
+        "TPB's AI and the Code questions and answers",
+    ] {
+        assert!(step.contains(check), "release step 3 omits {check:?}");
+    }
+
+    let concordance =
+        drdebits::model::load_concordance(&root_py("src/data/gs55-concordance.yaml")).unwrap();
+    let answers = concordance
+        .entries
+        .iter()
+        .find(|r| r.get("id") == "CC-37")
+        .expect("CC-37 maps the TPB answers");
+    assert_eq!(answers.get("section"), "TPB answers on AI and the Code");
+    assert!(
+        answers
+            .get("source")
+            .contains("issued 25 August 2026, last modified 28 September 2026")
+    );
+}
