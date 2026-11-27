@@ -102,6 +102,9 @@ fact, a note names that fact, as in
 `$1,100 is equal in amount to fact 'invoice total'`: a match in value, not
 evidence that the figure came from that fact. An amount equal to 2 or more
 facts is noted as ambiguous with every name, and the gate does not pick one.
+The check reads one draft against the facts it is given; no model run has
+measured how often drafts carry figures that trace to no fact, so it is not
+evidence that the guide makes untraced figures rarer.
 
 `--authorities authorities.json` asks for review of each section of a named
 Act and each ruling id the draft cites that is not on a closed list the
