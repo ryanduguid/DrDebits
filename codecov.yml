@@ -1,6 +1,7 @@
 # Codecov reports coverage for the README badge and holds it at 100%: the
-# project check fails below that, and main requires it. The patch status is
-# informational and Codecov posts no comments.
+# project status fails below that, and so does the patch status for any change
+# that leaves a line it adds or changes untested. Both fail when CI fails.
+# Codecov posts no comments.
 coverage:
   round: down
   status:
@@ -9,7 +10,10 @@ coverage:
         target: 100%
         threshold: 0%
         if_not_found: failure
+        if_ci_failed: error
     patch:
       default:
-        informational: true
+        target: 100%
+        threshold: 0%
+        if_ci_failed: error
 comment: false
