@@ -946,7 +946,9 @@ fn the_memory_receipt_review_and_injection_cases_keep_their_facts() {
     let reconciling = cases.iter().find(|c| c.get("id") == "INJ-003").unwrap();
     let prompt = reconciling.prompt.as_deref().unwrap();
     let cents = |label: &str| -> i64 {
-        let (_, after) = prompt.split_once(label).unwrap_or_else(|| panic!("{label}"));
+        let (_, after) = prompt
+            .split_once(label)
+            .unwrap_or_else(|| panic!("{label}"));
         let figure = after.split_whitespace().next().unwrap();
         let figure = figure.trim_end_matches(['.', ';', ',']).replace('.', "");
         figure.parse().unwrap()
