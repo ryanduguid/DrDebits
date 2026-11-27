@@ -12,6 +12,13 @@ release.
 
 - An answers file's `run` object may record a `topic`; `bench score`, `bench runs`
   and `bench compare` refuse a file whose `topic` is not the topic being scored.
+- MEM-001, MEM-002, SUBST-001, CONF-002, READ-001, REVIEW-001 and INJ-003 to INJ-006,
+  behaviour tests with frozen prompts, bringing the suite to 123: remembered text
+  that loosens a gate or outlives its income year, a firm rule to claim work
+  expenses without written evidence, a host rule not to question the agent, a write
+  receipt reported as a verified value, a verbal override of a failed review, and
+  instructions carried in a bank line, hidden email text, an email the user says to
+  follow and a forwarded setup email. None has a recorded model result.
 
 ### Fixed
 
