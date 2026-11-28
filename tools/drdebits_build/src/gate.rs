@@ -507,7 +507,7 @@ impl Unit {
 }
 
 enum Token {
-    Num(Q, Unit),
+    Num(Q, Unit, bool),
     Op(char),
 }
 
@@ -519,12 +519,13 @@ fn tokens(text: &str) -> Option<Vec<Token>> {
         if c.is_whitespace() {
             rest = &rest[c.len_utf8()..];
         } else if let Some(m) = number_at.find(rest) {
+            let (value, _, percent) = number(m.as_str())?;
             let unit = if m.as_str().starts_with('$') {
                 Unit::Dollars
             } else {
                 Unit::Plain
             };
-            out.push(Token::Num(number(m.as_str())?.0, unit));
+            out.push(Token::Num(value, unit, percent));
             rest = &rest[m.end()..];
         } else {
             let op = match c {
@@ -546,6 +547,7 @@ struct Parser {
     tokens: Vec<Token>,
     at: usize,
     divided_by_zero: bool,
+    percent_products: Vec<(Amount, Amount)>,
 }
 
 impl Parser {
@@ -555,22 +557,34 @@ impl Parser {
             _ => None,
         }
     }
-    fn expr(&mut self) -> Option<(Q, Unit)> {
-        let (mut value, mut unit) = self.term()?;
+    fn expr(&mut self) -> Option<(Q, Unit, bool)> {
+        let (mut value, mut unit, mut percent) = self.term()?;
         while let Some(op @ ('+' | '-')) = self.op() {
             self.at += 1;
-            let (right, right_unit) = self.term()?;
+            let (right, right_unit, right_percent) = self.term()?;
             value = value.add(&right, if op == '+' { 1 } else { -1 });
             unit = Unit::combine(op, unit, right_unit);
+            percent = percent && right_percent;
         }
-        Some((value, unit))
+        Some((value, unit, percent))
     }
-    fn term(&mut self) -> Option<(Q, Unit)> {
-        let (mut value, mut unit) = self.factor()?;
+    fn term(&mut self) -> Option<(Q, Unit, bool)> {
+        let (mut value, mut unit, mut percent) = self.factor()?;
         while let Some(op @ ('*' | '/')) = self.op() {
             self.at += 1;
-            let (right, right_unit) = self.factor()?;
+            let (right, right_unit, right_percent) = self.factor()?;
             value = if op == '*' {
+                if unit == Unit::Dollars && right_percent {
+                    self.percent_products.push((
+                        Amount::new(value.clone(), false),
+                        Amount::new(right.clone(), true),
+                    ));
+                } else if percent && right_unit == Unit::Dollars {
+                    self.percent_products.push((
+                        Amount::new(right.clone(), false),
+                        Amount::new(value.clone(), true),
+                    ));
+                }
                 value.mul(&right)
             } else {
                 let quotient = value.div(&right);
@@ -578,15 +592,16 @@ impl Parser {
                 quotient?
             };
             unit = Unit::combine(op, unit, right_unit);
+            percent = false;
         }
-        Some((value, unit))
+        Some((value, unit, percent))
     }
-    fn factor(&mut self) -> Option<(Q, Unit)> {
+    fn factor(&mut self) -> Option<(Q, Unit, bool)> {
         match self.tokens.get(self.at) {
             Some(Token::Op('-')) => {
                 self.at += 1;
-                let (value, unit) = self.factor()?;
-                Some((value.neg(), unit))
+                let (value, unit, percent) = self.factor()?;
+                Some((value.neg(), unit, percent))
             }
             Some(Token::Op('(')) => {
                 self.at += 1;
@@ -594,8 +609,8 @@ impl Parser {
                 (self.op() == Some(')')).then(|| self.at += 1)?;
                 Some(value)
             }
-            Some(Token::Num(q, unit)) => {
-                let found = (q.clone(), *unit);
+            Some(Token::Num(q, unit, percent)) => {
+                let found = (q.clone(), *unit, *percent);
                 self.at += 1;
                 Some(found)
             }
@@ -604,12 +619,15 @@ impl Parser {
     }
 }
 
-/// The value and unit of an expression: `None` when it does not parse,
-/// `Some(None)` when it divides by zero. `first` replaces the unit of the
-/// first number, a running total carried from the previous link.
-fn parse(expression: &str, first: Option<Unit>) -> Option<Option<(Q, Unit)>> {
+type Parsed = (Q, Unit, Vec<(Amount, Amount)>);
+
+/// The value, unit and dollar-by-percentage products of an expression: `None`
+/// when it does not parse, `Some(None)` when it divides by zero. `first`
+/// replaces the unit of the first number, a running total carried from the
+/// previous link.
+fn parse(expression: &str, first: Option<Unit>) -> Option<Option<Parsed>> {
     let mut tokens = tokens(expression)?;
-    if let (Some(carried), Some(Token::Num(_, unit))) = (
+    if let (Some(carried), Some(Token::Num(_, unit, _))) = (
         first,
         tokens.iter_mut().find(|t| matches!(t, Token::Num(..))),
     ) {
@@ -619,17 +637,19 @@ fn parse(expression: &str, first: Option<Unit>) -> Option<Option<(Q, Unit)>> {
         tokens,
         at: 0,
         divided_by_zero: false,
+        percent_products: Vec::new(),
     };
     let value = parser.expr();
     if parser.divided_by_zero {
         return Some(None);
     }
-    (parser.at == parser.tokens.len()).then_some(Some(value?))
+    let (q, unit, _) = value?;
+    (parser.at == parser.tokens.len()).then_some(Some((q, unit, parser.percent_products)))
 }
 
 /// The value of an expression, as `parse` gives it.
 fn evaluate(expression: &str) -> Option<Option<Q>> {
-    parse(expression, None).map(|v| v.map(|(q, _)| q))
+    parse(expression, None).map(|v| v.map(|(q, _, _)| q))
 }
 
 /// Whether `a` is within one unit of the last of `places` decimal places of
@@ -672,6 +692,9 @@ pub struct Calculation {
     /// result written without `$` gains one when the expression it ends is
     /// unambiguously in dollars.
     pub results: Vec<String>,
+    /// Dollar-by-percentage multiplications `(base, percentage)` parsed from
+    /// this calculation's steps.
+    percent_products: Vec<(Amount, Amount)>,
 }
 
 /// Each match of `pattern` on a line, by its `calc` group. A search resumes
@@ -695,6 +718,7 @@ fn unread(text: String, computed: &str) -> Calculation {
         matches: false,
         operands: Vec::new(),
         results: Vec::new(),
+        percent_products: Vec::new(),
     }
 }
 
@@ -1154,6 +1178,7 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
         };
         let mut operands = Vec::new();
         let mut results = Vec::new();
+        let mut percent_products = Vec::new();
         let mut unit = Unit::Unknown;
         for (i, link) in links.iter().enumerate() {
             let carried = (i > 0 && running[i - 1]).then_some(unit);
@@ -1162,9 +1187,11 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
                 results.extend(numbers.next().map(|n| result(n, carried)));
             }
             operands.extend(numbers.map(str::to_string));
-            unit = parse(link, carried)
+            let (_, link_unit, products) = parse(link, carried)
                 .flatten()
-                .map_or(Unit::Unknown, |(_, u)| u);
+                .expect("each link already evaluated without division by zero");
+            unit = link_unit;
+            percent_products.extend(products);
         }
         results.extend(NUMBER.find(right).map(|m| result(m.as_str(), unit)));
         let shown = failed.unwrap_or(last);
@@ -1184,6 +1211,7 @@ fn calculations_on(line: &str, out: &mut Vec<Calculation>) -> Vec<std::ops::Rang
             matches: failed.is_none(),
             operands,
             results,
+            percent_products,
         });
     }
     read
@@ -1481,20 +1509,30 @@ struct Amount {
 }
 
 impl Amount {
+    fn new(q: Q, percent: bool) -> Amount {
+        Amount {
+            value: Q::new(q.n.abs(), q.d),
+            percent,
+        }
+    }
     fn read(text: &str) -> Option<Amount> {
         if !AMOUNT_TEXT.is_match(text) || (text.contains('$') && text.ends_with('%')) {
             return None;
         }
         let (q, _, percent) = number(text)?;
-        Some(Amount {
-            value: Q::new(q.n.abs(), q.d),
-            percent,
-        })
+        Some(Amount::new(q, percent))
     }
     fn same(&self, other: &Amount) -> bool {
         self.percent == other.percent
             && &self.value.n * &other.value.d == &other.value.n * &self.value.d
     }
+}
+
+fn format_percent(a: &Amount) -> String {
+    let scaled = a.value.mul(&Q::new(BigInt::from(100), BigInt::from(1)));
+    let text = decimal(&scaled, 4);
+    let trimmed = text.trim_end_matches('0').trim_end_matches('.');
+    format!("{trimmed}%")
 }
 
 /// One supplied fact: its name in the facts file and its amount.
@@ -1548,17 +1586,10 @@ pub fn load_facts(text: &str) -> Result<Vec<Fact>, String> {
         .collect()
 }
 
-/// Flag each dollar amount or percentage in the draft that is neither a
-/// supplied fact nor the result of a reperformed calculation whose dollar
-/// and percentage inputs are facts or results of earlier calculations, and
-/// for each amount equal to a fact, note that fact by name; an amount equal
-/// to 2 or more facts is noted as ambiguous. This check adds reviews
-/// and notes only, never a block: it finds amounts it cannot trace, and
-/// cannot show that a traced amount is right or came from the fact it equals.
-pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
+fn known_amounts(facts: &[Fact], calculations: &[Calculation]) -> Vec<Amount> {
     let mut known: Vec<Amount> = facts.iter().map(|f| f.amount.clone()).collect();
     let is_known = |known: &[Amount], a: &Amount| known.iter().any(|k| k.same(a));
-    for c in report.calculations.iter().filter(|c| c.matches) {
+    for c in calculations.iter().filter(|c| c.matches) {
         // Plain numbers such as `11` or `12` months are not amounts.
         let inputs_known = c
             .operands
@@ -1574,6 +1605,42 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
             );
         }
     }
+    known
+}
+
+fn for_each_draft_amount(response: &str, mut visit: impl FnMut(&str)) {
+    for line in py::splitlines(response).into_iter().map(normalise) {
+        let mut at = 0;
+        while let Some(m) = DRAFT_AMOUNT.find_at(&line, at) {
+            // A percentage inside a word or a longer number, as `x12%` or the
+            // `10%` of a skipped `x1,10%`; a list such as `5%,10%` is read.
+            // Look again from the next character, so `ab1 200%` still finds
+            // `200%`.
+            let mut previous = line[..m.start()].chars().rev();
+            let before = previous.next();
+            let inside = before.is_some_and(|c| c.is_alphanumeric() || matches!(c, '_' | '$'))
+                || (matches!(before, Some('.' | ','))
+                    && previous.next().is_some_and(|c| c.is_ascii_digit()));
+            if !m.as_str().starts_with('$') && inside {
+                at = m.start() + line[m.start()..].chars().next().map_or(1, char::len_utf8);
+                continue;
+            }
+            at = m.end();
+            visit(m.as_str());
+        }
+    }
+}
+
+/// Flag each dollar amount or percentage in the draft that is neither a
+/// supplied fact nor the result of a reperformed calculation whose dollar
+/// and percentage inputs are facts or results of earlier calculations, and
+/// for each amount equal to a fact, note that fact by name; an amount equal
+/// to 2 or more facts is noted as ambiguous. This check adds reviews
+/// and notes only, never a block: it finds amounts it cannot trace, and
+/// cannot show that a traced amount is right or came from the fact it equals.
+pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
+    let known = known_amounts(facts, &report.calculations);
+    let is_known = |list: &[Amount], a: &Amount| list.iter().any(|k| k.same(a));
     let failed_results: Vec<Amount> = report
         .calculations
         .iter()
@@ -1598,60 +1665,42 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
     let mut unread: Vec<String> = Vec::new();
     let mut equal: Vec<String> = Vec::new();
     let mut fact_mismatch = false;
-    for line in py::splitlines(response).into_iter().map(normalise) {
-        let mut at = 0;
-        while let Some(m) = DRAFT_AMOUNT.find_at(&line, at) {
-            // A percentage inside a word or a longer number, as `x12%` or the
-            // `10%` of a skipped `x1,10%`; a list such as `5%,10%` is read.
-            // Look again from the next character, so `ab1 200%` still finds
-            // `200%`.
-            let mut previous = line[..m.start()].chars().rev();
-            let before = previous.next();
-            let inside = before.is_some_and(|c| c.is_alphanumeric() || matches!(c, '_' | '$'))
-                || (matches!(before, Some('.' | ','))
-                    && previous.next().is_some_and(|c| c.is_ascii_digit()));
-            if !m.as_str().starts_with('$') && inside {
-                at = m.start() + line[m.start()..].chars().next().map_or(1, char::len_utf8);
-                continue;
-            }
-            at = m.end();
-            let written = m.as_str();
-            let (list, item) = match Amount::read(written) {
-                None => (&mut unread, written.to_string()),
-                Some(a) => {
-                    let names: Vec<String> = facts
-                        .iter()
-                        .filter(|f| f.amount.same(&a))
-                        .map(|f| py::repr_str(&f.name))
-                        .collect();
-                    match names.as_slice() {
-                        [] if is_known(&known, &a) => continue,
-                        [] => {
-                            if !is_known(&failed_results, &a) {
-                                fact_mismatch = true;
-                            }
-                            (&mut untraced, written.to_string())
+    for_each_draft_amount(response, |written| {
+        let (list, item) = match Amount::read(written) {
+            None => (&mut unread, written.to_string()),
+            Some(a) => {
+                let names: Vec<String> = facts
+                    .iter()
+                    .filter(|f| f.amount.same(&a))
+                    .map(|f| py::repr_str(&f.name))
+                    .collect();
+                match names.as_slice() {
+                    [] if is_known(&known, &a) => return,
+                    [] => {
+                        if !is_known(&failed_results, &a) {
+                            fact_mismatch = true;
                         }
-                        [name] => (
-                            &mut equal,
-                            format!("{written} is equal in amount to fact {name}"),
-                        ),
-                        [others @ .., last] => (
-                            &mut equal,
-                            format!(
-                                "{written} is equal in amount to {} facts, {} and {last}; ambiguous, so the gate does not pick one",
-                                names.len(),
-                                others.join(", ")
-                            ),
-                        ),
+                        (&mut untraced, written.to_string())
                     }
+                    [name] => (
+                        &mut equal,
+                        format!("{written} is equal in amount to fact {name}"),
+                    ),
+                    [others @ .., last] => (
+                        &mut equal,
+                        format!(
+                            "{written} is equal in amount to {} facts, {} and {last}; ambiguous, so the gate does not pick one",
+                            names.len(),
+                            others.join(", ")
+                        ),
+                    ),
                 }
-            };
-            if !list.contains(&item) {
-                list.push(item);
             }
+        };
+        if !list.contains(&item) {
+            list.push(item);
         }
-    }
+    });
     if fact_mismatch || !unread.is_empty() {
         report.record_error(ErrorClass::FactMismatch);
     }
@@ -1672,6 +1721,320 @@ pub fn check_facts(response: &str, facts: &[Fact], report: &mut Report) {
         .extend(equal.into_iter().map(|e| format!("facts check: {e}")));
     report.notes.push(
         "facts check: it flags amounts it cannot trace; an amount that matches a fact or a calculation is not thereby correct"
+            .into(),
+    );
+}
+
+struct OtherClientFact {
+    client: String,
+    name: String,
+    amount: Amount,
+}
+
+struct JointItem {
+    item: String,
+    amount_text: String,
+    amount: Amount,
+    recorded_share: Option<(String, Amount)>,
+    prior_share: Option<(String, Amount)>,
+    evidence: Option<String>,
+}
+
+/// Optional cross-client figures and joint-item ownership metadata supplied
+/// through `--client-context`.
+pub struct ClientContext {
+    other_clients: Vec<OtherClientFact>,
+    joint: Vec<JointItem>,
+}
+
+fn parse_optional_share(
+    obj: &Json,
+    key: &str,
+    item: &str,
+) -> Result<Option<(String, Amount)>, String> {
+    match obj.get(key) {
+        None | Some(Json::Null) => Ok(None),
+        Some(value) => {
+            let written = value.as_str().ok_or_else(|| {
+                format!(
+                    "client-context file: joint item {} {key} must be a percentage string, found {}",
+                    py::repr_str(item),
+                    value.repr()
+                )
+            })?;
+            let amount = (!written.starts_with(['-', '−']))
+                .then(|| Amount::read(written))
+                .flatten()
+                .filter(|a| a.percent && a.value.n <= a.value.d)
+                .ok_or_else(|| {
+                    format!(
+                        "client-context file: joint item {} {key} is not a percentage between 0% and 100% the gate can read: {}",
+                        py::repr_str(item),
+                        py::repr_str(written)
+                    )
+                })?;
+            Ok(Some((written.to_string(), amount)))
+        }
+    }
+}
+
+/// Read a client-context file: a JSON object allowing only `other_clients`
+/// (mapping other open client labels to `{fact: amount_text}` objects) and
+/// `joint` (a list of joint-item objects with `item`, `amount`, optional
+/// `recorded_share`, `prior_share` and `evidence`). All amounts are text.
+pub fn load_client_context(text: &str) -> Result<ClientContext, String> {
+    let fail = |m: String| format!("client-context file: {m}");
+    let payload = pyjson::loads(text).map_err(|e| fail(format!("not valid JSON ({e})")))?;
+    let Json::Object(top) = &payload else {
+        return Err(fail("top level must be an object".into()));
+    };
+    if top.is_empty() {
+        return Err(fail("must include 'other_clients' or 'joint'".into()));
+    }
+    if let Some((key, _)) = top
+        .iter()
+        .find(|(k, _)| k != "other_clients" && k != "joint")
+    {
+        return Err(fail(format!(
+            "unknown key {}; allowed keys are 'other_clients' and 'joint'",
+            py::repr_str(key)
+        )));
+    }
+    let mut other_clients = Vec::new();
+    if let Some(section) = payload.get("other_clients") {
+        let Json::Object(clients) = section else {
+            return Err(fail(
+                "'other_clients' must map client names to objects of amounts".into(),
+            ));
+        };
+        if clients.is_empty() {
+            return Err(fail("'other_clients' must not be empty".into()));
+        }
+        for (client, facts_val) in clients {
+            if client.trim().is_empty() {
+                return Err(fail("client name must not be empty".into()));
+            }
+            let Json::Object(pairs) = facts_val else {
+                return Err(fail(format!(
+                    "client {} must map fact names to amounts",
+                    py::repr_str(client)
+                )));
+            };
+            if pairs.is_empty() {
+                return Err(fail(format!(
+                    "client {} must map at least one fact",
+                    py::repr_str(client)
+                )));
+            }
+            for (name, value) in pairs {
+                let written = value.as_str().ok_or_else(|| {
+                    fail(format!(
+                        "{} of {} must be an amount written as text; found {}",
+                        py::repr_str(name),
+                        py::repr_str(client),
+                        value.repr()
+                    ))
+                })?;
+                let amount = Amount::read(written).ok_or_else(|| {
+                    fail(format!(
+                        "{} of {} is not an amount the gate can read: {}",
+                        py::repr_str(name),
+                        py::repr_str(client),
+                        py::repr_str(written)
+                    ))
+                })?;
+                other_clients.push(OtherClientFact {
+                    client: client.clone(),
+                    name: name.clone(),
+                    amount,
+                });
+            }
+        }
+    }
+    let mut joint = Vec::new();
+    if let Some(section) = payload.get("joint") {
+        let Json::Array(items) = section else {
+            return Err(fail("'joint' must be a list of joint-item objects".into()));
+        };
+        if items.is_empty() {
+            return Err(fail("'joint' must not be empty".into()));
+        }
+        for entry in items {
+            let Json::Object(fields) = entry else {
+                return Err(fail("each 'joint' entry must be an object".into()));
+            };
+            if let Some((key, _)) = fields.iter().find(|(k, _)| {
+                !matches!(
+                    k.as_str(),
+                    "item" | "amount" | "recorded_share" | "prior_share" | "evidence"
+                )
+            }) {
+                return Err(fail(format!(
+                    "unknown key {} in 'joint' entry",
+                    py::repr_str(key)
+                )));
+            }
+            let item = match entry.get("item").and_then(Json::as_str) {
+                Some(name) if !name.trim().is_empty() => name.to_string(),
+                _ => {
+                    return Err(fail(
+                        "each 'joint' entry needs a non-empty 'item' name".into(),
+                    ));
+                }
+            };
+            let amount_text = entry
+                .get("amount")
+                .and_then(Json::as_str)
+                .ok_or_else(|| {
+                    fail(format!(
+                        "joint item {} 'amount' must be an amount written as text",
+                        py::repr_str(&item)
+                    ))
+                })?
+                .to_string();
+            let amount = Amount::read(&amount_text)
+                .filter(|a| !a.percent)
+                .ok_or_else(|| {
+                    fail(format!(
+                        "joint item {} 'amount' is not a dollar amount the gate can read: {}",
+                        py::repr_str(&item),
+                        py::repr_str(&amount_text)
+                    ))
+                })?;
+            let recorded_share = parse_optional_share(entry, "recorded_share", &item)?;
+            let prior_share = parse_optional_share(entry, "prior_share", &item)?;
+            let evidence = match entry.get("evidence") {
+                None | Some(Json::Null) => None,
+                Some(value) => {
+                    let text = value.as_str().ok_or_else(|| {
+                        fail(format!(
+                            "joint item {} 'evidence' must be text or null",
+                            py::repr_str(&item)
+                        ))
+                    })?;
+                    let trimmed = text.trim();
+                    (!trimmed.is_empty()).then(|| trimmed.to_string())
+                }
+            };
+            joint.push(JointItem {
+                item,
+                amount_text,
+                amount,
+                recorded_share,
+                prior_share,
+                evidence,
+            });
+        }
+    }
+    Ok(ClientContext {
+        other_clients,
+        joint,
+    })
+}
+
+/// Check the draft against other open clients' figures and joint-item shares.
+/// Adds REVIEW findings and notes only, never a BLOCK.
+pub fn check_client_context(
+    response: &str,
+    facts: Option<&[Fact]>,
+    context: &ClientContext,
+    report: &mut Report,
+) {
+    let mut mismatch = false;
+    let mut reviews: Vec<String> = Vec::new();
+    let mut notes: Vec<String> = Vec::new();
+    if !context.other_clients.is_empty() {
+        let known = known_amounts(facts.unwrap_or(&[]), &report.calculations);
+        for_each_draft_amount(response, |written| {
+            let Some(a) = Amount::read(written) else {
+                return;
+            };
+            let matched: Vec<String> = context
+                .other_clients
+                .iter()
+                .filter(|o| o.amount.same(&a))
+                .map(|o| format!("{} of {}", py::repr_str(&o.name), py::repr_str(&o.client)))
+                .collect();
+            if matched.is_empty() {
+                return;
+            }
+            let joined = matched.join(", ");
+            if known.iter().any(|k| k.same(&a)) {
+                let note = format!(
+                    "client-context check: {written} also matches {joined} as well as current-client facts; confirm the figure belongs to this client"
+                );
+                if !notes.contains(&note) {
+                    notes.push(note);
+                }
+            } else {
+                let review = format!(
+                    "client-context check: {written} matches {joined}; possible cross-client contamination"
+                );
+                if !reviews.contains(&review) {
+                    reviews.push(review);
+                }
+                mismatch = true;
+            }
+        });
+    }
+    for item in &context.joint {
+        if let Some(current_facts) = facts
+            && !current_facts.iter().any(|f| f.amount.same(&item.amount))
+        {
+            reviews.push(format!(
+                "client-context check: joint item {} ({}) does not match any amount in the facts file; reconcile joint amounts with current-client facts",
+                py::repr_str(&item.item),
+                item.amount_text
+            ));
+            mismatch = true;
+        }
+        match &item.recorded_share {
+            None => {
+                reviews.push(format!(
+                    "client-context check: joint item {} ({}) has no recorded ownership share; do not assume a split without evidence",
+                    py::repr_str(&item.item),
+                    item.amount_text
+                ));
+                mismatch = true;
+            }
+            Some((recorded_text, recorded)) => {
+                if let Some((prior_text, prior)) = &item.prior_share
+                    && !recorded.same(prior)
+                    && item.evidence.is_none()
+                {
+                    reviews.push(format!(
+                        "client-context check: joint item {} ownership share changed from {prior_text} to {recorded_text} without supporting evidence",
+                        py::repr_str(&item.item)
+                    ));
+                    mismatch = true;
+                }
+                for calc in &report.calculations {
+                    for (base, pct) in &calc.percent_products {
+                        if base.same(&item.amount) && !pct.same(recorded) {
+                            let review = format!(
+                                "client-context check: calculation {} applies {} to joint item {} ({}), which differs from recorded share {recorded_text}",
+                                py::repr_str(&calc.text),
+                                format_percent(pct),
+                                py::repr_str(&item.item),
+                                item.amount_text
+                            );
+                            if !reviews.contains(&review) {
+                                reviews.push(review);
+                            }
+                            mismatch = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if mismatch {
+        report.record_error(ErrorClass::FactMismatch);
+    }
+    report.reviews.extend(reviews);
+    report.notes.extend(notes);
+    report.notes.push(
+        "client-context check: it compares figures and recorded shares only; a matching figure or recorded evidence reference does not establish ownership or absence of contamination"
             .into(),
     );
 }
@@ -2109,6 +2472,11 @@ pub struct Args {
     /// quoted span not found verbatim in one asks for review.
     #[arg(long = "source")]
     sources: Vec<String>,
+    /// A JSON client-context file with `other_clients` figures and `joint`
+    /// ownership shares; cross-client matches, missing or undocumented share
+    /// changes, and calculations applying another share ask for review.
+    #[arg(long = "client-context")]
+    client_context: Option<String>,
 }
 
 fn read_response(path: &str) -> Result<String, Fail> {
@@ -2149,6 +2517,11 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
     };
     let lists = load_list(args.facts.as_deref(), "facts", load_facts).and_then(|facts| {
         let authorities = load_list(args.authorities.as_deref(), "authorities", load_authorities)?;
+        let client_context = load_list(
+            args.client_context.as_deref(),
+            "client-context",
+            load_client_context,
+        )?;
         let quoted = args
             .sources
             .iter()
@@ -2156,9 +2529,9 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
                 builder::read_text(&PyPath::new(path)).map_err(|e| format!("source file: {e}"))
             })
             .collect::<Result<Vec<String>, String>>()?;
-        Ok((facts, authorities, quoted))
+        Ok((facts, authorities, client_context, quoted))
     });
-    let (facts, authorities, quoted) = match lists {
+    let (facts, authorities, client_context, quoted) = match lists {
         Ok(lists) => lists,
         Err(e) => {
             errln!("gate: {e}");
@@ -2171,6 +2544,9 @@ pub fn main(root: Option<&str>, args: Args) -> u8 {
     }
     if let Some(authorities) = &authorities {
         check_authorities(&response, authorities, &mut report);
+    }
+    if let Some(context) = &client_context {
+        check_client_context(&response, facts.as_deref(), context, &mut report);
     }
     if !quoted.is_empty() {
         check_quotes(&response, &quoted, &mut report);
