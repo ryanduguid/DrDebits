@@ -9,7 +9,8 @@ mod common;
 use common::*;
 use drdebits::gate::{
     self, EXIT_BLOCK, EXIT_COULD_NOT_RUN, EXIT_PASS, EXIT_REVIEW, calculations, check,
-    check_authorities, check_facts, check_quotes, load_authorities, load_facts,
+    check_authorities, check_client_context, check_facts, check_quotes, load_authorities,
+    load_client_context, load_facts,
 };
 use drdebits::model::Conclusion;
 use drdebits::pyjson;
@@ -3594,4 +3595,408 @@ fn error_classes_separate_arithmetic_facts_and_route_findings() {
             "ARITHMETIC_ERROR"
         )]))
     );
+}
+
+const SPOUSE_A_FACTS: &str = r#"{
+  "facts": {
+    "spouse_a_salary": "$82,500.00",
+    "shared_bank_interest": "$1,250.00",
+    "rental_net_income_24_oak_st": "$18,400.00",
+    "rental_share": "50%"
+  }
+}"#;
+
+const TWO_SPOUSE_CONTEXT: &str = r#"{
+  "other_clients": {
+    "Spouse B": {
+      "salary": "$94,200.00",
+      "private_health_rebate": "$1,412.00",
+      "shared_bank_interest": "$1,250.00"
+    }
+  },
+  "joint": [
+    {
+      "item": "rental_property_24_oak_st",
+      "amount": "$18,400.00",
+      "recorded_share": "50%",
+      "prior_share": "50%",
+      "evidence": "Title deed 2021-04-12"
+    }
+  ]
+}"#;
+
+fn with_client_context(text: &str, facts: Option<&str>, context: &str) -> gate::Report {
+    let mut report = check(text, &conclusions());
+    let loaded_facts = facts.map(|f| load_facts(f).unwrap());
+    if let Some(f) = &loaded_facts {
+        check_facts(text, f, &mut report);
+    }
+    let loaded_context = load_client_context(context).unwrap();
+    check_client_context(text, loaded_facts.as_deref(), &loaded_context, &mut report);
+    report
+}
+
+fn context_reviews(report: &gate::Report) -> Vec<&str> {
+    report
+        .reviews
+        .iter()
+        .filter(|r| r.starts_with("client-context check:"))
+        .map(String::as_str)
+        .collect()
+}
+
+fn context_notes(report: &gate::Report) -> Vec<&str> {
+    report
+        .notes
+        .iter()
+        .filter(|n| n.starts_with("client-context check:"))
+        .map(String::as_str)
+        .collect()
+}
+
+#[test]
+fn two_spouse_cross_client_and_joint_share_checks() {
+    // Clean draft for Spouse A: matching 50% rental split and own salary passes.
+    let clean = DRAFT
+        .replace(
+            "Invoice total $1,100 including GST.",
+            "Spouse A salary $82,500.00; joint rental net income $18,400.00 at 50% share.",
+        )
+        .replace("$1,100 / 11 = $100.00", "$18,400.00 * 50% = $9,200.00")
+        .replace("GST of $100", "Rental share $9,200.00");
+    let report = with_client_context(&clean, Some(SPOUSE_A_FACTS), TWO_SPOUSE_CONTEXT);
+    assert_eq!(
+        report.verdict(),
+        ("PASS", EXIT_PASS),
+        "{:?}",
+        report.reviews
+    );
+    assert!(context_reviews(&report).is_empty());
+
+    // Spouse B's salary leaked into Spouse A's draft produces cross-client REVIEW.
+    let leaked = clean.replace(
+        "- None identified.",
+        "- Salary noted as $94,200.00 (and repeated $94,200.00); unreadable $5k ignored.",
+    );
+    let report = with_client_context(&leaked, Some(SPOUSE_A_FACTS), TWO_SPOUSE_CONTEXT);
+    assert_eq!(report.verdict(), ("REVIEW", EXIT_REVIEW));
+    assert!(report.blocks.is_empty());
+    assert!(
+        report
+            .error_classes
+            .contains(&gate::ErrorClass::FactMismatch)
+    );
+    assert_eq!(
+        context_reviews(&report),
+        [
+            "client-context check: $94,200.00 matches 'salary' of 'Spouse B'; possible cross-client contamination"
+        ]
+    );
+
+    // Amount matching both current-client facts and Spouse B produces a note, not contamination REVIEW.
+    let shared = clean.replace(
+        "- None identified.",
+        "- Bank interest $1,250.00 (repeated $1,250.00).",
+    );
+    let report = with_client_context(&shared, Some(SPOUSE_A_FACTS), TWO_SPOUSE_CONTEXT);
+    assert_eq!(
+        report.verdict(),
+        ("PASS", EXIT_PASS),
+        "{:?}",
+        report.reviews
+    );
+    assert!(context_reviews(&report).is_empty());
+    assert!(
+        context_notes(&report)
+            .iter()
+            .any(|n| n.contains("$1,250.00 also matches 'shared_bank_interest' of 'Spouse B'"))
+    );
+
+    // Derived current-client calculation result matching another client produces a note, not REVIEW.
+    let derived_ctx = r#"{
+      "other_clients": {
+        "Spouse B": {
+          "unrelated_distribution": "$9,200.00"
+        }
+      }
+    }"#;
+    let report = with_client_context(&clean, Some(SPOUSE_A_FACTS), derived_ctx);
+    assert_eq!(
+        report.verdict(),
+        ("PASS", EXIT_PASS),
+        "{:?}",
+        report.reviews
+    );
+    assert!(
+        context_notes(&report).iter().any(|n| {
+            n.contains("$9,200.00 also matches 'unrelated_distribution' of 'Spouse B'")
+        })
+    );
+
+    // Missing recorded_share on a joint item produces REVIEW.
+    let missing_share = r#"{
+      "joint": [
+        {
+          "item": "rental_property_24_oak_st",
+          "amount": "$18,400.00",
+          "recorded_share": null
+        }
+      ]
+    }"#;
+    let report = with_client_context(&clean, Some(SPOUSE_A_FACTS), missing_share);
+    assert_eq!(report.verdict(), ("REVIEW", EXIT_REVIEW));
+    assert!(
+        context_reviews(&report)
+            .iter()
+            .any(|r| r.contains("has no recorded ownership share"))
+    );
+
+    // Undocumented share change (50% -> 70% with blank or null evidence) produces REVIEW.
+    for ev in [r#""evidence": null"#, r#""evidence": "   ""#] {
+        let changed = format!(
+            r#"{{"joint": [{{"item": "rental_property_24_oak_st", "amount": "$18,400.00", "recorded_share": "70%", "prior_share": "50%", {ev}}}]}}"#
+        );
+        let report = with_client_context(&clean, None, &changed);
+        assert_eq!(report.verdict(), ("REVIEW", EXIT_REVIEW));
+        assert!(
+            context_reviews(&report).iter().any(|r| r
+                .contains("ownership share changed from 50% to 70% without supporting evidence")),
+            "{ev}: {:?}",
+            report.reviews
+        );
+    }
+
+    // Documented share change (50% -> 70% with deed evidence) and matching 70% calculation passes.
+    let documented = r#"{
+      "joint": [
+        {
+          "item": "rental_property_24_oak_st",
+          "amount": "$18,400.00",
+          "recorded_share": "70%",
+          "prior_share": "50%",
+          "evidence": "Transfer deed 2026-02-01"
+        }
+      ]
+    }"#;
+    let seventy = clean
+        .replace(
+            "$18,400.00 * 50% = $9,200.00",
+            "70% * $18,400.00 = $12,880.00",
+        )
+        .replace("$9,200.00", "$12,880.00");
+    let report = with_client_context(&seventy, None, documented);
+    assert_eq!(
+        report.verdict(),
+        ("PASS", EXIT_PASS),
+        "{:?}",
+        report.reviews
+    );
+
+    // Draft calculation applying 70% (in either operand order, or via plain-scalar arithmetic)
+    // against recorded 50% produces REVIEW.
+    for expr in [
+        "$18,400.00 * 70% = $12,880.00",
+        "70% * $18,400.00 = $12,880.00",
+        "$18,400.00 * (70% / 1) = $12,880.00",
+        "$18,400.00 * (35% * 2) = $12,880.00",
+        "$18,400.00 * (2 * 35%) = $12,880.00",
+    ] {
+        let wrong_share = clean
+            .replace("$18,400.00 * 50% = $9,200.00", expr)
+            .replace("$9,200.00", "$12,880.00")
+            .replace("- None identified.", &format!("- Repeated {expr}."));
+        let report = with_client_context(&wrong_share, None, TWO_SPOUSE_CONTEXT);
+        assert_eq!(report.verdict(), ("REVIEW", EXIT_REVIEW), "{expr}");
+        assert_eq!(
+            context_reviews(&report),
+            [format!(
+                "client-context check: calculation '{expr}' applies 70% to joint item 'rental_property_24_oak_st' ($18,400.00), which differs from recorded share 50%"
+            )]
+        );
+    }
+
+    // Joint item amount absent from --facts produces reconciliation REVIEW.
+    let unreconciled = r#"{
+      "joint": [
+        {
+          "item": "rental_property_24_oak_st",
+          "amount": "$19,000.00",
+          "recorded_share": "50%"
+        }
+      ]
+    }"#;
+    let report = with_client_context(&clean, Some(SPOUSE_A_FACTS), unreconciled);
+    assert_eq!(report.verdict(), ("REVIEW", EXIT_REVIEW));
+    assert!(
+        context_reviews(&report)
+            .iter()
+            .any(|r| r.contains("does not match any amount in the facts file"))
+    );
+}
+
+#[test]
+fn a_malformed_client_context_file_is_refused() {
+    for (text, reason) in [
+        ("{", "not valid JSON"),
+        ("[]", "top level must be an object"),
+        ("{}", "must include 'other_clients' or 'joint'"),
+        (r#"{"notes": 1}"#, "unknown key 'notes'"),
+        (r#"{"other_clients": []}"#, "'other_clients' must map"),
+        (
+            r#"{"other_clients": {}}"#,
+            "'other_clients' must not be empty",
+        ),
+        (
+            r#"{"other_clients": {"  ": {"a": "$1"}}}"#,
+            "client name must not be empty",
+        ),
+        (
+            r#"{"other_clients": {"Spouse B": []}}"#,
+            "must map fact names",
+        ),
+        (
+            r#"{"other_clients": {"Spouse B": {}}}"#,
+            "must map at least one fact",
+        ),
+        (
+            r#"{"other_clients": {"Spouse B": {"  ": "$1"}}}"#,
+            "fact name of 'Spouse B' must not be empty",
+        ),
+        (
+            r#"{"other_clients": {"Spouse B": {"salary": 94200}}}"#,
+            "must be an amount written as text",
+        ),
+        (
+            r#"{"other_clients": {"Spouse B": {"salary": "$1,23"}}}"#,
+            "is not an amount",
+        ),
+        (r#"{"joint": {}}"#, "'joint' must be a list"),
+        (r#"{"joint": []}"#, "'joint' must not be empty"),
+        (r#"{"joint": [1]}"#, "each 'joint' entry must be an object"),
+        (
+            r#"{"joint": [{"item": "p", "amount": "$1", "extra": 1}]}"#,
+            "unknown key 'extra'",
+        ),
+        (
+            r#"{"joint": [{"item": "  ", "amount": "$1"}]}"#,
+            "non-empty 'item' name",
+        ),
+        (
+            r#"{"joint": [{"item": "p", "amount": 100}]}"#,
+            "'amount' must be an amount written as text",
+        ),
+        (
+            r#"{"joint": [{"item": "p", "amount": "50%"}]}"#,
+            "not a dollar amount",
+        ),
+        (
+            r#"{"joint": [{"item": "p", "amount": "$100", "recorded_share": 50}]}"#,
+            "must be a percentage string",
+        ),
+        (
+            r#"{"joint": [{"item": "p", "amount": "$100", "recorded_share": "$50"}]}"#,
+            "is not a percentage between 0% and 100%",
+        ),
+        (
+            r#"{"joint": [{"item": "p", "amount": "$100", "recorded_share": "-50%"}]}"#,
+            "is not a percentage between 0% and 100%",
+        ),
+        (
+            r#"{"joint": [{"item": "p", "amount": "$100", "recorded_share": "150%"}]}"#,
+            "is not a percentage between 0% and 100%",
+        ),
+        (
+            r#"{"joint": [{"item": "p", "amount": "$100", "prior_share": "50"}]}"#,
+            "is not a percentage between 0% and 100%",
+        ),
+        (
+            r#"{"joint": [{"item": "p", "amount": "$100", "evidence": 1}]}"#,
+            "'evidence' must be text or null",
+        ),
+    ] {
+        let Err(e) = load_client_context(text) else {
+            panic!("{text} was accepted");
+        };
+        assert!(e.starts_with("client-context file: "), "{text}: {e}");
+        assert!(e.contains(reason), "{text}: {e}");
+    }
+}
+
+#[test]
+fn the_command_reads_a_client_context_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = repo_root();
+    let root = root.to_str().unwrap();
+    let clean = DRAFT
+        .replace(
+            "Invoice total $1,100 including GST.",
+            "Spouse A salary $82,500.00; joint rental net income $18,400.00 at 50% share.",
+        )
+        .replace("$1,100 / 11 = $100.00", "$18,400.00 * 50% = $9,200.00")
+        .replace("GST of $100", "Rental share $9,200.00");
+    let leaked = clean.replace("- None identified.", "- Spouse salary $94,200.00.");
+    std::fs::write(dir.path().join("clean.md"), &clean).unwrap();
+    std::fs::write(dir.path().join("leaked.md"), &leaked).unwrap();
+    std::fs::write(dir.path().join("facts.json"), SPOUSE_A_FACTS).unwrap();
+    std::fs::write(dir.path().join("context.json"), TWO_SPOUSE_CONTEXT).unwrap();
+    std::fs::write(dir.path().join("bad.json"), r#"{"unknown": 1}"#).unwrap();
+    let gate = |args: &[&str]| {
+        let mut all = vec!["--root", root, "gate"];
+        all.extend(args);
+        run_in(dir.path(), &all, false)
+    };
+    let ok = gate(&[
+        "--facts",
+        "facts.json",
+        "--client-context",
+        "context.json",
+        "clean.md",
+    ]);
+    assert_eq!(ok.code, i32::from(EXIT_PASS), "{}{}", ok.stdout, ok.stderr);
+    let rev = gate(&[
+        "--facts",
+        "facts.json",
+        "--client-context",
+        "context.json",
+        "--json",
+        "leaked.md",
+    ]);
+    assert_eq!(
+        rev.code,
+        i32::from(EXIT_REVIEW),
+        "{}{}",
+        rev.stdout,
+        rev.stderr
+    );
+    assert!(
+        rev.stdout.contains("\"verdict\": \"REVIEW\""),
+        "{}",
+        rev.stdout
+    );
+    assert!(
+        rev.stdout.contains("possible cross-client contamination"),
+        "{}",
+        rev.stdout
+    );
+    for ctx in ["bad.json", "absent.json"] {
+        let out = gate(&["--client-context", ctx, "clean.md"]);
+        assert_eq!(
+            out.code,
+            i32::from(EXIT_COULD_NOT_RUN),
+            "{ctx}: {}",
+            out.stderr
+        );
+        assert!(
+            out.stderr.contains("client-context file:"),
+            "{ctx}: {}",
+            out.stderr
+        );
+    }
+}
+
+#[test]
+fn the_client_context_check_only_adds_its_own_findings() {
+    only_adds_its_own_findings("client-context check:", |text| {
+        with_client_context(text, None, TWO_SPOUSE_CONTEXT)
+    });
 }

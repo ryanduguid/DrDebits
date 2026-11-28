@@ -153,6 +153,26 @@ A span found shows text membership only, not that the source applies or
 supports the claim. A `--source` path is read as given and is not confined to
 `--root`, because the user named the file.
 
+`--client-context context.json` checks two-client and joint-item boundaries
+without changing `--facts`'s single-key schema:
+
+```json
+{"other_clients": {"Spouse B": {"salary": "$94,200.00"}},
+ "joint": [{"item": "rental_24_oak_st", "amount": "$18,400.00",
+            "recorded_share": "50%", "prior_share": "50%",
+            "evidence": "Title deed 2021-04-12"}]}
+```
+
+Amounts and percentages are written as text; unknown keys or malformed values
+stop the gate with exit 2. A draft amount matching `other_clients` that is not
+a current-client fact or reperformed calculation result asks for review
+(exit 3) as possible cross-client contamination; one that also matches a
+current-client fact adds a note instead. Each `joint` entry asks for review if
+its amount is absent from `--facts` when supplied, if `recorded_share` is
+missing, if `recorded_share` differs from `prior_share` without `evidence`, or
+if a parsed calculation multiplies the joint amount by another percentage. Like
+`--facts`, this check only asks for review, never blocks.
+
 ## Ethical routing and boundary architecture
 
 ```mermaid
