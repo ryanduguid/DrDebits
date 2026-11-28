@@ -591,8 +591,13 @@ impl Parser {
                 self.divided_by_zero |= quotient.is_none();
                 quotient?
             };
+            percent = if op == '*' {
+                (percent && right_unit == Unit::Plain && !right_percent)
+                    || (!percent && unit == Unit::Plain && right_percent)
+            } else {
+                percent && right_unit == Unit::Plain && !right_percent
+            };
             unit = Unit::combine(op, unit, right_unit);
-            percent = false;
         }
         Some((value, unit, percent))
     }
@@ -1827,6 +1832,12 @@ pub fn load_client_context(text: &str) -> Result<ClientContext, String> {
                 )));
             }
             for (name, value) in pairs {
+                if name.trim().is_empty() {
+                    return Err(fail(format!(
+                        "fact name of {} must not be empty",
+                        py::repr_str(client)
+                    )));
+                }
                 let written = value.as_str().ok_or_else(|| {
                     fail(format!(
                         "{} of {} must be an amount written as text; found {}",

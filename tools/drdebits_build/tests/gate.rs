@@ -3792,10 +3792,14 @@ fn two_spouse_cross_client_and_joint_share_checks() {
         report.reviews
     );
 
-    // Draft calculation applying 70% (in either operand order) against recorded 50% produces REVIEW.
+    // Draft calculation applying 70% (in either operand order, or via plain-scalar arithmetic)
+    // against recorded 50% produces REVIEW.
     for expr in [
         "$18,400.00 * 70% = $12,880.00",
         "70% * $18,400.00 = $12,880.00",
+        "$18,400.00 * (70% / 1) = $12,880.00",
+        "$18,400.00 * (35% * 2) = $12,880.00",
+        "$18,400.00 * (2 * 35%) = $12,880.00",
     ] {
         let wrong_share = clean
             .replace("$18,400.00 * 50% = $9,200.00", expr)
@@ -3853,6 +3857,10 @@ fn a_malformed_client_context_file_is_refused() {
         (
             r#"{"other_clients": {"Spouse B": {}}}"#,
             "must map at least one fact",
+        ),
+        (
+            r#"{"other_clients": {"Spouse B": {"  ": "$1"}}}"#,
+            "fact name of 'Spouse B' must not be empty",
         ),
         (
             r#"{"other_clients": {"Spouse B": {"salary": 94200}}}"#,
